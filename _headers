@@ -1,0 +1,9 @@
+# Netlify headers — always serve the freshest page.
+#
+# The browser must revalidate the HTML on every load instead of reusing a stale
+# cached copy. This is what guarantees every browser runs the current sync code
+# (not an old version), and it complements the no-cache <meta> tags inside the
+# HTML. The wallpaper images themselves are served from Supabase, not Netlify,
+# so this only affects the page files.
+/*
+  Cache-Control: public, max-age=0, must-revalidate
