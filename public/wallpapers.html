@@ -12,7 +12,7 @@
 <meta name="description" content="Download stunning free wallpapers in 4K, 5K and 8K Ultra HD. Hand-picked backgrounds for desktop, iPhone, Android and tablet — nature, space, abstract, cars, anime and more.">
 <meta name="keywords" content="8k wallpapers, 4k wallpapers, 5k wallpapers, ultra hd backgrounds, free wallpapers, desktop backgrounds, phone wallpapers">
 <meta name="robots" content="index, follow">
-<meta name="theme-color" content="#0c0c0c">
+<meta name="theme-color" content="#0f1116">
 <!-- Open Graph (Facebook, Pinterest, WhatsApp link previews) -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="8K Wallpapers">
@@ -81,8 +81,8 @@
     --glass-strong: rgba(255,255,255,0.13);
     --glass-border: rgba(255,255,255,0.2);
     --glass-shine: rgba(255,255,255,0.45);
-    --accent: #ffffff;
-    --accent-glow: #ffffff;
+    --accent: #6366f1;
+    --accent-glow: #818cf8;
     --text: rgba(255,255,255,0.95);
     --muted: rgba(255,255,255,0.58);
     --blur: 20px;
@@ -751,8 +751,8 @@
     --glass-strong: rgba(0,0,0,0.1);
     --glass-border: rgba(0,0,0,0.16);
     --glass-shine: rgba(255,255,255,0.8);
-    --accent: #16161a;
-    --accent-glow: #16161a;
+    --accent: #4f46e5;
+    --accent-glow: #6366f1;
     --text: rgba(22,22,26,0.94);
     --muted: rgba(22,22,26,0.56);
   }
@@ -804,6 +804,114 @@
   /* the tag cloud uses fixed bright colors tuned for a dark panel; invert the
      lightness (keeping roughly the same hue) so white/pale tags stay visible */
   html.light .poptag { filter: invert(1) hue-rotate(180deg); }
+
+  /* ============================================================
+     v6 — simple flat theme: one accent color, solid surfaces,
+     no glass blur, no sheen animations. Rules are written as
+     "html .x, html.light .x" pairs so they out-rank both the
+     original glass styles and the earlier light-mode overrides.
+     ============================================================ */
+  :root {
+    --bg-0: #0f1116;        /* page background */
+    --surface: #171a21;     /* header, footer, panels, cards */
+    --surface-2: #21252f;   /* chips, inputs, buttons */
+    --line: #2b303c;        /* borders */
+  }
+  html.light {
+    --bg-0: #f5f6f8;
+    --surface: #ffffff;
+    --surface-2: #eef0f4;
+    --line: #dcdfe6;
+  }
+
+  html body, html.light body { background: var(--bg-0); }
+  html .backdrop, html.light .backdrop { background: var(--bg-0); }
+
+  /* no moving shine anywhere */
+  html .header-sheen::after, html footer::after { display: none; }
+  html .tag::after, html .tab::after, html .detail-download::after { display: none; }
+
+  html header, html footer, html.light header, html.light footer {
+    background: var(--surface); border-color: var(--line);
+    backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
+  }
+  html .categories-btn, html .theme-btn, html .search, html .policy-back, html .detail-back,
+  html.light .categories-btn, html.light .theme-btn, html.light .search, html.light .policy-back, html.light .detail-back {
+    background: var(--surface-2); border-color: var(--line); color: var(--text);
+    backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
+  }
+  html .cat-panel, html.light .cat-panel {
+    background: var(--surface); border-color: var(--line);
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    box-shadow: 0 18px 44px rgba(0,0,0,0.3);
+  }
+  html .cat-panel::before, html.light .cat-panel::before { background: var(--surface); border-color: var(--line); }
+
+  /* hero: plain heading, accent search button */
+  html .hero h1, html.light .hero h1 {
+    background: none; -webkit-background-clip: initial; background-clip: initial;
+    -webkit-text-fill-color: currentColor; color: var(--text); animation: none;
+  }
+  html .hero-search, html.light .hero-search {
+    background: var(--surface); border-color: var(--line);
+    backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
+  }
+  html .hero-search button, html.light .hero-search button { background: var(--accent); color: #fff; }
+  html .hero-search button:hover, html.light .hero-search button:hover { box-shadow: 0 8px 20px rgba(99,102,241,0.35); }
+
+  html .tag, html .tab, html .res-chip,
+  html.light .tag, html.light .tab, html.light .res-chip {
+    background: var(--surface-2); border-color: var(--line); color: var(--text);
+    backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
+  }
+  html .tab.active, html .res-chip.active,
+  html.light .tab.active, html.light .res-chip.active {
+    background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: none;
+  }
+  html .filter-chip, html.light .filter-chip { background: var(--surface-2); border-color: var(--line); }
+
+  html .section-head .bar, html.light .section-head .bar { background: var(--accent); box-shadow: none; }
+
+  html .card, html .rel-card, html.light .card, html.light .rel-card {
+    background: var(--surface); border-color: var(--line); box-shadow: none;
+  }
+  html .card:hover, html .rel-card:hover, html.light .card:hover, html.light .rel-card:hover {
+    border-color: var(--accent); box-shadow: 0 10px 26px rgba(0,0,0,0.22);
+  }
+  html .thumb, html .rel-thumb, html.light .thumb, html.light .rel-thumb { background: var(--surface-2); }
+
+  html .detail-download, html.light .detail-download {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+    backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
+  }
+  html .detail-download:hover, html.light .detail-download:hover { box-shadow: 0 10px 24px rgba(99,102,241,0.4); }
+  html .detail-stage, html.light .detail-stage { background: var(--surface-2); border-color: var(--line); box-shadow: none; }
+  html .detail-res, html .related-panel, html .poptags-panel,
+  html.light .detail-res, html.light .related-panel, html.light .poptags-panel {
+    background: var(--surface); border-color: var(--line);
+    backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
+  }
+  html .res-dev, html.light .res-dev {
+    background: var(--surface-2); border-color: var(--line); color: var(--text);
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+  }
+  html .res-dev.active, html.light .res-dev.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  html .res-item:hover .res-dim, html.light .res-item:hover .res-dim { color: var(--accent-glow); text-shadow: none; }
+  html .meta-chip, html .tag-chip, html.light .meta-chip, html.light .tag-chip { background: var(--surface-2); border-color: var(--line); }
+
+  /* tag cloud: one simple color, accent on hover (beats the inline colors) */
+  html .poptags-line, html.light .poptags-line { background: var(--accent); animation: none; }
+  html .poptag, html.light .poptag { color: var(--muted) !important; opacity: 1 !important; filter: none; }
+  html .poptag:hover, html.light .poptag:hover { color: var(--accent) !important; text-shadow: none; }
+
+  html .scrolltop, html.light .scrolltop {
+    background: var(--surface-2); border-color: var(--line);
+    backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  }
+  html .policy .contact-card, html.light .policy .contact-card {
+    background: var(--surface); border-color: var(--line);
+    backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
+  }
 </style>
 </head>
 <body>
@@ -1461,7 +1569,7 @@ window.addEventListener('scroll', ()=>{ scrollTopBtn.classList.toggle('show', wi
     document.documentElement.classList.toggle('light', mode==='light');
     if(btn) btn.innerHTML = mode==='light' ? '&#9728;' : '&#9790;';   // sun / moon
     const tc=document.querySelector('meta[name="theme-color"]');
-    if(tc) tc.content = mode==='light' ? '#f2f2f5' : '#0c0c0c';
+    if(tc) tc.content = mode==='light' ? '#f5f6f8' : '#0f1116';
   }
   let mode=null;
   try { mode=localStorage.getItem(KEY); } catch(e){}
