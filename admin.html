@@ -770,6 +770,7 @@
     <button class="admin-btn" id="adminBtn" title="Add wallpaper">+</button>
     <button class="admin-export-btn" id="exportBtn" title="Export wallpapers for the public site">&#8681; Export</button>
     <button class="admin-export-btn" id="statsBtn" title="Library statistics">&#128202; Stats</button>
+    <button class="admin-export-btn" id="signoutBtn" title="Sign out and change the GitHub token">&#8631; Sign out</button>
     <a class="admin-export-btn" href="wallpapers.html" title="Open the public site" style="text-decoration:none;display:inline-flex;align-items:center">&#8599; View Site</a>
     <div class="search">
       <input type="text" placeholder="Search" id="searchInput">
@@ -1816,7 +1817,22 @@ document.getElementById('homeLogo').onclick=goHome;
       if(changed) render();   // only repaint when something actually changed
       const backendCount = wallpapers.filter(function(w){ return w._ref && w._ref.site==='supabase'; }).length;
       setStatus('v4 • Connected ✓  ' + data.length + ' wallpaper(s) on GitHub, ' + backendCount + ' shown here', 'ok');
-    } catch(e){ console.warn('Could not load wallpapers.json:', e); setStatus('Could not load the list: ' + (e && e.message ? e.message : e), 'err'); }
+    } catch(e){
+      console.warn('Could not load wallpapers.json:', e);
+      setStatus('Could not load the list: ' + (e && e.message ? e.message : e), 'err');
+      // A rejected token (expired/revoked) can never recover on its own, and the
+      // lock screen only shows when NO token is saved — so drop the bad token and
+      // reopen the sign-in gate with an explanation instead of looping on 401s.
+      if(/\b401\b/.test(String(e && e.message))){
+        ghSetToken('');
+        const tokenField = document.getElementById('lockToken');
+        if(tokenField) tokenField.value = '';
+        const err = document.getElementById('lockErr');
+        if(err) err.textContent = 'GitHub rejected the saved token — it likely expired or was revoked. '
+          + 'Generate a new fine-grained token (Contents: Read & write on ' + GH_OWNER + '/' + GH_REPO + ') and sign in again.';
+        showLogin();
+      }
+    }
   }
 
   // Keep the admin grid current by re-reading wallpapers.json from GitHub on a timer
@@ -1866,7 +1882,8 @@ document.getElementById('homeLogo').onclick=goHome;
   // Prefill the token field from this browser so a returning admin doesn't re-paste it.
   if(ghToken()) lockToken.value = ghToken();
 
-  function showApp(){ lock.classList.add('hidden'); startSync(); }
+  // re-entering after a token swap must reload immediately, not wait for the 20s poll
+  function showApp(){ lock.classList.add('hidden'); if(_syncStarted) loadAdded(); else startSync(); }
   function showLogin(){ lock.classList.remove('hidden'); lockEmail.focus(); }
 
   async function doLogin(){
@@ -1879,8 +1896,21 @@ document.getElementById('homeLogo').onclick=goHome;
     try {
       // The Supabase email/password sign-in authorizes image uploads to Storage.
       const { error } = await sb.auth.signInWithPassword({ email, password });
-      if(error){ lockErr.textContent = error.message || 'Sign-in failed.'; lockInput.value=''; }
-      else { ghSetToken(token); showApp(); }   // remember the GitHub token, then enter
+      if(error){ lockErr.textContent = error.message || 'Sign-in failed.'; lockInput.value=''; return; }
+      // Verify the GitHub token actually works BEFORE entering — a bad token used
+      // to get saved anyway, locking the admin out behind endless 401 banners.
+      ghSetToken(token);
+      try { await ghLoad(); }
+      catch(e){
+        if(/\b40[13]\b/.test(String(e && e.message))){
+          ghSetToken('');
+          lockErr.textContent = (e && e.message ? e.message : 'GitHub rejected the token.')
+            + ' Generate a new fine-grained token (Contents: Read & write) and try again.';
+          return;
+        }
+        // other failures (network hiccups etc.) don't block sign-in; the app surfaces them
+      }
+      showApp();
     } catch(e){
       lockErr.textContent = 'Could not reach the server. Check your connection.';
     } finally {
@@ -1900,6 +1930,14 @@ document.getElementById('homeLogo').onclick=goHome;
       if(data && data.session && ghToken()) showApp(); else showLogin();
     } catch(e){ showLogin(); }
   })();
+
+  // ============ Sign out: clear the saved token/session to swap credentials ============
+  document.getElementById('signoutBtn').onclick = async ()=>{
+    if(!confirm('Sign out and clear the saved GitHub token from this browser?')) return;
+    ghSetToken('');
+    try { if(sb) await sb.auth.signOut(); } catch(e){}
+    location.reload();   // boots back to the lock screen with a clean slate
+  };
 
   // ============ Export: copy wallpaper data for the public site ============
   document.getElementById('exportBtn').onclick = ()=>{
