@@ -2059,20 +2059,20 @@ document.getElementById('homeLogo').onclick=goHome;
   // (polling / realtime) never duplicate or miss a wallpaper.
   const _seenPaths = new Set();
 
-  // --- small on-screen status banner so loading problems are visible without dev tools ---
+  // --- status banner: ERRORS ONLY on the public site. Routine sync chatter
+  // ("Connected ✓ … up to date") used to pop over the gallery on every 30s
+  // poll; success is now silent — new posts simply appear in the grid. ---
   const _statusEl = document.createElement('div');
   _statusEl.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:99999;'
     + 'padding:11px 18px;border-radius:10px;font:600 13px system-ui,sans-serif;color:#fff;'
-    + 'background:rgba(20,20,20,0.94);border:1px solid rgba(255,255,255,0.22);box-shadow:0 8px 24px rgba(0,0,0,0.55);'
-    + 'max-width:92vw;text-align:center;transition:opacity .4s;';
-  _statusEl.textContent = 'v4 • Connecting to the wallpaper server…';
+    + 'background:rgba(150,30,30,0.96);border:1px solid rgba(255,255,255,0.22);box-shadow:0 8px 24px rgba(0,0,0,0.55);'
+    + 'max-width:92vw;text-align:center;transition:opacity .4s;display:none;';
   (function attach(){ if(document.body){ document.body.appendChild(_statusEl); } else { document.addEventListener('DOMContentLoaded', ()=>document.body.appendChild(_statusEl)); } })();
   function setStatus(msg, kind){
+    if(kind !== 'err'){ _statusEl.style.display = 'none'; return; }   // silent success
     _statusEl.textContent = msg;
-    _statusEl.style.background = kind==='err' ? 'rgba(150,30,30,0.96)'
-      : kind==='ok' ? 'rgba(25,110,55,0.96)' : 'rgba(20,20,20,0.94)';
+    _statusEl.style.display = 'block';
     _statusEl.style.opacity = '1';
-    if(kind==='ok'){ setTimeout(()=>{ _statusEl.style.opacity='0'; }, 4000); }
   }
 
   // Load the wallpaper list from the site's own API (visible to everyone).
