@@ -307,6 +307,18 @@
   .edit-btn svg { width: 15px; height: 15px; }
   .edit-btn:hover { background: rgba(50,130,214,1); transform: scale(1.08); }
   .edit-btn:disabled { opacity: 0.6; cursor: default; transform: none; }
+  /* ---- library statistics modal ---- */
+  .stat-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 6px; }
+  .stat-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; padding: 14px 12px; text-align: center; }
+  .stat-card b { display: block; font-size: 22px; color: var(--text); }
+  .stat-card span { font-size: 11px; color: var(--muted); font-weight: 700; letter-spacing: 0.5px; }
+  .stat-sec { font-size: 11.5px; font-weight: 700; letter-spacing: 0.8px; color: var(--muted); margin: 16px 0 8px; text-transform: uppercase; }
+  .stat-row { display: flex; align-items: center; gap: 10px; margin: 5px 0; font-size: 13px; color: var(--text); }
+  .stat-row .sr-label { width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+  .stat-row .sr-bar { flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  .stat-row .sr-bar i { display: block; height: 100%; background: linear-gradient(90deg, #7c8cff, #3aa0ff); border-radius: 4px; }
+  .stat-row .sr-count { width: 34px; text-align: right; font-weight: 700; color: var(--muted); }
+  .stat-note { margin-top: 18px; font-size: 12px; color: var(--muted); line-height: 1.55; }
 
   /* ---- Admin login gate ---- */
   .lock-screen {
@@ -757,6 +769,7 @@
     </div>
     <button class="admin-btn" id="adminBtn" title="Add wallpaper">+</button>
     <button class="admin-export-btn" id="exportBtn" title="Export wallpapers for the public site">&#8681; Export</button>
+    <button class="admin-export-btn" id="statsBtn" title="Library statistics">&#128202; Stats</button>
     <a class="admin-export-btn" href="wallpapers.html" title="Open the public site" style="text-decoration:none;display:inline-flex;align-items:center">&#8599; View Site</a>
     <div class="search">
       <input type="text" placeholder="Search" id="searchInput">
@@ -822,6 +835,16 @@
       </div>
       <div class="admin-msg" id="afMsg"></div>
     </div>
+  </div>
+</div>
+
+<div class="admin-overlay" id="statsOverlay">
+  <div class="admin-modal">
+    <div class="admin-mhead">
+      <h3>&#128202; Library Statistics</h3>
+      <button class="admin-close" id="statsClose">&times;</button>
+    </div>
+    <div class="admin-body" id="statsBody"></div>
   </div>
 </div>
 
@@ -1149,6 +1172,71 @@ async function renameWallpaper(w, btn){
     if(btn){ btn.disabled = false; }
   }
 }
+
+// ---- Admin: library statistics (checklist item 17: "View statistics") ----
+(function(){
+  const overlay = document.getElementById('statsOverlay');
+  const body = document.getElementById('statsBody');
+  const btn = document.getElementById('statsBtn');
+  if(!overlay || !body || !btn) return;
+  function escS(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function dims(res){ const m=String(res||'').match(/(\d+)\s*[x×]\s*(\d+)/i); return m?{w:+m[1],h:+m[2]}:null; }
+  function tierOf(w){
+    const p=dims(w.res); if(!p) return 'Unknown';
+    if(p.w>=7680||p.h>=4320) return '8K';
+    if(p.w>=5120||p.h>=2880) return '5K';
+    if(p.w>=3840||p.h>=2160) return '4K';
+    return 'HD';
+  }
+  // one "label · bar · count" row per entry, biggest first
+  function bars(title, counts, total, limit){
+    const entries = Object.keys(counts).map(k=>[k, counts[k]]).sort((a,b)=>b[1]-a[1]).slice(0, limit||10);
+    if(!entries.length) return '';
+    let html = "<div class='stat-sec'>"+escS(title)+"</div>";
+    entries.forEach(pair=>{
+      const pct = total ? Math.round(pair[1]/total*100) : 0;
+      html += "<div class='stat-row'><span class='sr-label' title='"+escS(pair[0])+"'>"+escS(pair[0])+"</span>"
+            + "<span class='sr-bar'><i style='width:"+Math.max(pct,3)+"%'></i></span>"
+            + "<span class='sr-count'>"+pair[1]+"</span></div>";
+    });
+    return html;
+  }
+  function buildStats(){
+    const total = wallpapers.length;
+    const published = wallpapers.filter(w=>w._ref && w._ref.site==='supabase').length;
+    const cats={}, tabsC={}, tiers={}, tags={};
+    wallpapers.forEach(w=>{
+      if(w.cat) cats[w.cat]=(cats[w.cat]||0)+1;
+      if(w.tab) tabsC[w.tab]=(tabsC[w.tab]||0)+1;
+      const t=tierOf(w); tiers[t]=(tiers[t]||0)+1;
+      (w.tags||[]).forEach(tg=>{ tags[tg]=(tags[tg]||0)+1; });
+    });
+    let html = "<div class='stat-cards'>"
+      + "<div class='stat-card'><b>"+total+"</b><span>TOTAL</span></div>"
+      + "<div class='stat-card'><b>"+published+"</b><span>PUBLISHED</span></div>"
+      + "<div class='stat-card'><b>"+(total-published)+"</b><span>BUILT-IN DEMO</span></div>"
+      + "</div>";
+    const newest = wallpapers.find(w=>w._ref && w._ref.site==='supabase');   // list is newest-first
+    if(newest){
+      const when = newest.created_at ? new Date(newest.created_at).toLocaleString() : 'date unknown';
+      html += "<div class='stat-sec'>Latest publish</div>"
+            + "<div class='stat-row'><span style='font-weight:600'>"+escS(newest.name)+"</span>"
+            + "<span style='color:var(--muted);margin-left:auto'>"+escS(when)+"</span></div>";
+    }
+    html += bars('By resolution', tiers, total);
+    html += bars('By tab', tabsC, total);
+    html += bars('Top categories', cats, total);
+    html += bars('Top tags', tags, total);
+    html += "<div class='stat-note'>Visitor views and downloads are counted per browser on the public site "
+          + "(there is no server). Global counters need a small backend — e.g. a Cloudflare Worker + KV; "
+          + "see CLOUDFLARE-SETUP.md.</div>";
+    body.innerHTML = html;
+  }
+  btn.onclick = ()=>{ buildStats(); overlay.classList.add('open'); };
+  document.getElementById('statsClose').onclick = ()=> overlay.classList.remove('open');
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.classList.remove('open'); });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape' && overlay.classList.contains('open')) overlay.classList.remove('open'); });
+})();
 
 // ---- Admin: delete a published wallpaper (database row + stored image) ----
 async function deleteWallpaper(w, btn){
@@ -1648,7 +1736,8 @@ document.getElementById('homeLogo').onclick=goHome;
         name, img: imageUrl(path), _ref:{site:'supabase', path},
         tab: elTab.value, cat: elCat.value,
         res: elRes.value.trim() || '3840x2160',
-        tags: tags.length ? tags : ['Wallpaper'], _new:true
+        tags: tags.length ? tags : ['Wallpaper'],
+        created_at: new Date().toISOString(), _new:true
       });
       _seenPaths.add(path);  // already on screen — keep the live refresh from adding a duplicate
       setMsg('Published! "'+name+'" is now live for everyone.', 'ok');
@@ -1720,7 +1809,7 @@ document.getElementById('homeLogo').onclick=goHome;
           name: row.name, img: imageUrl(row.image_path),
           _ref: { site:'supabase', path: row.image_path },
           tab: row.tab, cat: row.category, res: row.resolution,
-          tags: row.tags || [], _new: true
+          tags: row.tags || [], created_at: row.created_at, _new: true
         });
         changed++;
       });

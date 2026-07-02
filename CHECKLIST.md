@@ -19,7 +19,7 @@ deliberate (see `GITHUB-SETUP.md`); revisit only if user accounts/comments are n
 | 14 | Wallpaper page | ✅ Preview, download, resolution, views, downloads, upload date, file size, related wallpapers |
 | 15 | Multiple download buttons | ✅ Desktop / Mobile / Tablet / iPhone / iPad resolution lists |
 | 16 | User accounts | ⚠️ Favorites work without login (localStorage). Login/comments/user uploads need a real backend — out of scope for the static architecture |
-| 17 | Admin panel | ✅ Upload, delete, and now rename (edit titles). Approve/manage-users N/A (single admin) |
+| 17 | Admin panel | ✅ Upload, delete, rename (edit titles), and a 📊 Stats dashboard (totals, per-resolution/tab/category/tag breakdowns, latest publish). Approve/manage-users N/A (single admin) |
 | 18 | SEO | ✅ Meta description, canonical, Open Graph, Twitter cards, Schema.org JSON-LD, robots.txt, sitemap.xml |
 | 19 | Analytics | 🔧 GA4 snippet is in `wallpapers.html` head, commented — paste your G-ID and uncomment. Search Console steps in setup guide |
 | 20 | Ads | 🔧 Needs an approved AdSense account — steps in setup guide |
