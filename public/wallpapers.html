@@ -912,6 +912,8 @@
     background: var(--surface); border-color: var(--line);
     backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
   }
+  /* photographer credit links on Unsplash photos */
+  html .detail-desc a, html.light .detail-desc a { color: var(--accent); text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -1195,7 +1197,17 @@ function toggleFav(w){
   const id = favId(w), i = favs.indexOf(id);
   if(i > -1) favs.splice(i,1); else favs.push(id);
   try { localStorage.setItem(FAV_KEY, JSON.stringify(favs)); } catch(e){}
+  // Unsplash results are ephemeral (fetched per view), so hearted ones are
+  // stored whole — otherwise they'd vanish from Saved after a reload.
+  if(w._unsplash){
+    const j = usFavs.findIndex(x => favId(x) === id);
+    if(i > -1 && j > -1) usFavs.splice(j, 1);
+    else if(i === -1 && j === -1) usFavs.push({ name:w.name, img:w.img, tab:w.tab, cat:w.cat, res:w.res, tags:w.tags, _ref:w._ref, _unsplash:w._unsplash });
+    try { localStorage.setItem(USFAV_KEY, JSON.stringify(usFavs)); } catch(e){}
+  }
 }
+const USFAV_KEY = '8kw_us_favs';
+let usFavs = (()=>{ try { return JSON.parse(localStorage.getItem(USFAV_KEY) || '[]'); } catch(e){ return []; } })();
 
 // ---- View / download counters, persisted in this browser. They become global
 // counts once a backend (e.g. a Cloudflare Worker + KV) is added later. ----
@@ -1206,6 +1218,14 @@ function bumpStat(w, key){
   const id = favId(w), s = stats[id] || (stats[id] = {v:0, d:0});
   s[key] = (s[key]||0) + 1;
   try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(e){}
+}
+
+// Unsplash asks apps to ping a photo's download endpoint when it's downloaded;
+// the proxy holds the key, so just forward the trigger (fire-and-forget).
+function trackUnsplash(w){
+  if(w && w._unsplash && w._unsplash.download){
+    try { fetch(API_BASE + '/api/unsplash?track=' + encodeURIComponent(w._unsplash.download)).catch(()=>{}); } catch(e){}
+  }
 }
 
 // ---- Resolution metadata: "3840x2160" -> tier (4K/5K/8K) and orientation ----
@@ -1335,7 +1355,7 @@ function makeCard(w){
   img.onerror=()=>{ thumb.classList.add('loaded'); };
   img.src=w.img;
   if(img.complete && img.naturalWidth){ img.classList.add('loaded'); thumb.classList.add('loaded'); }
-  card.querySelector('.dl').onclick=e=>{ e.stopPropagation(); bumpStat(w,'d'); download(w.name, w.img); };
+  card.querySelector('.dl').onclick=e=>{ e.stopPropagation(); bumpStat(w,'d'); trackUnsplash(w); download(w.name, w.img); };
   card.querySelector('.exp').onclick=e=>{ e.stopPropagation(); openLightbox(w); };
   const fb=card.querySelector('.fav-btn');
   fb.onclick=e=>{ e.stopPropagation(); toggleFav(w); fb.classList.toggle('is-fav', isFav(w)); updateHeroStats(); if(showFavs) render(); };
@@ -1353,6 +1373,12 @@ function render(preserveCount){
   const grid=document.getElementById('grid');
   grid.innerHTML='';
   _list = applyFilters();
+  if(preserveCount){
+    // background refresh: keep the Unsplash photos already mixed into this view
+    _list = _list.concat(_extra);
+  } else {
+    _extra = []; _usPage = 0; _usDone = false; _usSeen.clear();
+  }
   updateChrome(_list.length);
   if(!_list.length){
     _shown = 0;
@@ -1376,10 +1402,71 @@ function appendCards(n){
   for(let i=_shown; i<end; i++) grid.appendChild(makeCard(_list[i]));
   _shown = end;
 }
+
+// ---- "More wallpapers" from Unsplash, via the site's /api/unsplash proxy ----
+// When the visitor scrolls past the local wallpapers, matching Unsplash photos
+// are appended: search/tag/category views search Unsplash, the Recent tab pulls
+// the latest photos, everything else pulls popular ones. Saved view: never.
+// If the proxy isn't configured (no UNSPLASH_KEY), this degrades silently.
+let _extra = [];                       // Unsplash photos added to the current view
+let _usPage = 0, _usDone = false, _usLoading = false;
+const _usSeen = new Set();
+
+function usQuery(){
+  if(showFavs) return null;
+  if(query) return { q: query };
+  if(activeTag) return { q: activeTag };
+  if(activeCat) return { q: activeCat + ' wallpaper' };
+  if(activeTab === 'RECENT') return { order: 'latest' };
+  return { order: 'popular' };
+}
+
+async function loadMoreUnsplash(){
+  const params = usQuery();
+  if(!params || _usLoading || _usDone) return;
+  const myKey = JSON.stringify(params);
+  _usLoading = true;
+  try {
+    // hop past pages whose photos all fall outside the active res/orientation filter
+    for(let hop = 0; hop < 3; hop++){
+      const page = _usPage + 1;
+      const qs = (params.q ? 'q=' + encodeURIComponent(params.q) : 'order=' + params.order) + '&page=' + page;
+      const res = await fetch(API_BASE + '/api/unsplash?' + qs);
+      if(!res.ok){ _usDone = true; return; }              // unconfigured / rate-limited
+      const data = await res.json();
+      if(myKey !== JSON.stringify(usQuery())) return;     // the view changed mid-flight
+      _usPage = page;
+      const raw = (data && data.photos) || [];
+      if(!raw.length){ _usDone = true; return; }          // no more results
+      const mapped = raw.filter(p => !_usSeen.has(p.id)).map(p => {
+        _usSeen.add(p.id);
+        return {
+          name: p.name, img: p.img,
+          tab: activeTab, cat: activeCat || 'Photos',
+          res: (p.width && p.height) ? (p.width + 'x' + p.height) : '',
+          tags: [],
+          _ref: { site: 'unsplash', id: p.id },
+          _unsplash: { author: p.author, authorLink: p.authorLink, photoLink: p.photoLink, download: p.download }
+        };
+      }).filter(w => (!activeRes || resTier(w) === activeRes) && (!activeOrient || orientOf(w) === activeOrient));
+      if(!mapped.length) continue;                        // page filtered out — try the next one
+      if(_shown === 0) document.getElementById('grid').innerHTML = '';   // replace "no matches"
+      _extra = _extra.concat(mapped);
+      _list = _list.concat(mapped);
+      appendCards(mapped.length);
+      updateChrome(_list.length);
+      return;
+    }
+  } catch(e){ /* network hiccup — the next scroll retries */ }
+  finally { _usLoading = false; }
+}
+
 if(HAS_IO){
   const io = new IntersectionObserver(entries=>{
     entries.forEach(en=>{
-      if(en.isIntersecting && _shown < _list.length) appendCards(PAGE_SIZE);
+      if(!en.isIntersecting) return;
+      if(_shown < _list.length) appendCards(PAGE_SIZE);
+      else loadMoreUnsplash();
     });
   }, {rootMargin:'900px 0px'});
   io.observe(document.getElementById('gridSentinel'));
@@ -1391,7 +1478,7 @@ render();
 // ============================================================
 function applyFilters(){
   let list = wallpapers.slice();
-  if(showFavs) list = list.filter(isFav);
+  if(showFavs) list = list.filter(isFav).concat(usFavs.filter(isFav));
   else if(query){
     list = list.filter(w =>
       w.name.toLowerCase().includes(query)
@@ -1534,12 +1621,13 @@ function openLightbox(w){
   _lbWp=w;
   const big = w.img.startsWith('data:') ? w.img : w.img.replace(/w=\d+/, 'w=1600');
   lightbox.querySelector('img').src=big;
-  lightbox.querySelector('.lb-cap').textContent=w.name+' • '+(w.res||'');
+  lightbox.querySelector('.lb-cap').textContent = w.name + ' • ' + (w.res||'')
+    + (w._unsplash ? ' • Photo by ' + (w._unsplash.author || 'a photographer') + ' on Unsplash' : '');
   lightbox.classList.add('open'); document.body.style.overflow='hidden';
 }
 function closeLightbox(){ lightbox.classList.remove('open'); document.body.style.overflow=''; }
 lightbox.querySelector('.lb-close').onclick=closeLightbox;
-lightbox.querySelector('.lb-dl').onclick=e=>{ e.stopPropagation(); if(_lbWp){ bumpStat(_lbWp,'d'); download(_lbWp.name, _lbWp.img); } };
+lightbox.querySelector('.lb-dl').onclick=e=>{ e.stopPropagation(); if(_lbWp){ bumpStat(_lbWp,'d'); trackUnsplash(_lbWp); download(_lbWp.name, _lbWp.img); } };
 lightbox.addEventListener('click', e=>{ if(e.target===lightbox) closeLightbox(); });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape' && lightbox.classList.contains('open')) closeLightbox(); });
 
@@ -1806,9 +1894,18 @@ function showDetail(w){
   document.getElementById('dtCat').textContent = w.cat;
   document.getElementById('dtName').textContent = w.name;
   document.getElementById('dtRes').textContent = w.res;
-  document.getElementById('dtDesc').textContent =
-    "Get this "+w.name+" background in "+w.res+" 4K resolution from the "+w.cat+
+  const dtDescEl = document.getElementById('dtDesc');
+  dtDescEl.textContent =
+    "Get this "+w.name+" background in "+w.res+" resolution from the "+w.cat+
     " category. You can also download it for computer, mobile phones, iPhone and iPad from the resolutions below.";
+  // Unsplash photos must credit the photographer (API guideline)
+  if(w._unsplash){
+    const utm = '?utm_source=8k-wallpapers&utm_medium=referral';
+    dtDescEl.innerHTML = esc(dtDescEl.textContent)
+      + "<br>Photo by <a href='" + esc(w._unsplash.authorLink || 'https://unsplash.com') + utm + "' target='_blank' rel='noopener'>"
+      + esc(w._unsplash.author || 'a photographer')
+      + "</a> on <a href='" + esc(w._unsplash.photoLink || 'https://unsplash.com') + utm + "' target='_blank' rel='noopener'>Unsplash</a>.";
+  }
   // larger preview for the stage
   const img=document.getElementById('dtImg');
   img.src = w.img.replace(/w=\d+/, 'w=1400');
@@ -1892,7 +1989,7 @@ async function downloadWithFeedback(btn, name, img, width){
 }
 
 document.getElementById('dtDownload').onclick=(e)=>{
-  if(currentWp){ bumpStat(currentWp,'d'); downloadWithFeedback(e.currentTarget, currentWp.name, currentWp.img); }
+  if(currentWp){ bumpStat(currentWp,'d'); trackUnsplash(currentWp); downloadWithFeedback(e.currentTarget, currentWp.name, currentWp.img); }
 };
 document.getElementById('dtReport').onclick=(e)=>{ e.preventDefault(); alert('Thanks — this image has been flagged for review.'); };
 
@@ -1948,7 +2045,7 @@ function buildResList(dev){
       const dim = item.querySelector('.res-dim');
       const orig = dim.textContent;
       item.classList.add('busy'); dim.textContent = 'Preparing '+r.w+'x'+r.h+'\u2026';
-      bumpStat(currentWp,'d');
+      bumpStat(currentWp,'d'); trackUnsplash(currentWp);
       try { await downloadSized(currentWp.name, currentWp.img, r.w, r.h); }
       finally { dim.textContent = orig; item.classList.remove('busy'); }
     };

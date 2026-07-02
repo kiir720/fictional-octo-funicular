@@ -36,6 +36,21 @@ Everything runs on one Cloudflare Pages project — no Supabase, no GitHub token
 | `POST /api/import` | `X-Admin-Key` | server-side fetch of an Unsplash/Pexels URL into storage |
 | `GET /api/verify` | `X-Admin-Key` | key check used by the admin sign-in |
 | `GET /images/<path>` | public | the image bytes, cached immutable for 1 year |
+| `GET /api/unsplash?q=…&page=N` | public | proxied Unsplash browse/search — feeds the endless "more wallpapers" scroll (edge-cached 1 h) |
+
+## Unsplash "more wallpapers" feed
+
+The public page appends matching Unsplash photos after the local wallpapers run
+out (search/tag/category → Unsplash search; Recent tab → latest; other tabs →
+popular). Photographer credits and Unsplash's download trigger are built in.
+
+One-time setup: create a free app at <https://unsplash.com/developers>
+(Your apps → New Application), copy its **Access Key**, then:
+`npx wrangler pages secret put UNSPLASH_KEY --project-name 8k-wallpapers` and
+redeploy. Without the key the feature simply stays off. Demo apps get
+50 requests/hour — the proxy caches every page of results for an hour, so that
+goes a long way; apply for production (5,000/hour) in the Unsplash dashboard
+when traffic grows.
 
 ## Storage limits (Workers KV, free — no card)
 
