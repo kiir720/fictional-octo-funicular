@@ -1,0 +1,10 @@
+# 8K Wallpapers — crawler rules
+# Replace YOUR-DOMAIN below with your real domain (e.g. 8kwallpapers.pages.dev
+# or www.yourdomain.com) after deploying — see CLOUDFLARE-SETUP.md.
+
+User-agent: *
+Allow: /
+# the admin panel must never be indexed (and shouldn't be deployed publicly at all)
+Disallow: /admin.html
+
+Sitemap: https://YOUR-DOMAIN/sitemap.xml

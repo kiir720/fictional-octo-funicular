@@ -8,7 +8,26 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>8K Wallpapers</title>
+<title>8K Wallpapers — Free 4K, 5K &amp; 8K Ultra HD Backgrounds</title>
+<meta name="description" content="Download stunning free wallpapers in 4K, 5K and 8K Ultra HD. Hand-picked backgrounds for desktop, iPhone, Android and tablet — nature, space, abstract, cars, anime and more.">
+<meta name="keywords" content="8k wallpapers, 4k wallpapers, 5k wallpapers, ultra hd backgrounds, free wallpapers, desktop backgrounds, phone wallpapers">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#0c0c0c">
+<!-- Open Graph (Facebook, Pinterest, WhatsApp link previews) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="8K Wallpapers">
+<meta property="og:title" content="8K Wallpapers — Free 4K, 5K &amp; 8K Ultra HD Backgrounds">
+<meta property="og:description" content="Download stunning free wallpapers in 4K, 5K and 8K Ultra HD for desktop, mobile and tablet.">
+<meta property="og:image" content="https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1200&q=80">
+<!-- Twitter / X link previews -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="8K Wallpapers — Free 4K, 5K &amp; 8K Ultra HD Backgrounds">
+<meta name="twitter:description" content="Download stunning free wallpapers in 4K, 5K and 8K Ultra HD for desktop, mobile and tablet.">
+<meta name="twitter:image" content="https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1200&q=80">
+<!-- Google Analytics 4 — paste your Measurement ID (G-XXXXXXXXXX) on both lines and uncomment:
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-XXXXXXXXXX');</script>
+-->
 <script>
   // ===== Image hosting (Supabase Storage) + metadata (GitHub) =====
   // The wallpaper LIST now lives in a plain JSON file on GitHub — no database,
@@ -35,6 +54,32 @@
     return 'https://raw.githubusercontent.com/' + GH_OWNER + '/' + GH_REPO
       + '/' + GH_BRANCH + '/' + GH_FILE + '?t=' + Date.now();
   }
+
+  // ----- SEO: canonical URL, og:url and Schema.org structured data -----
+  // These need the live URL, so they are injected at runtime — correct on any
+  // domain the site is deployed to (Cloudflare Pages, custom domain, …).
+  (function(){
+    if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
+    var url = location.origin + location.pathname;
+    var link = document.createElement('link'); link.rel = 'canonical'; link.href = url;
+    document.head.appendChild(link);
+    var og = document.createElement('meta'); og.setAttribute('property','og:url'); og.content = url;
+    document.head.appendChild(og);
+    var ld = document.createElement('script'); ld.type = 'application/ld+json';
+    ld.textContent = JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: '8K Wallpapers',
+      url: url,
+      description: 'Free 4K, 5K and 8K Ultra HD wallpapers for desktop, mobile and tablet.',
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: url + '#q={search_term_string}',
+        'query-input': 'required name=search_term_string'
+      }
+    });
+    document.head.appendChild(ld);
+  })();
 
   // Flag browsers without CSS custom properties (e.g. IE11) so the stylesheet can
   // supply literal color fallbacks and keep text readable.
@@ -683,6 +728,97 @@
     .section-sub { margin-left: 0; width: 100%; justify-content: space-between; }
     .scrolltop { right: 14px; bottom: 14px; }
   }
+
+  /* ---- theme toggle ---- */
+  .theme-btn {
+    background: var(--glass); border: 1px solid var(--glass-border); color: var(--text);
+    width: 38px; height: 38px; border-radius: 100px; cursor: pointer; font-size: 17px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 0 var(--glass-shine); transition: background 0.2s, transform 0.18s;
+  }
+  .theme-btn:hover { background: var(--glass-strong); transform: translateY(-2px); }
+
+  /* ---- resolution / orientation filter bar ---- */
+  .resbar { display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; padding: 12px 28px 0; }
+  .resbar-lbl { color: var(--muted); font-size: 12.5px; font-weight: 700; letter-spacing: 0.6px; margin-right: 2px; }
+  .res-chip {
+    background: var(--glass); border: 1px solid var(--glass-border); color: var(--text);
+    padding: 7px 15px; border-radius: 100px; font-size: 12.5px; font-weight: 700; cursor: pointer;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 0 var(--glass-shine); transition: background 0.18s, transform 0.18s;
+  }
+  .res-chip:hover { background: var(--glass-strong); transform: translateY(-2px); }
+  .res-chip.active { background: rgba(255,255,255,0.9); color: #111; border-color: rgba(255,255,255,0.9); }
+
+  /* ---- detail info line (views / downloads / date / size) ---- */
+  .meta-info { color: var(--muted); font-size: 13px; font-weight: 600; letter-spacing: 0.2px; }
+
+  /* ---- extra share buttons ---- */
+  .share.cp { background: #52565e; }
+  .share.sh { background: #0aa574; }
+
+  /* ============================================================
+     Light mode — html.light overrides (toggle in the header)
+     ============================================================ */
+  html.light {
+    --glass: rgba(0,0,0,0.05);
+    --glass-strong: rgba(0,0,0,0.1);
+    --glass-border: rgba(0,0,0,0.16);
+    --glass-shine: rgba(255,255,255,0.8);
+    --accent: #16161a;
+    --accent-glow: #16161a;
+    --text: rgba(22,22,26,0.94);
+    --muted: rgba(22,22,26,0.56);
+  }
+  html.light body { background: #f2f2f5; color: var(--text); }
+  html.light .backdrop { background: #e9e9ee; }
+  html.light header, html.light footer {
+    background: rgba(255,255,255,0.78); border-color: rgba(0,0,0,0.12);
+    box-shadow: 0 10px 36px rgba(0,0,0,0.08);
+  }
+  html.light .header-sheen::after, html.light footer::after { display: none; }
+  html.light .hero h1 {
+    background: linear-gradient(100deg, #16161a 10%, #3d3dd8 42%, #c2288f 68%, #16161a 95%);
+    background-size: 220% auto; -webkit-background-clip: text; background-clip: text;
+  }
+  html.light .hero-search { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.14); box-shadow: 0 12px 34px rgba(0,0,0,0.1); }
+  html.light .hero-search button { background: #16161a; color: #fff; }
+  html.light .hero-search button:hover { box-shadow: 0 8px 22px rgba(0,0,0,0.3); }
+  html.light .tag, html.light .tab, html.light .categories-btn, html.light .search,
+  html.light .theme-btn, html.light .res-chip, html.light .policy-back, html.light .detail-back {
+    background: rgba(255,255,255,0.85); border-color: rgba(0,0,0,0.14); color: var(--text); box-shadow: 0 3px 10px rgba(0,0,0,0.07);
+  }
+  html.light .tab.active, html.light .res-chip.active { background: #16161a; border-color: #16161a; color: #fff; }
+  html.light .cat-panel { background: rgba(255,255,255,0.96); }
+  html.light .cat-panel::before { background: rgba(255,255,255,0.96); border-color: rgba(0,0,0,0.16); }
+  html.light .cat-item:hover { background: rgba(0,0,0,0.05); }
+  html.light .cat-item .tip { background: rgba(255,255,255,0.97); color: var(--text); border-color: rgba(0,0,0,0.14); }
+  html.light .card, html.light .rel-card { background: #ffffff; border-color: #dcdce2; box-shadow: 0 4px 14px rgba(0,0,0,0.1); }
+  html.light .card:hover, html.light .rel-card:hover { box-shadow: 0 14px 30px rgba(0,0,0,0.16); }
+  html.light .thumb, html.light .rel-thumb, html.light .detail-stage { background: #e2e2e8; }
+  html.light .thumb .shimmer { background: linear-gradient(100deg, #e4e4ea 30%, #f4f4f8 50%, #e4e4ea 70%); background-size: 200% 100%; }
+  html.light .detail-stage { border-color: rgba(0,0,0,0.14); box-shadow: 0 18px 50px rgba(0,0,0,0.16); }
+  html.light .detail-download { color: var(--text); background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.16); box-shadow: 0 6px 20px rgba(0,0,0,0.09); }
+  html.light .detail-desc, html.light .policy p, html.light .policy li { color: #45484f; }
+  html.light .policy p.lead { color: #33363c; }
+  html.light .detail-res, html.light .related-panel, html.light .poptags-panel {
+    background: rgba(255,255,255,0.75); border-color: rgba(0,0,0,0.1); box-shadow: none;
+  }
+  html.light .res-list { border-color: rgba(0,0,0,0.08); }
+  html.light .res-item { border-color: rgba(0,0,0,0.05); }
+  html.light .res-item:hover { background: rgba(0,0,0,0.04); }
+  html.light .res-dev { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.14); }
+  html.light .scrolltop { background: rgba(255,255,255,0.92); border-color: rgba(0,0,0,0.16); box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
+  html.light .filter-chip { background: rgba(0,0,0,0.07); }
+  html.light .filter-chip .x { background: rgba(0,0,0,0.25); }
+  html.light .section-head .bar { box-shadow: none; }
+  html.light .meta-chip, html.light .tag-chip { background: rgba(0,0,0,0.05); }
+  html.light .policy .contact-card { background: rgba(255,255,255,0.85); border-color: rgba(0,0,0,0.12); box-shadow: none; }
+  html.light .policy .contact-card .row { color: #45484f; }
+  /* the tag cloud uses fixed bright colors tuned for a dark panel; invert the
+     lightness (keeping roughly the same hue) so white/pale tags stay visible */
+  html.light .poptag { filter: invert(1) hue-rotate(180deg); }
 </style>
 </head>
 <body>
@@ -704,6 +840,7 @@
       <input type="text" placeholder="Search" id="searchInput">
       <button>&#9906;</button>
     </div>
+    <button class="theme-btn" id="themeBtn" title="Toggle light / dark mode" aria-label="Toggle light or dark mode">&#9790;</button>
   </div>
 </header>
 
@@ -780,6 +917,7 @@
   </section>
   <div class="tags" id="tags"></div>
   <nav class="tabs" id="tabs"></nav>
+  <div class="resbar" id="resBar"></div>
 
   <div class="section-head">
     <div class="bar"></div>
@@ -791,6 +929,7 @@
   </div>
 
   <main class="grid" id="grid"></main>
+  <div id="gridSentinel" aria-hidden="true" style="height:1px"></div>
 </div>
 
 <div id="policyView" class="policy-view" style="display:none">
@@ -815,12 +954,15 @@
     <div class="detail-meta">
       <div class="meta-row"><span class="meta-lbl">Categories</span><span class="meta-chip" id="dtCatChip"></span></div>
       <div class="meta-row"><span class="meta-lbl">Tags</span><span id="dtTags"></span></div>
+      <div class="meta-row"><span class="meta-lbl">Details</span><span class="meta-info" id="dtInfo"></span></div>
     </div>
     <div class="detail-share">
       <a class="share pin" title="Pinterest"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.137.893 2.739a.36.36 0 0 1 .083.345c-.091.378-.293 1.193-.333 1.36-.052.22-.174.266-.401.16-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.608 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.003 2.349-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z"/></svg></a>
       <a class="share fb" title="Facebook"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
       <a class="share tw" title="Twitter"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.953 4.57a10 10 0 0 1-2.825.775 4.958 4.958 0 0 0 2.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 0 0-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 0 0-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 0 1-2.228-.616v.06a4.923 4.923 0 0 0 3.946 4.827 4.996 4.996 0 0 1-2.212.085 4.936 4.936 0 0 0 4.604 3.417 9.867 9.867 0 0 1-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 0 0 7.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0 0 24 4.59z"/></svg></a>
       <a class="share rd" title="Reddit"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.231-.095z"/></svg></a>
+      <a class="share cp" title="Copy link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a>
+      <a class="share sh" title="Share&hellip;" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></a>
     </div>
     <div class="detail-res">
       <div class="res-bar">
@@ -849,6 +991,7 @@
 
 <footer>
   <nav class="foot-nav">
+    <a href="#" data-policy="about">About</a><span>|</span>
     <a href="#" data-policy="privacy">Privacy</a><span>|</span>
     <a href="#" data-policy="tos">TOS</a><span>|</span>
     <a href="#" data-policy="copyright">Copyright</a><span>|</span>
@@ -941,9 +1084,11 @@ const wallpapers = [
 
 let activeTab = 'RECENT';
 let query = '';
-let activeCat = null;   // active category filter (null = none)
-let activeTag = null;   // active tag filter
-let showFavs = false;   // showing the Saved view
+let activeCat = null;    // active category filter (null = none)
+let activeTag = null;    // active tag filter
+let showFavs = false;    // showing the Saved view
+let activeRes = null;    // resolution filter: '4K' | '5K' | '8K'
+let activeOrient = null; // orientation filter: 'Portrait' | 'Landscape'
 
 // escape text before inserting it into innerHTML
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -957,6 +1102,34 @@ function toggleFav(w){
   const id = favId(w), i = favs.indexOf(id);
   if(i > -1) favs.splice(i,1); else favs.push(id);
   try { localStorage.setItem(FAV_KEY, JSON.stringify(favs)); } catch(e){}
+}
+
+// ---- View / download counters, persisted in this browser. They become global
+// counts once a backend (e.g. a Cloudflare Worker + KV) is added later. ----
+const STATS_KEY = '8kw_stats';
+let stats = (()=>{ try { return JSON.parse(localStorage.getItem(STATS_KEY) || '{}'); } catch(e){ return {}; } })();
+function statOf(w){ return stats[favId(w)] || {v:0, d:0}; }
+function bumpStat(w, key){
+  const id = favId(w), s = stats[id] || (stats[id] = {v:0, d:0});
+  s[key] = (s[key]||0) + 1;
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(e){}
+}
+
+// ---- Resolution metadata: "3840x2160" -> tier (4K/5K/8K) and orientation ----
+function parseResDims(res){
+  const m = String(res||'').match(/(\d+)\s*[x×]\s*(\d+)/i);
+  return m ? {w:+m[1], h:+m[2]} : null;
+}
+function resTier(w){
+  const p = parseResDims(w.res); if(!p) return null;
+  if(p.w >= 7680 || p.h >= 4320) return '8K';
+  if(p.w >= 5120 || p.h >= 2880) return '5K';
+  if(p.w >= 3840 || p.h >= 2160) return '4K';
+  return 'HD';
+}
+function orientOf(w){
+  const p = parseResDims(w.res); if(!p) return null;
+  return p.h > p.w ? 'Portrait' : 'Landscape';
 }
 
 const tagsEl = document.getElementById('tags');
@@ -1054,40 +1227,69 @@ async function downloadSized(name, imgUrl, tw, th){
   }
 }
 
-function render(){
+function makeCard(w){
+  const card=document.createElement('div'); card.className='card';
+  const badge = w._new ? "<span class='admin-badge'>NEW</span>" : "";
+  const heart = "<button class='fav-btn"+(isFav(w)?' is-fav':'')+"' title='Save to favorites'><svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 21s-7.55-4.74-10.05-9.36C.32 8.4 1.96 5 5.2 5c2.04 0 3.3 1.13 4.1 2.32L12 9.6l2.7-2.28C15.5 6.13 16.76 5 18.8 5c3.24 0 4.88 3.4 3.25 6.64C19.55 16.26 12 21 12 21z'/></svg></button>";
+  card.innerHTML = badge + heart
+    + "<div class='thumb'><div class='shimmer'></div>"
+    + "<img alt='"+esc(w.name)+"' loading='lazy' decoding='async'>"
+    + "<div class='hover'><button class='act dl'>&#11245; Download</button>"
+    + "<button class='act exp'>&#9974; Full</button></div></div>"
+    + "<div class='caption'>"+esc(w.name)+"</div>";
+  const thumb=card.querySelector('.thumb'), img=card.querySelector('img');
+  img.onload=()=>{ img.classList.add('loaded'); thumb.classList.add('loaded'); };
+  img.onerror=()=>{ thumb.classList.add('loaded'); };
+  img.src=w.img;
+  if(img.complete && img.naturalWidth){ img.classList.add('loaded'); thumb.classList.add('loaded'); }
+  card.querySelector('.dl').onclick=e=>{ e.stopPropagation(); bumpStat(w,'d'); download(w.name, w.img); };
+  card.querySelector('.exp').onclick=e=>{ e.stopPropagation(); openLightbox(w); };
+  const fb=card.querySelector('.fav-btn');
+  fb.onclick=e=>{ e.stopPropagation(); toggleFav(w); fb.classList.toggle('is-fav', isFav(w)); updateHeroStats(); if(showFavs) render(); };
+  card.onclick=()=>showDetail(w);
+  return card;
+}
+
+// ---- Infinite scroll: cards render in pages as the visitor scrolls down ----
+const PAGE_SIZE = 24;
+const HAS_IO = 'IntersectionObserver' in window;
+let _list = [];   // the currently filtered list
+let _shown = 0;   // how many of _list are on screen
+
+function render(preserveCount){
   const grid=document.getElementById('grid');
   grid.innerHTML='';
-  const list = applyFilters();
-  updateChrome(list.length);
-  if(!list.length){
+  _list = applyFilters();
+  updateChrome(_list.length);
+  if(!_list.length){
+    _shown = 0;
     const msg = showFavs
       ? 'No saved wallpapers yet — tap the &#9829; on any wallpaper to save it here.'
       : 'No wallpapers match your search.';
     grid.innerHTML="<p style='grid-column:1/-1;text-align:center;color:var(--muted);padding:60px 20px'>"+msg+"</p>";
     return;
   }
-  list.forEach(w=>{
-    const card=document.createElement('div'); card.className='card';
-    const badge = w._new ? "<span class='admin-badge'>NEW</span>" : "";
-    const heart = "<button class='fav-btn"+(isFav(w)?' is-fav':'')+"' title='Save to favorites'><svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 21s-7.55-4.74-10.05-9.36C.32 8.4 1.96 5 5.2 5c2.04 0 3.3 1.13 4.1 2.32L12 9.6l2.7-2.28C15.5 6.13 16.76 5 18.8 5c3.24 0 4.88 3.4 3.25 6.64C19.55 16.26 12 21 12 21z'/></svg></button>";
-    card.innerHTML = badge + heart
-      + "<div class='thumb'><div class='shimmer'></div>"
-      + "<img alt='"+esc(w.name)+"' loading='lazy' decoding='async'>"
-      + "<div class='hover'><button class='act dl'>&#11245; Download</button>"
-      + "<button class='act exp'>&#9974; Full</button></div></div>"
-      + "<div class='caption'>"+esc(w.name)+"</div>";
-    const thumb=card.querySelector('.thumb'), img=card.querySelector('img');
-    img.onload=()=>{ img.classList.add('loaded'); thumb.classList.add('loaded'); };
-    img.onerror=()=>{ thumb.classList.add('loaded'); };
-    img.src=w.img;
-    if(img.complete && img.naturalWidth){ img.classList.add('loaded'); thumb.classList.add('loaded'); }
-    card.querySelector('.dl').onclick=e=>{ e.stopPropagation(); download(w.name, w.img); };
-    card.querySelector('.exp').onclick=e=>{ e.stopPropagation(); openLightbox(w); };
-    const fb=card.querySelector('.fav-btn');
-    fb.onclick=e=>{ e.stopPropagation(); toggleFav(w); fb.classList.toggle('is-fav', isFav(w)); updateHeroStats(); if(showFavs) render(); };
-    card.onclick=()=>showDetail(w);
-    grid.appendChild(card);
-  });
+  // On a background refresh (preserveCount) keep the visitor's scroll depth;
+  // without IntersectionObserver just render everything up front.
+  const target = !HAS_IO ? _list.length
+    : preserveCount ? Math.max(PAGE_SIZE, Math.min(_shown, _list.length))
+    : PAGE_SIZE;
+  _shown = 0;
+  appendCards(target);
+}
+function appendCards(n){
+  const grid=document.getElementById('grid');
+  const end = Math.min(_list.length, _shown + n);
+  for(let i=_shown; i<end; i++) grid.appendChild(makeCard(_list[i]));
+  _shown = end;
+}
+if(HAS_IO){
+  const io = new IntersectionObserver(entries=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting && _shown < _list.length) appendCards(PAGE_SIZE);
+    });
+  }, {rootMargin:'900px 0px'});
+  io.observe(document.getElementById('gridSentinel'));
 }
 render();
 
@@ -1096,21 +1298,61 @@ render();
 // ============================================================
 function applyFilters(){
   let list = wallpapers.slice();
-  if(showFavs) return list.filter(isFav);
-  if(query){
-    return list.filter(w =>
+  if(showFavs) list = list.filter(isFav);
+  else if(query){
+    list = list.filter(w =>
       w.name.toLowerCase().includes(query)
       || (w.cat||'').toLowerCase().includes(query)
-      || (w.tags||[]).some(t => String(t).toLowerCase().includes(query)));
+      || (w.tags||[]).some(t => String(t).toLowerCase().includes(query))
+      || String(w.res||'').toLowerCase().includes(query)          // "3840", "2160"…
+      || String(resTier(w)||'').toLowerCase() === query);         // "4k", "8k"…
+  } else {
+    if(activeCat) list = list.filter(w => w.cat === activeCat);
+    if(activeTag) list = list.filter(w => (w.tags||[]).some(t => String(t).toLowerCase() === activeTag.toLowerCase()));
+    if(!activeCat && !activeTag){
+      if(activeTab === 'RANDOM') list = list.slice().sort(()=>Math.random()-0.5);
+      else if(activeTab === 'COLLECTIONS' || activeTab === 'ALL'){ /* show everything */ }
+      else list = list.filter(w => w.tab === activeTab);
+    }
   }
-  if(activeCat) list = list.filter(w => w.cat === activeCat);
-  if(activeTag) list = list.filter(w => (w.tags||[]).some(t => String(t).toLowerCase() === activeTag.toLowerCase()));
-  if(!activeCat && !activeTag){
-    if(activeTab === 'RANDOM') list = list.slice().sort(()=>Math.random()-0.5);
-    else if(activeTab === 'COLLECTIONS' || activeTab === 'ALL'){ /* show everything */ }
-    else list = list.filter(w => w.tab === activeTab);
-  }
+  // resolution / orientation chips refine every view (tabs, search, favorites…)
+  if(activeRes) list = list.filter(w => resTier(w) === activeRes);
+  if(activeOrient) list = list.filter(w => orientOf(w) === activeOrient);
   return list;
+}
+
+// ---- Resolution / orientation filter chips under the tab bar ----
+(function(){
+  const bar = document.getElementById('resBar');
+  if(!bar) return;
+  const lbl = document.createElement('span');
+  lbl.className='resbar-lbl'; lbl.textContent='FILTER:';
+  bar.appendChild(lbl);
+  const groups = [
+    {items:['4K','5K','8K'],            get:()=>activeRes,    set:v=>{ activeRes=v; }},
+    {items:['Portrait','Landscape'],    get:()=>activeOrient, set:v=>{ activeOrient=v; }},
+  ];
+  groups.forEach(g=>{
+    g.items.forEach(item=>{
+      const b=document.createElement('button');
+      b.className='res-chip'; b.textContent=item; b.dataset.val=item;
+      b.onclick=()=>{
+        const wasActive = g.get() === item;
+        g.set(wasActive ? null : item);
+        // one active chip per group
+        g.items.forEach(v=>{
+          const el=bar.querySelector(".res-chip[data-val='"+v+"']");
+          if(el) el.classList.toggle('active', !wasActive && v===item);
+        });
+        render();
+      };
+      bar.appendChild(b);
+    });
+  });
+})();
+function clearResChips(){
+  activeRes=null; activeOrient=null;
+  document.querySelectorAll('#resBar .res-chip').forEach(x=>x.classList.remove('active'));
 }
 
 function resetActiveTabs(){ [...tabsEl.children].forEach(c=>c.classList.remove('active')); }
@@ -1139,6 +1381,7 @@ function showFavorites(btn){
 }
 function clearFilter(){
   activeCat=null; activeTag=null; showFavs=false; query=''; activeTab='RECENT';
+  clearResChips();
   syncSearchInputs(''); resetActiveTabs();
   const rt=[...tabsEl.children].find(x=>x.textContent.includes('RECENT')); if(rt) rt.classList.add('active');
   setTitle('Recent Wallpapers'); render();
@@ -1203,7 +1446,7 @@ function openLightbox(w){
 }
 function closeLightbox(){ lightbox.classList.remove('open'); document.body.style.overflow=''; }
 lightbox.querySelector('.lb-close').onclick=closeLightbox;
-lightbox.querySelector('.lb-dl').onclick=e=>{ e.stopPropagation(); if(_lbWp) download(_lbWp.name, _lbWp.img); };
+lightbox.querySelector('.lb-dl').onclick=e=>{ e.stopPropagation(); if(_lbWp){ bumpStat(_lbWp,'d'); download(_lbWp.name, _lbWp.img); } };
 lightbox.addEventListener('click', e=>{ if(e.target===lightbox) closeLightbox(); });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape' && lightbox.classList.contains('open')) closeLightbox(); });
 
@@ -1224,6 +1467,29 @@ scrollTopBtn.innerHTML="<svg viewBox='0 0 24 24' fill='none' stroke='currentColo
 document.body.appendChild(scrollTopBtn);
 scrollTopBtn.onclick=safeScrollTop;
 window.addEventListener('scroll', ()=>{ scrollTopBtn.classList.toggle('show', window.scrollY>600); }, {passive:true});
+
+// ---- Light / dark mode toggle (persisted; first visit follows the OS setting) ----
+(function(){
+  const KEY='8kw_theme';
+  const btn=document.getElementById('themeBtn');
+  function apply(mode){
+    document.documentElement.classList.toggle('light', mode==='light');
+    if(btn) btn.innerHTML = mode==='light' ? '&#9728;' : '&#9790;';   // sun / moon
+    const tc=document.querySelector('meta[name="theme-color"]');
+    if(tc) tc.content = mode==='light' ? '#f2f2f5' : '#0c0c0c';
+  }
+  let mode=null;
+  try { mode=localStorage.getItem(KEY); } catch(e){}
+  if(mode!=='light' && mode!=='dark'){
+    mode=(window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+  }
+  apply(mode);
+  if(btn) btn.onclick=()=>{
+    mode = (mode==='light') ? 'dark' : 'light';
+    try { localStorage.setItem(KEY, mode); } catch(e){}
+    apply(mode);
+  };
+})();
 
 // ---- Policy pages ----
 const policies = {
@@ -1269,7 +1535,18 @@ const policies = {
     + "<div class='row'><b>Reports</b><span>Use the \"Report Image\" option on any wallpaper for copyright or content concerns.</span></div>"
     + "<div class='row'><b>Response</b><span>We typically reply within 2&ndash;3 business days.</span></div>"
     + "</div>"
-    + "<p style='font-size:13px;color:var(--muted);margin-top:18px'>This is a demo contact page &mdash; the address above is a placeholder.</p>"
+    + "<p style='font-size:13px;color:var(--muted);margin-top:18px'>This is a demo contact page &mdash; the address above is a placeholder.</p>",
+
+  about: "<h1>About</h1>"
+    + "<p class='lead'>8K Wallpapers is a hand-curated gallery of ultra-high-definition backgrounds &mdash; free to download for personal use on desktop, mobile and tablet.</p>"
+    + "<h3>What you'll find here</h3>"
+    + "<ul><li>Wallpapers in resolutions up to 8K (7680&times;4320), organised by category and tag.</li>"
+    + "<li>One-click downloads sized for any device &mdash; Full HD and 4K desktops, ultrawide monitors, iPhone, iPad and Android.</li>"
+    + "<li>New wallpapers added regularly &mdash; check the Recent tab, or save your favorites with the &#9829; button.</li></ul>"
+    + "<h3>Quality first</h3>"
+    + "<p>Every wallpaper is reviewed before it is published. We optimise images so they look sharp on high-DPI displays without wasting your bandwidth.</p>"
+    + "<h3>Get in touch</h3>"
+    + "<p>Spotted a problem, want to request a wallpaper, or have a copyright concern? See the <a href='#' data-policy-link='contact'>Contact</a> page &mdash; we're happy to hear from you.</p>"
 };
 
 const galleryView = document.getElementById('galleryView');
@@ -1295,6 +1572,10 @@ tabs.forEach(t=>{
 
 function showPolicy(key){
   policyBody.innerHTML = policies[key];
+  // links between policy pages (e.g. About -> Contact)
+  policyBody.querySelectorAll('[data-policy-link]').forEach(a=>{
+    a.onclick=(e)=>{ e.preventDefault(); showPolicy(a.getAttribute('data-policy-link')); };
+  });
   galleryView.style.display='none';
   detailView.style.display='none';
   policyView.style.display='block';
@@ -1305,6 +1586,8 @@ function showGallery(){
   policyView.style.display='none';
   detailView.style.display='none';
   galleryView.style.display='block';
+  setHash('');
+  document.title = '8K Wallpapers — Free 4K, 5K & 8K Ultra HD Backgrounds';
   safeScrollTop();
 }
 
@@ -1332,8 +1615,98 @@ tabs.forEach(t=>{
 
 function browseCat(name){ filterByCat(name); }
 
+// ---- Shareable deep links: every wallpaper gets a #w/<slug> URL ----
+function slugOf(w){ return String(w.name||'').replace(/[^a-z0-9]+/gi,'-').replace(/^-+|-+$/g,'').toLowerCase(); }
+function findBySlug(slug){ for(const w of wallpapers){ if(slugOf(w)===slug) return w; } return null; }
+function pageUrlOf(w){
+  // location.origin is the string "null" when opened from a local file
+  return (location.origin && location.origin !== 'null')
+    ? location.origin + location.pathname + '#w/' + slugOf(w)
+    : location.href;
+}
+let _suppressHash = false;
+function setHash(h){
+  _suppressHash = true;
+  if(h) location.hash = h;
+  else if(location.hash) history.replaceState(null, '', location.pathname + location.search);
+  setTimeout(()=>{ _suppressHash = false; }, 0);
+}
+// Open the right view for the current #hash. Returns false when the target
+// wallpaper isn't loaded yet (the GitHub sync retries it after each load).
+function routeFromHash(){
+  const h = decodeURIComponent(location.hash || '');
+  if(h.indexOf('#w/') === 0){
+    const w = findBySlug(h.slice(3));
+    if(w){ showDetail(w); return true; }
+    return false;
+  }
+  if(h.indexOf('#q=') === 0){ showGallery(); runSearch(h.slice(3)); return true; }
+  if(detailView.style.display === 'block') showGallery();
+  return true;
+}
+window.addEventListener('hashchange', ()=>{ if(!_suppressHash) routeFromHash(); });
+// Open a shared link (#w/<slug> or #q=…) on first load. Deferred with a
+// 0-timeout because showDetail touches consts declared further down the script.
+// If the target wallpaper hasn't arrived from GitHub yet, the sync loop
+// retries after each refresh.
+let _pendingRoute = /^#(w\/|q=)/.test(location.hash);
+if(_pendingRoute) setTimeout(()=>{ if(_pendingRoute) _pendingRoute = !routeFromHash(); }, 0);
+
+// point the share buttons at the current wallpaper
+function updateShareLinks(w){
+  const u = encodeURIComponent(pageUrlOf(w));
+  const t = encodeURIComponent(w.name + ' — free 4K/5K/8K wallpaper');
+  const m = encodeURIComponent(w.img);
+  const links = {
+    pin: 'https://www.pinterest.com/pin/create/button/?url='+u+'&media='+m+'&description='+t,
+    fb:  'https://www.facebook.com/sharer/sharer.php?u='+u,
+    tw:  'https://twitter.com/intent/tweet?url='+u+'&text='+t,
+    rd:  'https://www.reddit.com/submit?url='+u+'&title='+t
+  };
+  Object.keys(links).forEach(k=>{
+    const a = document.querySelector('.detail-share .share.'+k);
+    if(a){ a.href = links[k]; a.target = '_blank'; a.rel = 'noopener'; }
+  });
+}
+// copy-link + native share buttons (wired once)
+(function(){
+  const cp = document.querySelector('.detail-share .share.cp');
+  const sh = document.querySelector('.detail-share .share.sh');
+  if(cp) cp.onclick = async (e)=>{
+    e.preventDefault();
+    if(!currentWp) return;
+    const url = pageUrlOf(currentWp);
+    try {
+      await navigator.clipboard.writeText(url);
+      const old = cp.innerHTML; cp.innerHTML = '&#10003;';
+      setTimeout(()=>{ cp.innerHTML = old; }, 1200);
+    } catch(err) { prompt('Copy this link:', url); }
+  };
+  if(sh){
+    if(navigator.share){
+      sh.onclick = (e)=>{
+        e.preventDefault();
+        if(!currentWp) return;
+        navigator.share({ title: currentWp.name + ' — 8K Wallpapers', url: pageUrlOf(currentWp) }).catch(()=>{});
+      };
+    } else { sh.style.display = 'none'; }
+  }
+})();
+
+// best-effort file size of the original image (shown when the host reports it)
+function fmtBytes(n){ return n >= 1048576 ? (n/1048576).toFixed(1)+' MB' : Math.round(n/1024)+' KB'; }
+async function fetchFileSize(url){
+  try {
+    if(!/^https?:/.test(url)) return null;
+    const res = await fetch(url, { method:'HEAD' });
+    const len = +res.headers.get('content-length');
+    return len > 0 ? len : null;
+  } catch(e){ return null; }
+}
+
 function showDetail(w){
   currentWp = w;
+  bumpStat(w, 'v');
   // collapse any open resolution list from a previous wallpaper
   if(typeof resList !== 'undefined' && resList){ resList.classList.remove('open'); resList.innerHTML=''; }
   if(typeof resDevBtns !== 'undefined' && resDevBtns){ resDevBtns.forEach(b=>b.classList.remove('active')); }
@@ -1378,6 +1751,27 @@ function showDetail(w){
     pt.appendChild(a);
   });
 
+  // ---- Details line: views, downloads, upload date, file size ----
+  const st = statOf(w);
+  const parts = [
+    '👁 ' + st.v + ' view' + (st.v===1?'':'s'),
+    '⬇ ' + (st.d||0) + ' download' + ((st.d||0)===1?'':'s')
+  ];
+  if(w.created_at){
+    const d = new Date(w.created_at);
+    if(!isNaN(d)) parts.push('📅 Added ' + d.toLocaleDateString(undefined, {year:'numeric', month:'short', day:'numeric'}));
+  }
+  const info = document.getElementById('dtInfo');
+  info.textContent = parts.join('  •  ');
+  fetchFileSize(w.img).then(len=>{
+    if(len && currentWp === w) info.textContent += '  •  💾 ' + fmtBytes(len);
+  });
+
+  // share buttons, address-bar deep link and page title for this wallpaper
+  updateShareLinks(w);
+  setHash('w/' + slugOf(w));
+  document.title = w.name + ' — 8K Wallpapers';
+
   galleryView.style.display='none';
   policyView.style.display='none';
   detailView.style.display='block';
@@ -1405,7 +1799,7 @@ async function downloadWithFeedback(btn, name, img, width){
 }
 
 document.getElementById('dtDownload').onclick=(e)=>{
-  if(currentWp) downloadWithFeedback(e.currentTarget, currentWp.name, currentWp.img);
+  if(currentWp){ bumpStat(currentWp,'d'); downloadWithFeedback(e.currentTarget, currentWp.name, currentWp.img); }
 };
 document.getElementById('dtReport').onclick=(e)=>{ e.preventDefault(); alert('Thanks — this image has been flagged for review.'); };
 
@@ -1461,6 +1855,7 @@ function buildResList(dev){
       const dim = item.querySelector('.res-dim');
       const orig = dim.textContent;
       item.classList.add('busy'); dim.textContent = 'Preparing '+r.w+'x'+r.h+'\u2026';
+      bumpStat(currentWp,'d');
       try { await downloadSized(currentWp.name, currentWp.img, r.w, r.h); }
       finally { dim.textContent = orig; item.classList.remove('busy'); }
     };
@@ -1489,6 +1884,7 @@ document.getElementById('policyBack').onclick=showGallery;
 function goHome(){
   showGallery();                       // hide detail/policy, show the grid
   activeTab='RECENT'; query=''; activeCat=null; activeTag=null; showFavs=false;
+  clearResChips();
   syncSearchInputs('');
   [...tabsEl.children].forEach(c=>c.classList.remove('active'));
   const recentTab=[...tabsEl.children].find(x=>x.textContent.includes('RECENT'));
@@ -1740,11 +2136,14 @@ document.getElementById('homeLogo').onclick=goHome;
           cat: row.category,
           res: row.resolution,
           tags: row.tags || [],
+          created_at: row.created_at,
           _new: true
         });
         added++; changed++;
       });
-      if(changed) render();   // only repaint when something actually changed
+      if(changed) render(true);   // repaint, keeping the visitor's scroll depth
+      // a shared #w/<slug> link may point at a wallpaper that just arrived
+      if(changed && _pendingRoute) _pendingRoute = !routeFromHash();
       if(data.length === 0){
         setStatus('Connected to GitHub ✓ — no wallpapers published yet.', 'ok');
       } else {
