@@ -29,31 +29,16 @@
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-XXXXXXXXXX');</script>
 -->
 <script>
-  // ===== Image hosting (Supabase Storage) + metadata (GitHub) =====
-  // The wallpaper LIST now lives in a plain JSON file on GitHub — no database,
-  // no Row-Level-Security, no "0 rows" surprises. The image FILES still live in
-  // a public Supabase Storage bucket, which is built to serve large 8K files.
-  const SUPABASE_URL = 'https://vqidoafmudhlnmvohevx.supabase.co';
-  const BUCKET = 'wallpapers';
+  // ===== Wallpaper data: Cloudflare (Pages Functions + R2) =====
+  // Everything lives on the same Cloudflare Pages project as this page: the
+  // LIST at /api/wallpapers and the image FILES at /images/<path>, both backed
+  // by an R2 bucket. No Supabase, no GitHub tokens, no CDN cache lag. When
+  // this page is opened anywhere else (a local file, a dev server), it talks
+  // to the live site instead.
+  const API_BASE = /\.pages\.dev$/.test(location.hostname) ? '' : 'https://8k-wallpapers.pages.dev';
 
-  // ----- GitHub repo that holds wallpapers.json (the "database") -----
-  // Fill these in with YOUR GitHub username + repo, then commit wallpapers.json.
-  const GH_OWNER  = 'kiir720';
-  const GH_REPO   = 'fictional-octo-funicular';
-  const GH_BRANCH = 'main';
-  const GH_FILE   = 'wallpapers.json';
-
-  // Public URL of a stored image, built straight from its storage path. A public
-  // bucket needs no key and no auth to read — so there is nothing to misconfigure.
-  function imageUrl(path){
-    return SUPABASE_URL + '/storage/v1/object/public/' + BUCKET + '/' + encodeURI(path);
-  }
-  // Raw URL of the metadata file on GitHub's CDN, with a cache-buster so polling
-  // sees fresh commits instead of a stale cached copy.
-  function metadataUrl(){
-    return 'https://raw.githubusercontent.com/' + GH_OWNER + '/' + GH_REPO
-      + '/' + GH_BRANCH + '/' + GH_FILE + '?t=' + Date.now();
-  }
+  function imageUrl(path){ return API_BASE + '/images/' + encodeURI(path); }
+  function metadataUrl(){ return API_BASE + '/api/wallpapers'; }
 
   // ----- SEO: canonical URL, og:url and Schema.org structured data -----
   // These need the live URL, so they are injected at runtime — correct on any
@@ -1632,7 +1617,7 @@ function setHash(h){
   setTimeout(()=>{ _suppressHash = false; }, 0);
 }
 // Open the right view for the current #hash. Returns false when the target
-// wallpaper isn't loaded yet (the GitHub sync retries it after each load).
+// wallpaper isn't loaded yet (the data sync retries it after each load).
 function routeFromHash(){
   const h = decodeURIComponent(location.hash || '');
   if(h.indexOf('#w/') === 0){
@@ -1647,7 +1632,7 @@ function routeFromHash(){
 window.addEventListener('hashchange', ()=>{ if(!_suppressHash) routeFromHash(); });
 // Open a shared link (#w/<slug> or #q=…) on first load. Deferred with a
 // 0-timeout because showDetail touches consts declared further down the script.
-// If the target wallpaper hasn't arrived from GitHub yet, the sync loop
+// If the target wallpaper hasn't arrived from the server yet, the sync loop
 // retries after each refresh.
 let _pendingRoute = /^#(w\/|q=)/.test(location.hash);
 if(_pendingRoute) setTimeout(()=>{ if(_pendingRoute) _pendingRoute = !routeFromHash(); }, 0);
@@ -2090,21 +2075,15 @@ document.getElementById('homeLogo').onclick=goHome;
     if(kind==='ok'){ setTimeout(()=>{ _statusEl.style.opacity='0'; }, 4000); }
   }
 
-  // Load the wallpaper list from the GitHub-hosted JSON file (visible to everyone).
+  // Load the wallpaper list from the site's own API (visible to everyone).
   async function loadAdded(){
-    if(GH_OWNER === 'YOUR_GITHUB_USERNAME'){
-      setStatus('Set GH_OWNER / GH_REPO at the top of this file to your GitHub repo — showing the built-in gallery.', '');
-      return;
-    }
     try {
       const res = await fetch(metadataUrl(), { cache: 'no-store' });
-      // A brand-new repo with no wallpapers.json yet returns 404 — treat that as
-      // "nothing published yet" rather than an error, so the built-in gallery stays up.
       if(res.status === 404){
-        setStatus('Connected to GitHub ✓ — no wallpapers.json published yet.', '');
+        setStatus('Connected ✓ — nothing published yet.', '');
         return;
       }
-      if(!res.ok) throw new Error('GitHub returned HTTP ' + res.status);
+      if(!res.ok) throw new Error('The wallpaper server returned HTTP ' + res.status);
       let data = await res.json();
       // Accept either a bare array or a { wallpapers: [...] } wrapper.
       if(!Array.isArray(data)){ data = (data && Array.isArray(data.wallpapers)) ? data.wallpapers : []; }
@@ -2117,7 +2096,7 @@ document.getElementById('homeLogo').onclick=goHome;
       // 1) remove any backend wallpaper that was deleted from the admin
       for(let i = wallpapers.length - 1; i >= 0; i--){
         const w = wallpapers[i];
-        if(w._ref && w._ref.site === 'supabase' && w._ref.path && !serverPaths.has(w._ref.path)){
+        if(w._ref && w._ref.site === 'r2' && w._ref.path && !serverPaths.has(w._ref.path)){
           _seenPaths.delete(w._ref.path);
           wallpapers.splice(i, 1);
           changed++;
@@ -2130,8 +2109,8 @@ document.getElementById('homeLogo').onclick=goHome;
         _seenPaths.add(row.image_path);
         wallpapers.unshift({
           name: row.name,
-          img: imageUrl(row.image_path),   // image still served from Supabase Storage
-          _ref: { site:'supabase', path: row.image_path },
+          img: imageUrl(row.image_path),   // image served from R2 via /images/
+          _ref: { site:'r2', path: row.image_path },
           tab: row.tab,
           cat: row.category,
           res: row.resolution,
@@ -2145,13 +2124,13 @@ document.getElementById('homeLogo').onclick=goHome;
       // a shared #w/<slug> link may point at a wallpaper that just arrived
       if(changed && _pendingRoute) _pendingRoute = !routeFromHash();
       if(data.length === 0){
-        setStatus('Connected to GitHub ✓ — no wallpapers published yet.', 'ok');
+        setStatus('Connected ✓ — no wallpapers published yet.', 'ok');
       } else {
-        setStatus('v4 • Connected ✓  ' + data.length + ' wallpaper(s)' + (added ? (' — added ' + added + ' new') : ' — up to date'), 'ok');
+        setStatus('Connected ✓  ' + data.length + ' wallpaper(s)' + (added ? (' — added ' + added + ' new') : ' — up to date'), 'ok');
       }
     } catch(e){
-      console.warn('Could not load wallpapers.json from GitHub:', e);
-      setStatus('Could not load the wallpaper list from GitHub: ' + (e && e.message ? e.message : e), 'err');
+      console.warn('Could not load the wallpaper list:', e);
+      setStatus('Could not load the wallpaper list: ' + (e && e.message ? e.message : e), 'err');
     }
   }
 
@@ -2176,10 +2155,9 @@ document.getElementById('homeLogo').onclick=goHome;
   function startSync(){
     // initial load
     loadAdded();
-    // GitHub's raw CDN caches a file for up to ~5 minutes, so there's no point polling
-    // faster than that; 60s surfaces new posts within about a minute of the CDN
-    // refreshing, without hammering anything.
-    _setPolling(60000);
+    // the API serves the list with no-store, so new posts show up on the next
+    // poll — 30s keeps the page fresh without hammering the server
+    _setPolling(30000);
     // Re-check on any signal that the page may have missed an update.
     document.addEventListener('visibilitychange', function(){ if(!document.hidden) loadAdded(); });
     window.addEventListener('focus', loadAdded);

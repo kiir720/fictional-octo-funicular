@@ -1,82 +1,70 @@
-# 8K Wallpapers — Cloudflare deployment guide
+# 8K Wallpapers — Cloudflare setup (the whole stack)
 
-The site is static (HTML + a JSON "database" on GitHub + images on Supabase Storage),
-so it deploys to **Cloudflare Pages** for free: global CDN, automatic SSL, DDoS
-protection, and unlimited bandwidth — no server to manage.
+**Live site:** <https://8k-wallpapers.pages.dev>
 
----
+Everything runs on one Cloudflare Pages project — no Supabase, no GitHub tokens:
 
-## 1. Deploy to Cloudflare Pages
-
-1. Push this folder to your GitHub repo (the one from `GITHUB-SETUP.md`),
-   **except `admin.html`** — see step 3.
-2. Sign in at [dash.cloudflare.com](https://dash.cloudflare.com) →
-   **Workers & Pages → Create → Pages → Connect to Git**.
-3. Pick your repo. Build settings: framework preset **None**, build command
-   *(empty)*, output directory `/`. Deploy.
-4. Your site is live at `https://<project>.pages.dev`. The `_redirects` file
-   already serves `wallpapers.html` at the root URL, and `_headers` applies
-   caching + security headers.
-
-Every `git push` after this auto-deploys — that's also your rollback story
-(each deployment is kept and can be restored with one click).
-
-## 2. Custom domain + SSL + CDN
-
-1. In the Pages project → **Custom domains → Add**, enter your domain.
-   If the domain isn't on Cloudflare yet, add it (free plan) and point its
-   nameservers at Cloudflare.
-2. SSL is issued automatically; traffic is served from Cloudflare's CDN edge.
-3. After the domain works, **replace `YOUR-DOMAIN`** in `robots.txt` and
-   `sitemap.xml` with the real domain and push again.
-
-## 3. Keep the admin panel private
-
-`admin.html` writes to GitHub with your token and must not be public:
-
-- **Easiest:** don't commit/deploy `admin.html` at all — keep using it as a
-  local file on your PC (it talks to GitHub + Supabase directly, so it works
-  from anywhere).
-- **Or:** deploy it but protect the path with **Cloudflare Zero Trust → Access →
-  Applications → Add** → path `/admin.html` → policy "Allow only
-  achumkiir@gmail.com" (free for up to 50 users). `robots.txt` already blocks
-  crawlers from it either way.
-
-## 4. Google Analytics + Search Console
-
-1. Create a GA4 property at [analytics.google.com](https://analytics.google.com),
-   copy the Measurement ID (`G-XXXXXXXXXX`).
-2. In `wallpapers.html` `<head>` there is a **commented-out GA4 snippet** —
-   paste your ID on both lines and uncomment it.
-3. At [Google Search Console](https://search.google.com/search-console), add the
-   domain property, verify via the DNS record Cloudflare offers to add for you,
-   then submit `https://your-domain/sitemap.xml`.
-
-## 5. Ads (when ready)
-
-Apply at [Google AdSense](https://adsense.google.com). Approval needs a custom
-domain, the legal pages (already on the site: About / Privacy / TOS / Copyright /
-Contact), and some content + traffic history. Once approved, paste the AdSense
-`<script>` snippet into `wallpapers.html`'s `<head>` next to the GA snippet.
-
-## 6. Security checklist (mostly automatic)
-
-| Item | How it's covered |
+| Piece | Where it lives |
 | --- | --- |
-| SSL | Automatic with Pages / custom domain |
-| DDoS protection | Automatic on every Cloudflare zone |
-| Rate limiting | Dashboard → Security → WAF → Rate limiting rules (free tier: 1 rule) |
-| Bot/CAPTCHA | Security → Bots → Bot Fight Mode (free). Cloudflare Turnstile if you ever add public forms |
-| Security headers | Already set in `_headers` |
-| Admin auth | Supabase login + GitHub token, plus Cloudflare Access (step 3) |
-| Backups | `wallpapers.json` lives in git — full history. Supabase images: enable Storage backups or periodically download the bucket |
+| Public page | `public/wallpapers.html`, served by Cloudflare Pages (CDN + SSL + DDoS included) |
+| API | `functions/` → Pages Functions at `/api/*` and `/images/*` |
+| Wallpaper list | one JSON document in Workers KV (`meta/wallpapers.json`) |
+| Image files | Workers KV (`images/<name>`), served by the site at `/images/<name>` |
+| Admin auth | a single `ADMIN_KEY` secret checked by the API |
+| Admin page | `admin.html` — a LOCAL file on your PC, never deployed (returns 404 on the site) |
 
-## 7. Later upgrades (optional, all Cloudflare)
+## Day-to-day
 
-- **Cloudflare R2** — move images off Supabase Storage to R2 (S3-compatible,
-  zero egress fees) once the library grows; only `imageUrl()` in the two HTML
-  files needs to change.
-- **Cloudflare Images / Image Resizing** — server-side thumbnails and AVIF/WebP
-  variants instead of shipping the original to every visitor.
-- **Workers + KV** — a tiny API to make view/download counters global (they are
-  per-browser today) and to serve a generated sitemap with one URL per wallpaper.
+- **Publish / rename / delete wallpapers:** open `admin.html` locally, sign in with
+  the admin key. Everything appears on the public site within ~30 seconds.
+- **Deploy site changes** (after editing files):
+  `npx wrangler pages deploy --branch main`
+- **Rotate the admin key** (if it ever leaks):
+  `npx wrangler pages secret put ADMIN_KEY --project-name 8k-wallpapers`
+  then paste the new key into `admin.html`'s sign-in screen (old key stops working
+  after the next deploy).
+
+## API quick reference
+
+| Endpoint | Auth | What it does |
+| --- | --- | --- |
+| `GET /api/wallpapers` | public | full wallpaper list (newest first, `no-store`) |
+| `POST /api/wallpapers` | `X-Admin-Key` | add an entry (`name`, `category`, `tab`, `resolution`, `tags`, `image_path`) |
+| `PATCH /api/wallpapers` | `X-Admin-Key` | rename (`image_path`, `name`) |
+| `DELETE /api/wallpapers` | `X-Admin-Key` | remove entry + its stored image |
+| `POST /api/upload?name=…` | `X-Admin-Key` | store raw image bytes, returns `{path}` (max 15 MB) |
+| `POST /api/import` | `X-Admin-Key` | server-side fetch of an Unsplash/Pexels URL into storage |
+| `GET /api/verify` | `X-Admin-Key` | key check used by the admin sign-in |
+| `GET /images/<path>` | public | the image bytes, cached immutable for 1 year |
+
+## Storage limits (Workers KV, free — no card)
+
+- 1 GB total storage (≈ 200–500 wallpapers at 2–5 MB each)
+- 100,000 image/list reads per day, 1,000 writes per day
+- max 25 MB per file
+
+**When the site outgrows KV, move to R2** (needs a payment method on the account;
+free tier is 10 GB + unlimited free downloads): enable R2 in the dashboard,
+`npx wrangler r2 bucket create 8k-wallpapers-media`, swap the three object helpers
+(`putObject` / `getObject` / `deleteObject`) in `functions/api/_utils.js` to the R2
+binding, and replace the `kv_namespaces` block in `wrangler.toml` with an
+`r2_buckets` one. Nothing else changes.
+
+## Custom domain + Google
+
+1. Pages project → **Custom domains → Add** (SSL is automatic). Then update the
+   URLs in `public/robots.txt` and `public/sitemap.xml` and redeploy.
+2. **GA4:** paste your Measurement ID into the commented snippet in
+   `public/wallpapers.html`'s `<head>` and uncomment it.
+3. **Search Console:** verify the domain, submit `/sitemap.xml`.
+4. **AdSense:** apply once there's a custom domain + some traffic; paste its
+   snippet next to the GA one.
+
+## Security notes
+
+- SSL, CDN and DDoS protection are automatic on Pages.
+- Rate limiting / Bot Fight Mode: dashboard → Security (free tier includes both).
+- The admin key never leaves your browser except to the site's own API over HTTPS.
+- Backups: the site code is in git; the wallpaper list + images live in KV —
+  export occasionally with `npx wrangler kv key list/get --namespace-id 2ca57291d77147c998164738214212b1`
+  (or just keep original image files).

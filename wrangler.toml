@@ -1,0 +1,15 @@
+# Cloudflare Pages config for the 8K Wallpapers site.
+# - static site is served from ./public
+# - ./functions provides the API (/api/*, /images/*)
+# - images + the wallpaper list live in the Workers KV namespace below
+#   (KV = no-card free tier: 1 GB storage, 100k reads/day, values up to 25 MB;
+#   if the site outgrows it, swap the object helpers in functions/api/_utils.js
+#   to an R2 bucket — nothing else changes)
+# - the admin key is a secret:  npx wrangler pages secret put ADMIN_KEY --project-name 8k-wallpapers
+name = "8k-wallpapers"
+compatibility_date = "2026-07-01"
+pages_build_output_dir = "public"
+
+[[kv_namespaces]]
+binding = "STORE"
+id = "2ca57291d77147c998164738214212b1"
