@@ -1,2 +1,4 @@
 # Cloudflare Pages redirects — the site root serves the gallery.
-/  /wallpapers.html  200
+# The target is the extensionless "clean URL" (Pages serves wallpapers.html
+# there), so this is a direct 200 rewrite with no redirect hop.
+/  /wallpapers  200

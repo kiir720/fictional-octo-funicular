@@ -33,6 +33,11 @@ deliberate (see `GITHUB-SETUP.md`); revisit only if user accounts/comments are n
 | 28 | Tech stack | ✅ Decided (Cloudflare, see top) |
 | 29 | Future features | 📋 Ideas list — R2, Workers counters, per-wallpaper sitemap, AI search |
 
-**Manual steps left (need your accounts):** deploy to Cloudflare Pages, set the
-custom domain, replace `YOUR-DOMAIN` in `robots.txt`/`sitemap.xml`, uncomment GA4
-with your ID, submit the sitemap in Search Console, apply for AdSense.
+**Deployed 2026-07-02:** live at <https://8k-wallpapers.pages.dev> (Wrangler direct
+upload, project `8k-wallpapers`; admin.html deliberately not deployed).
+Re-deploy after changes with:
+`npx wrangler pages deploy <folder> --project-name 8k-wallpapers --branch main`
+
+**Manual steps left (need your accounts):** optional custom domain (then update
+robots.txt/sitemap.xml URLs), uncomment GA4 with your ID, submit the sitemap in
+Search Console, apply for AdSense.
