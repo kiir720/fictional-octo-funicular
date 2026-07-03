@@ -13,6 +13,9 @@
 <meta name="keywords" content="8k wallpapers, 4k wallpapers, 5k wallpapers, ultra hd backgrounds, free wallpapers, desktop backgrounds, phone wallpapers">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#0f1116">
+<!-- warm up the image CDN connection before the first thumbnail request -->
+<link rel="preconnect" href="https://images.unsplash.com">
+<link rel="dns-prefetch" href="https://images.unsplash.com">
 <!-- Open Graph (Facebook, Pinterest, WhatsApp link previews) -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="8K Wallpapers">
@@ -39,6 +42,14 @@
 
   function imageUrl(path){ return API_BASE + '/images/' + encodeURI(path); }
   function metadataUrl(){ return API_BASE + '/api/wallpapers'; }
+  // Small version of an image for grid cards — the detail/lightbox views load
+  // bigger ones. Published wallpapers get a real thumbnail generated at publish
+  // time; Unsplash-hosted images just ask their CDN for a smaller width.
+  function thumbUrl(w){
+    if(w._ref && w._ref.site === 'r2' && w._ref.path) return API_BASE + '/images/thumbs/' + encodeURI(w._ref.path);
+    if(/[?&]w=\d+/.test(w.img || '')) return w.img.replace(/([?&])w=\d+/, '$1w=480').replace(/q=8\d/, 'q=70');
+    return w.img;
+  }
 
   // ----- SEO: canonical URL, og:url and Schema.org structured data -----
   // These need the live URL, so they are injected at runtime — correct on any
@@ -1340,20 +1351,27 @@ async function downloadSized(name, imgUrl, tw, th){
   }
 }
 
-function makeCard(w){
+function makeCard(w, idx){
   const card=document.createElement('div'); card.className='card';
   const badge = w._new ? "<span class='admin-badge'>NEW</span>" : "";
   const heart = "<button class='fav-btn"+(isFav(w)?' is-fav':'')+"' title='Save to favorites'><svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 21s-7.55-4.74-10.05-9.36C.32 8.4 1.96 5 5.2 5c2.04 0 3.3 1.13 4.1 2.32L12 9.6l2.7-2.28C15.5 6.13 16.76 5 18.8 5c3.24 0 4.88 3.4 3.25 6.64C19.55 16.26 12 21 12 21z'/></svg></button>";
+  // the first row of cards paints immediately with high priority; the rest lazy-load
+  const eager = typeof idx === 'number' && idx < 8;
   card.innerHTML = badge + heart
     + "<div class='thumb'><div class='shimmer'></div>"
-    + "<img alt='"+esc(w.name)+"' loading='lazy' decoding='async'>"
+    + "<img alt='"+esc(w.name)+"' loading='"+(eager?'eager':'lazy')+"'"+(eager?" fetchpriority='high'":"")+" decoding='async'>"
     + "<div class='hover'><button class='act dl'>&#11245; Download</button>"
     + "<button class='act exp'>&#9974; Full</button></div></div>"
     + "<div class='caption'>"+esc(w.name)+"</div>";
   const thumb=card.querySelector('.thumb'), img=card.querySelector('img');
   img.onload=()=>{ img.classList.add('loaded'); thumb.classList.add('loaded'); };
-  img.onerror=()=>{ thumb.classList.add('loaded'); };
-  img.src=w.img;
+  let triedFull = false;
+  img.onerror=()=>{
+    // no stored thumbnail (older posts): fall back to the full image once
+    if(!triedFull && w.img){ triedFull = true; img.src = w.img; return; }
+    thumb.classList.add('loaded');
+  };
+  img.src = thumbUrl(w);
   if(img.complete && img.naturalWidth){ img.classList.add('loaded'); thumb.classList.add('loaded'); }
   card.querySelector('.dl').onclick=e=>{ e.stopPropagation(); bumpStat(w,'d'); trackUnsplash(w); download(w.name, w.img); };
   card.querySelector('.exp').onclick=e=>{ e.stopPropagation(); openLightbox(w); };
@@ -1399,7 +1417,7 @@ function render(preserveCount){
 function appendCards(n){
   const grid=document.getElementById('grid');
   const end = Math.min(_list.length, _shown + n);
-  for(let i=_shown; i<end; i++) grid.appendChild(makeCard(_list[i]));
+  for(let i=_shown; i<end; i++) grid.appendChild(makeCard(_list[i], i));
   _shown = end;
 }
 

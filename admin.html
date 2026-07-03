@@ -63,6 +63,16 @@
     if(!res.ok) throw await apiError(res, 'Image import failed');
     return (await res.json()).path;
   }
+  // Upload the small grid thumbnail for an already-stored image.
+  async function apiUploadThumb(blob, forPath){
+    const res = await fetch(API_BASE + '/api/upload?thumb=' + encodeURIComponent(forPath), {
+      method: 'POST',
+      headers: apiHeaders({ 'Content-Type': 'image/jpeg' }),
+      body: blob
+    });
+    if(!res.ok) throw await apiError(res, 'Thumbnail upload failed');
+    return true;
+  }
   // Add / rename / delete entries in the wallpaper list.
   async function apiAdd(row){
     const res = await fetch(API_BASE + '/api/wallpapers', {
@@ -1637,6 +1647,28 @@ document.getElementById('homeLogo').onclick=goHome;
     elPrev.innerHTML=''; elPrev.textContent='Image preview appears here'; setMsg('');
   }
 
+  // Downscale an image (Blob or URL) to a ~640px-wide JPEG for grid thumbnails.
+  async function makeThumbBlob(src){
+    const isBlob = (typeof Blob !== 'undefined') && (src instanceof Blob);
+    const objUrl = isBlob ? URL.createObjectURL(src) : null;
+    try {
+      const img = await new Promise((resolve, reject)=>{
+        const im = new Image();
+        if(!isBlob) im.crossOrigin = 'anonymous';
+        im.onload = ()=>resolve(im);
+        im.onerror = reject;
+        im.src = objUrl || src;
+      });
+      if(!img.width) return null;
+      const w = Math.min(640, img.width);
+      const h = Math.max(1, Math.round(img.height * (w / img.width)));
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      if(!c.toBlob) return null;
+      return await new Promise(r=>c.toBlob(r, 'image/jpeg', 0.78));
+    } finally { if(objUrl) URL.revokeObjectURL(objUrl); }
+  }
+
   async function addWallpaper(){
     const name = elName.value.trim();
     if(!name){ setMsg('Please enter a name for the wallpaper.', 'err'); elName.focus(); return; }
@@ -1658,6 +1690,17 @@ document.getElementById('homeLogo').onclick=goHome;
         setMsg('Importing image…', 'ok');
         path = await apiImport(buildUrl(ref, 2400), name);
       }
+
+      // 1.5) small grid thumbnail so the public site loads fast. Best-effort:
+      //      the grid falls back to the full image if this step fails.
+      try {
+        setMsg('Creating thumbnail…', 'ok');
+        const src = (uploadedDataUrl && elFile.files && elFile.files[0])
+          ? elFile.files[0]
+          : API_BASE + '/images/' + encodeURI(path);
+        const tb = await makeThumbBlob(src);
+        if(tb) await apiUploadThumb(tb, path);
+      } catch(e){ console.warn('Thumbnail skipped:', e); }
 
       // 2) record it in the wallpaper list
       setMsg('Publishing…', 'ok');

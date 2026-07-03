@@ -33,6 +33,7 @@ Everything runs on one Cloudflare Pages project — no Supabase, no GitHub token
 | `PATCH /api/wallpapers` | `X-Admin-Key` | rename (`image_path`, `name`) |
 | `DELETE /api/wallpapers` | `X-Admin-Key` | remove entry + its stored image |
 | `POST /api/upload?name=…` | `X-Admin-Key` | store raw image bytes, returns `{path}` (max 15 MB) |
+| `POST /api/upload?thumb=<path>` | `X-Admin-Key` | store the small grid thumbnail for an existing image (admin makes one automatically at publish) |
 | `POST /api/import` | `X-Admin-Key` | server-side fetch of an Unsplash/Pexels URL into storage |
 | `GET /api/verify` | `X-Admin-Key` | key check used by the admin sign-in |
 | `GET /images/<path>` | public | the image bytes, cached immutable for 1 year |

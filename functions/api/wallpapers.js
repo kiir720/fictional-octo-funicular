@@ -49,6 +49,7 @@ export async function onRequest({ request, env }){
     if(next.length === list.length) return cors(json({ error: 'not found' }, 404));
     await writeList(env, next);
     try { await deleteObject(env, 'images/' + b.image_path); } catch(e){ /* best-effort */ }
+    try { await deleteObject(env, 'images/thumbs/' + b.image_path); } catch(e){ /* best-effort */ }
     return cors(json({ ok: true }));
   }
 
