@@ -1456,9 +1456,10 @@ async function loadMoreUnsplash(){
       _usPage = page;
       const raw = (data && data.photos) || [];
       if(!raw.length){ _usDone = true; return; }          // no more results
+      const cap = s => String(s).replace(/\b\w/g, c => c.toUpperCase());
       const mapped = raw.filter(p => !_usSeen.has(p.id)).map(p => {
         _usSeen.add(p.id);
-        return {
+        const w = {
           name: p.name, img: p.img,
           tab: activeTab, cat: activeCat || 'Photos',
           res: (p.width && p.height) ? (p.width + 'x' + p.height) : '',
@@ -1466,6 +1467,22 @@ async function loadMoreUnsplash(){
           _ref: { site: 'unsplash', id: p.id },
           _unsplash: { author: p.author, authorLink: p.authorLink, photoLink: p.photoLink, download: p.download }
         };
+        // real Unsplash tags when the API ever sends them; otherwise build
+        // tags from the photo's description plus the browsing context
+        if(Array.isArray(p.tags) && p.tags.length){
+          w.tags = p.tags.map(cap);
+        } else {
+          const stop = /^(the|and|with|under|over|near|from|into|onto|during|photo|photography|image|picture|view|shot|close|closeup|background|wallpaper|untitled|there|this|that|some|between|behind|above|below|next|beside|front|during|while|against)$/i;
+          String(p.name || '').split(/[^a-zA-Z]+/).forEach(word=>{
+            if(word.length >= 3 && !stop.test(word) && w.tags.length < 4
+               && !w.tags.some(t => t.toLowerCase() === word.toLowerCase())) w.tags.push(cap(word));
+          });
+          if(params.q && !w.tags.some(t => t.toLowerCase() === params.q.toLowerCase())) w.tags.push(cap(params.q));
+          const t = resTier(w); if(t && t !== 'HD') w.tags.push(t);
+          const o = orientOf(w); if(o) w.tags.push(o);
+          w.tags.push('Unsplash');
+        }
+        return w;
       }).filter(w => (!activeRes || resTier(w) === activeRes) && (!activeOrient || orientOf(w) === activeOrient));
       if(!mapped.length) continue;                        // page filtered out — try the next one
       if(_shown === 0) document.getElementById('grid').innerHTML = '';   // replace "no matches"

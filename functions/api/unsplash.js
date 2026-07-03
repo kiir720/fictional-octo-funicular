@@ -53,7 +53,9 @@ export async function onRequest(context){
     author: p.user && p.user.name,
     authorLink: p.user && p.user.links && p.user.links.html,
     photoLink: p.links && p.links.html,
-    download: p.links && p.links.download_location
+    download: p.links && p.links.download_location,
+    // search results carry real tags; the browse feed usually doesn't
+    tags: Array.isArray(p.tags) ? p.tags.map(t => t && t.title).filter(Boolean).slice(0, 8) : []
   })).filter(p => p.img);
 
   const res = json({ photos, page }, { headers: { 'cache-control': 'public, max-age=3600' } });
