@@ -1404,6 +1404,7 @@ function render(preserveCount){
       ? 'No saved wallpapers yet — tap the &#9829; on any wallpaper to save it here.'
       : 'No wallpapers match your search.';
     grid.innerHTML="<p style='grid-column:1/-1;text-align:center;color:var(--muted);padding:60px 20px'>"+msg+"</p>";
+    scheduleAutoLoad();   // Unsplash can still fill an empty search view
     return;
   }
   // On a background refresh (preserveCount) keep the visitor's scroll depth;
@@ -1413,6 +1414,7 @@ function render(preserveCount){
     : PAGE_SIZE;
   _shown = 0;
   appendCards(target);
+  scheduleAutoLoad();   // top up if the sentinel is already on screen
 }
 function appendCards(n){
   const grid=document.getElementById('grid');
@@ -1492,8 +1494,35 @@ async function loadMoreUnsplash(){
       updateChrome(_list.length);
       return;
     }
+    // three pages in a row fell to the res/orientation filter — stop here so a
+    // background retry loop can't burn through the Unsplash rate limit
+    _usDone = true;
   } catch(e){ /* network hiccup — the next scroll retries */ }
-  finally { _usLoading = false; }
+  finally {
+    _usLoading = false;
+    // if the view changed while this request was in flight (fast typing), the
+    // response was discarded — check again for the view that's on screen now
+    scheduleAutoLoad();
+  }
+}
+
+// The IntersectionObserver only reports CHANGES — if a search shrinks the grid
+// while the sentinel is already on screen, no event fires and the view would
+// never fill. So after every render (debounced, so typing doesn't spam the
+// API) actively check whether the visible view needs more content.
+let _kickTimer = null;
+function scheduleAutoLoad(){
+  clearTimeout(_kickTimer);
+  _kickTimer = setTimeout(maybeLoadMore, 350);
+}
+function maybeLoadMore(){
+  if(!HAS_IO) return;   // legacy browsers render everything up front
+  const s = document.getElementById('gridSentinel');
+  if(!s || document.getElementById('galleryView').style.display === 'none') return;
+  const r = s.getBoundingClientRect();
+  if(r.top > innerHeight + 900) return;   // sentinel far below — wait for scroll
+  if(_shown < _list.length) appendCards(PAGE_SIZE);
+  else loadMoreUnsplash();
 }
 
 if(HAS_IO){
