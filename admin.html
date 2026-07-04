@@ -313,6 +313,40 @@
   .stat-row .sr-count { width: 34px; text-align: right; font-weight: 700; color: var(--muted); }
   .stat-note { margin-top: 18px; font-size: 12px; color: var(--muted); line-height: 1.55; }
 
+  /* ---- bulk upload modal ---- */
+  .bulk-modal { max-width: 720px; }
+  .bulk-queue { margin-top: 6px; display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; }
+  .bulk-queue:empty::after {
+    content: 'Selected images will be listed here.'; color: rgba(255,255,255,0.35);
+    font-size: 13px; display: block; text-align: center; padding: 22px 0;
+  }
+  .bulk-item {
+    display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 10px;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+  }
+  .bulk-thumb {
+    width: 62px; height: 40px; flex-shrink: 0; border-radius: 6px; object-fit: cover;
+    background: rgba(255,255,255,0.08) center/cover no-repeat;
+  }
+  .bulk-mid { flex: 1; min-width: 0; }
+  .bulk-name {
+    width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 7px; color: var(--text); padding: 7px 9px; font-size: 13px; font-family: inherit; outline: none;
+  }
+  .bulk-name:focus { border-color: rgba(126,226,154,0.5); }
+  .bulk-sub { font-size: 11px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bulk-state { flex-shrink: 0; width: 24px; text-align: center; font-size: 15px; }
+  .bulk-state.err { color: #ff8080; }
+  .bulk-state.ok { color: #7ee29a; }
+  .bulk-del {
+    flex-shrink: 0; background: none; border: none; color: var(--muted); font-size: 20px; line-height: 1;
+    cursor: pointer; padding: 0 4px; transition: color 0.15s;
+  }
+  .bulk-del:hover { color: #ff8080; }
+  .bulk-progress { height: 6px; border-radius: 4px; background: rgba(255,255,255,0.1); overflow: hidden; margin: 12px 0 4px; display: none; }
+  .bulk-progress.show { display: block; }
+  .bulk-progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #7ee29a, #3aa0ff); transition: width 0.25s; }
+
   /* ---- Admin login gate ---- */
   .lock-screen {
     position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center; padding: 24px;
@@ -759,6 +793,7 @@
       </div>
     </div>
     <button class="admin-btn" id="adminBtn" title="Add wallpaper">+</button>
+    <button class="admin-export-btn" id="bulkBtn" title="Add many wallpapers at once">&#9776; Bulk add</button>
     <button class="admin-export-btn" id="exportBtn" title="Export wallpapers for the public site">&#8681; Export</button>
     <button class="admin-export-btn" id="statsBtn" title="Library statistics">&#128202; Stats</button>
     <button class="admin-export-btn" id="signoutBtn" title="Sign out and change the admin key">&#8631; Sign out</button>
@@ -826,6 +861,56 @@
         <button class="admin-cancel" id="afCancel">Cancel</button>
       </div>
       <div class="admin-msg" id="afMsg"></div>
+    </div>
+  </div>
+</div>
+
+<div class="admin-overlay" id="bulkOverlay">
+  <div class="admin-modal bulk-modal">
+    <div class="admin-mhead">
+      <h3>&#9776; Bulk Add Wallpapers</h3>
+      <button class="admin-close" id="bulkClose">&times;</button>
+    </div>
+    <div class="admin-body">
+      <div class="admin-field">
+        <label>Choose images from your computer</label>
+        <button type="button" class="admin-upload" id="bkUploadBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+          <span id="bkUploadLabel">Select multiple images…</span>
+        </button>
+        <input type="file" id="bkFiles" accept="image/*" multiple hidden>
+        <div class="admin-hint">Pick several JPG, PNG, or WebP files at once. Each name defaults from its filename; edit any of them below. Resolution is detected automatically.</div>
+      </div>
+
+      <div class="admin-or"><span>shared settings for all</span></div>
+
+      <div class="admin-row2">
+        <div class="admin-field">
+          <label>Category</label>
+          <select id="bkCat"></select>
+        </div>
+        <div class="admin-field">
+          <label>Tab</label>
+          <select id="bkTab">
+            <option value="RECENT">Recent</option>
+            <option value="POPULAR">Popular</option>
+            <option value="FEATURED">Featured</option>
+          </select>
+        </div>
+      </div>
+      <div class="admin-field">
+        <label>Tags for all (comma-separated)</label>
+        <input type="text" id="bkTags" placeholder="Space, Stars, Dark, 4K">
+      </div>
+
+      <div class="bulk-queue" id="bkQueue"></div>
+      <div class="bulk-progress" id="bkProgress"><i></i></div>
+
+      <div class="admin-actions">
+        <button class="admin-submit" id="bkSubmit">Publish all</button>
+        <button class="admin-cancel" id="bkCancel">Cancel</button>
+      </div>
+      <div class="admin-msg" id="bkMsg"></div>
     </div>
   </div>
 </div>
@@ -1731,6 +1816,159 @@ document.getElementById('homeLogo').onclick=goHome;
     } finally {
       submitBtn.disabled = false;
     }
+  }
+
+  // ============ Bulk add: many wallpapers in one go ============
+  const bulkOverlay = document.getElementById('bulkOverlay');
+  const bkFiles = document.getElementById('bkFiles');
+  const bkUploadBtn = document.getElementById('bkUploadBtn');
+  const bkUploadLabel = document.getElementById('bkUploadLabel');
+  const bkCat = document.getElementById('bkCat');
+  const bkTab = document.getElementById('bkTab');
+  const bkTags = document.getElementById('bkTags');
+  const bkQueueEl = document.getElementById('bkQueue');
+  const bkProgress = document.getElementById('bkProgress');
+  const bkSubmit = document.getElementById('bkSubmit');
+  const bkMsg = document.getElementById('bkMsg');
+  let bulkItems = [];        // { file, name, w, h, objUrl, row, nameInput, stateEl, done }
+  let bulkBusy = false;
+
+  categories.slice().sort().forEach(c=>{
+    const o=document.createElement('option'); o.value=c; o.textContent=c; bkCat.appendChild(o);
+  });
+  bkCat.value = 'Abstract';
+
+  function setBkMsg(text, kind){ bkMsg.textContent = text; bkMsg.className = 'admin-msg ' + (kind||''); }
+  function titleFromFile(fn){ return fn.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase()).trim(); }
+
+  function addBulkFiles(fileList){
+    const files = Array.prototype.slice.call(fileList || []);
+    let skipped = 0;
+    files.forEach(file=>{
+      if(!file.type.startsWith('image/')){ skipped++; return; }
+      const objUrl = URL.createObjectURL(file);
+      const item = { file, name: titleFromFile(file.name), w: 0, h: 0, objUrl, done: false };
+
+      const row = document.createElement('div'); row.className = 'bulk-item';
+      const thumb = document.createElement('img'); thumb.className = 'bulk-thumb'; thumb.alt = '';
+      const mid = document.createElement('div'); mid.className = 'bulk-mid';
+      const nameInput = document.createElement('input'); nameInput.className = 'bulk-name'; nameInput.value = item.name;
+      nameInput.oninput = ()=>{ item.name = nameInput.value; };
+      const sub = document.createElement('div'); sub.className = 'bulk-sub';
+      const oversize = file.size > 15 * 1024 * 1024;
+      sub.textContent = file.name + ' • ' + Math.round(file.size/1024) + ' KB' + (oversize ? ' • too large (max 15 MB)' : '');
+      const stateEl = document.createElement('div'); stateEl.className = 'bulk-state' + (oversize ? ' err' : '');
+      stateEl.textContent = oversize ? '!' : '';
+      const del = document.createElement('button'); del.className = 'bulk-del'; del.title = 'Remove'; del.innerHTML = '&times;';
+      del.onclick = ()=>{ if(bulkBusy) return; removeBulkItem(item); };
+
+      thumb.onload = ()=>{ item.w = thumb.naturalWidth; item.h = thumb.naturalHeight;
+        if(item.w) sub.textContent = file.name + ' • ' + item.w + '×' + item.h + (oversize ? ' • too large (max 15 MB)' : ''); };
+      thumb.src = objUrl;
+
+      mid.appendChild(nameInput); mid.appendChild(sub);
+      row.appendChild(thumb); row.appendChild(mid); row.appendChild(stateEl); row.appendChild(del);
+      bkQueueEl.appendChild(row);
+
+      item.row = row; item.nameInput = nameInput; item.stateEl = stateEl; item.subEl = sub; item.oversize = oversize;
+      bulkItems.push(item);
+    });
+    bkFiles.value = '';   // allow re-picking the same files later
+    updateBulkChrome(skipped);
+  }
+  function removeBulkItem(item){
+    const i = bulkItems.indexOf(item);
+    if(i > -1) bulkItems.splice(i, 1);
+    if(item.objUrl) URL.revokeObjectURL(item.objUrl);
+    if(item.row && item.row.parentNode) item.row.parentNode.removeChild(item.row);
+    updateBulkChrome(0);
+  }
+  function updateBulkChrome(skipped){
+    const n = bulkItems.length;
+    bkUploadLabel.textContent = n ? (n + ' image' + (n===1?'':'s') + ' selected — add more…') : 'Select multiple images…';
+    bkUploadBtn.classList.toggle('has-file', n > 0);
+    bkSubmit.textContent = n > 1 ? ('Publish all ' + n) : 'Publish';
+    if(skipped) setBkMsg(skipped + ' non-image file' + (skipped===1?'':'s') + ' skipped.', 'err');
+    else if(n) setBkMsg('');
+  }
+
+  async function publishOne(item){
+    const name = (item.name || '').trim() || titleFromFile(item.file.name);
+    // 1) upload the original
+    const path = await apiUpload(item.file, item.file.name);
+    // 1.5) grid thumbnail (best-effort)
+    try { const tb = await makeThumbBlob(item.file); if(tb) await apiUploadThumb(tb, path); }
+    catch(e){ console.warn('Thumbnail skipped:', e); }
+    // 2) record it
+    const tags = bkTags.value.split(',').map(t=>t.trim()).filter(Boolean);
+    const resolution = (item.w && item.h) ? (item.w + 'x' + item.h) : '3840x2160';
+    const entry = await apiAdd({
+      name, category: bkCat.value, tab: bkTab.value,
+      resolution, tags: tags.length ? tags : ['Wallpaper'], image_path: path
+    });
+    // 3) show locally right away
+    wallpapers.unshift({
+      name, img: imageUrl(path), _ref:{site:'r2', path},
+      tab: bkTab.value, cat: bkCat.value, res: resolution,
+      tags: tags.length ? tags : ['Wallpaper'],
+      created_at: (entry && entry.created_at) || new Date().toISOString(), _new:true
+    });
+    _seenPaths.add(path);
+  }
+
+  async function publishBulk(){
+    const pending = bulkItems.filter(it => !it.done && !it.oversize);
+    if(!pending.length){ setBkMsg('Add some images first (oversize files can’t be published).', 'err'); return; }
+    bulkBusy = true; bkSubmit.disabled = true; bkUploadBtn.disabled = true;
+    bkProgress.classList.add('show'); const bar = bkProgress.querySelector('i');
+    let done = 0, ok = 0, failed = 0;
+    for(const item of pending){
+      item.stateEl.className = 'bulk-state'; item.stateEl.textContent = '⏳';
+      item.nameInput.disabled = true;
+      try {
+        await publishOne(item);
+        item.done = true; ok++;
+        item.stateEl.className = 'bulk-state ok'; item.stateEl.textContent = '✓';
+      } catch(err){
+        console.error(err); failed++;
+        item.stateEl.className = 'bulk-state err'; item.stateEl.textContent = '✕';
+        item.subEl.textContent = 'Failed: ' + (err.message || 'error');
+        item.nameInput.disabled = false;
+      }
+      done++; bar.style.width = Math.round(done / pending.length * 100) + '%';
+      setBkMsg('Published ' + ok + ' of ' + pending.length + (failed ? (' — ' + failed + ' failed') : '') + '…', failed ? 'err' : 'ok');
+    }
+    render(); goHome();
+    bulkBusy = false; bkSubmit.disabled = false; bkUploadBtn.disabled = false;
+    if(!failed){
+      setBkMsg('Published all ' + ok + ' wallpaper' + (ok===1?'':'s') + '! They’re live for everyone.', 'ok');
+      setTimeout(()=>{ closeBulk(); resetBulk(); }, 1200);
+    } else {
+      setBkMsg('Published ' + ok + ', ' + failed + ' failed. Fix the names/files and press Publish again to retry the failed ones.', 'err');
+      bkProgress.classList.remove('show'); bar.style.width = '0';
+    }
+  }
+
+  function resetBulk(){
+    bulkItems.forEach(it=>{ if(it.objUrl) URL.revokeObjectURL(it.objUrl); });
+    bulkItems = []; bkQueueEl.innerHTML = ''; bkTags.value = '';
+    bkCat.value = 'Abstract'; bkTab.value = 'RECENT';
+    bkProgress.classList.remove('show'); bkProgress.querySelector('i').style.width = '0';
+    setBkMsg(''); updateBulkChrome(0);
+  }
+  function openBulk(){ bulkOverlay.classList.add('open'); }
+  function closeBulk(){ if(bulkBusy) return; bulkOverlay.classList.remove('open'); }
+
+  bkUploadBtn.onclick = ()=> bkFiles.click();
+  bkFiles.addEventListener('change', ()=> addBulkFiles(bkFiles.files));
+  bkSubmit.onclick = publishBulk;
+  bkCancel_wire();
+  function bkCancel_wire(){
+    document.getElementById('bkCancel').onclick = ()=>{ if(bulkBusy) return; closeBulk(); resetBulk(); };
+    document.getElementById('bulkClose').onclick = closeBulk;
+    document.getElementById('bulkBtn').onclick = openBulk;
+    bulkOverlay.addEventListener('click', e=>{ if(e.target===bulkOverlay) closeBulk(); });
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape' && bulkOverlay.classList.contains('open')) closeBulk(); });
   }
 
   // ---- load published wallpapers from the site's API ----
