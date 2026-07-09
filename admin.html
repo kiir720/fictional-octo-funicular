@@ -879,7 +879,7 @@
           <span id="bkUploadLabel">Select multiple images…</span>
         </button>
         <input type="file" id="bkFiles" accept="image/*" multiple hidden>
-        <div class="admin-hint">Pick several JPG, PNG, or WebP files at once. Each name defaults from its filename; edit any of them below. Resolution is detected automatically.</div>
+        <div class="admin-hint">Pick several JPG, PNG, or WebP files at once. Each name defaults from its filename; edit any of them below. Resolution is detected automatically, and tags are suggested from each image on-device.</div>
       </div>
 
       <div class="admin-or"><span>shared settings for all</span></div>
@@ -1683,7 +1683,11 @@ document.getElementById('homeLogo').onclick=goHome;
       if(!ref){ elPrev.innerHTML=''; elPrev.textContent = elUrl.value ? 'Could not read an Unsplash or Pexels ID from that' : 'Image preview appears here'; return; }
       const url = buildUrl(ref, 800);
       const img = new Image();
-      img.onload = ()=>{ elPrev.innerHTML=''; elPrev.appendChild(img); setMsg('Detected '+(ref.site==='pexels'?'Pexels':'Unsplash')+' image \u2713', 'ok'); };
+      img.onload = ()=>{
+        elPrev.innerHTML=''; elPrev.appendChild(img);
+        setMsg('Detected '+(ref.site==='pexels'?'Pexels':'Unsplash')+' image \u2713', 'ok');
+        suggestTagsInto(elTags, url);   // on-device tag suggestions for the pasted photo
+      };
       img.onerror = ()=>{ elPrev.innerHTML=''; elPrev.textContent='Preview failed to load (the ID may be invalid)'; };
       img.src = url; img.alt='preview';
     }, 400);
@@ -1710,6 +1714,8 @@ document.getElementById('homeLogo').onclick=goHome;
         elName.value = file.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
       }
       setMsg('Image ready to add \u2713', 'ok');
+      // analyze the image on-device and suggest tags (fills only an empty field)
+      suggestTagsInto(elTags, file);
     };
     reader.onerror = ()=> setMsg('Could not read that file.', 'err');
     reader.readAsDataURL(file);
@@ -1722,7 +1728,7 @@ document.getElementById('homeLogo').onclick=goHome;
 
   function setMsg(text, kind){ elMsg.textContent=text; elMsg.className='admin-msg '+(kind||''); }
 
-  function openAdmin(){ overlay.classList.add('open'); setTimeout(()=>elUrl.focus(),50); }
+  function openAdmin(){ overlay.classList.add('open'); setTimeout(()=>elUrl.focus(),50); getTagModel().catch(()=>{}); }
   function closeAdmin(){ overlay.classList.remove('open'); }
 
   function resetForm(){
@@ -1752,6 +1758,120 @@ document.getElementById('homeLogo').onclick=goHome;
       if(!c.toBlob) return null;
       return await new Promise(r=>c.toBlob(r, 'image/jpeg', 0.78));
     } finally { if(objUrl) URL.revokeObjectURL(objUrl); }
+  }
+
+  // ============ Auto-tagging: analyze images on-device ============
+  // A small MobileNet classifier (TensorFlow.js, lazy-loaded from the CDN on
+  // first use) suggests subject tags, and a quick canvas pass adds brightness
+  // and dominant-color tags. Nothing leaves this browser — analysis runs
+  // locally. If the CDN or model can't load, color tags still work alone.
+  let _tagLibPromise = null;
+  function _loadScript(src){
+    return new Promise((resolve, reject)=>{
+      const s = document.createElement('script');
+      s.src = src; s.onload = resolve; s.onerror = ()=>reject(new Error('Could not load ' + src));
+      document.head.appendChild(s);
+    });
+  }
+  function getTagModel(){
+    if(!_tagLibPromise){
+      _tagLibPromise = (async ()=>{
+        if(!window.tf) await _loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js');
+        if(!window.mobilenet) await _loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js');
+        return await window.mobilenet.load({ version: 2, alpha: 0.5 });
+      })();
+      _tagLibPromise.catch(()=>{ _tagLibPromise = null; });   // a later attempt may retry
+    }
+    return _tagLibPromise;
+  }
+
+  // Draw any image source (File/Blob or URL) onto a 224px analysis canvas
+  // (cover-fit center crop — the classifier's expected input shape).
+  async function analysisCanvas(src){
+    const isBlob = (typeof Blob !== 'undefined') && (src instanceof Blob);
+    const objUrl = isBlob ? URL.createObjectURL(src) : null;
+    try {
+      const img = await new Promise((resolve, reject)=>{
+        const im = new Image();
+        if(!isBlob) im.crossOrigin = 'anonymous';
+        im.onload = ()=>resolve(im);
+        im.onerror = reject;
+        im.src = objUrl || src;
+      });
+      if(!img.width) throw new Error('empty image');
+      const S = 224, c = document.createElement('canvas'); c.width = S; c.height = S;
+      const ctx = c.getContext('2d');
+      const scale = Math.max(S / img.width, S / img.height);
+      const dw = img.width * scale, dh = img.height * scale;
+      ctx.drawImage(img, (S - dw) / 2, (S - dh) / 2, dw, dh);
+      return c;
+    } finally { if(objUrl) URL.revokeObjectURL(objUrl); }
+  }
+
+  // Brightness + dominant color straight from the pixels — no ML needed.
+  function colorTags(canvas){
+    const d = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+    const hueNames = ['Red','Orange','Yellow','Green','Teal','Blue','Purple','Pink'];
+    const hueEdges = [15, 45, 70, 160, 200, 250, 290, 345];
+    const buckets = [0,0,0,0,0,0,0,0];
+    let lum = 0, sat = 0;
+    const n = d.length / 4;
+    for(let i = 0; i < d.length; i += 4){
+      const r = d[i], g = d[i+1], b = d[i+2];
+      lum += 0.299*r + 0.587*g + 0.114*b;
+      const max = Math.max(r,g,b), min = Math.min(r,g,b), delta = max - min;
+      if(delta < 26 || max < 40) continue;         // grey or near-black pixel
+      sat++;
+      let h;
+      if(max === r) h = ((g - b) / delta + 6) % 6;
+      else if(max === g) h = (b - r) / delta + 2;
+      else h = (r - g) / delta + 4;
+      h = h * 60;
+      let k = 0; while(k < hueEdges.length && h >= hueEdges[k]) k++;
+      buckets[k % 8]++;                            // 345–360° wraps back to Red
+    }
+    const tags = [];
+    lum /= n;
+    if(lum < 62) tags.push('Dark'); else if(lum > 195) tags.push('Bright');
+    if(sat / n >= 0.12){
+      let best = 0; for(let k = 1; k < 8; k++) if(buckets[k] > buckets[best]) best = k;
+      if(buckets[best] / sat >= 0.34) tags.push(hueNames[best]);
+    } else if(lum >= 62 && lum <= 195){
+      tags.push('Minimal');                        // desaturated mid-tone image
+    }
+    return tags;
+  }
+
+  // Full analysis -> up to 6 suggested tags (subjects first, then colors).
+  async function autoTags(src){
+    let canvas;
+    try { canvas = await analysisCanvas(src); } catch(e){ return []; }
+    const cTags = (()=>{ try { return colorTags(canvas); } catch(e){ return []; } })();
+    let mTags = [];
+    try {
+      const model = await getTagModel();
+      const preds = await model.classify(canvas, 5);
+      mTags = preds.filter(p => p.probability >= 0.16).slice(0, 3)
+        .map(p => String(p.className).split(',')[0].trim().replace(/\b\w/g, c => c.toUpperCase()))
+        .filter(Boolean);
+    } catch(e){ console.warn('Classifier unavailable — using color tags only:', e); }
+    const seen = {};
+    return mTags.concat(cTags)
+      .filter(t => { const k = t.toLowerCase(); if(seen[k]) return false; seen[k] = 1; return true; })
+      .slice(0, 6);
+  }
+
+  // Fill the single-add tags input from an image — only if it's still empty.
+  let _suggestSeq = 0;
+  async function suggestTagsInto(inputEl, src){
+    const my = ++_suggestSeq;
+    try {
+      const tags = await autoTags(src);
+      if(my !== _suggestSeq || !tags.length) return;   // a newer image superseded this one
+      if(inputEl.value.trim()) return;                 // never overwrite typed tags
+      inputEl.value = tags.join(', ');
+      setMsg('Tags suggested from the image ✓ — edit freely.', 'ok');
+    } catch(e){ /* suggestions are best-effort */ }
   }
 
   async function addWallpaper(){
@@ -1856,15 +1976,28 @@ document.getElementById('homeLogo').onclick=goHome;
       nameInput.oninput = ()=>{ item.name = nameInput.value; };
       const sub = document.createElement('div'); sub.className = 'bulk-sub';
       const oversize = file.size > 15 * 1024 * 1024;
-      sub.textContent = file.name + ' • ' + Math.round(file.size/1024) + ' KB' + (oversize ? ' • too large (max 15 MB)' : '');
+      item.autoTags = null;   // null = still analyzing, [] = nothing found
+      function refreshSub(){
+        const parts = [file.name];
+        parts.push(item.w ? (item.w + '×' + item.h) : (Math.round(file.size/1024) + ' KB'));
+        if(item.autoTags === null) parts.push('finding tags…');
+        else if(item.autoTags.length) parts.push(item.autoTags.join(', '));
+        if(oversize) parts.push('too large (max 15 MB)');
+        sub.textContent = parts.join(' • ');
+      }
+      refreshSub();
       const stateEl = document.createElement('div'); stateEl.className = 'bulk-state' + (oversize ? ' err' : '');
       stateEl.textContent = oversize ? '!' : '';
       const del = document.createElement('button'); del.className = 'bulk-del'; del.title = 'Remove'; del.innerHTML = '&times;';
       del.onclick = ()=>{ if(bulkBusy) return; removeBulkItem(item); };
 
-      thumb.onload = ()=>{ item.w = thumb.naturalWidth; item.h = thumb.naturalHeight;
-        if(item.w) sub.textContent = file.name + ' • ' + item.w + '×' + item.h + (oversize ? ' • too large (max 15 MB)' : ''); };
+      thumb.onload = ()=>{ item.w = thumb.naturalWidth; item.h = thumb.naturalHeight; refreshSub(); };
       thumb.src = objUrl;
+
+      // analyze the image on-device; its tags publish alongside the shared ones
+      autoTags(file)
+        .then(tags=>{ item.autoTags = tags; if(!item.done) refreshSub(); })
+        .catch(()=>{ item.autoTags = []; if(!item.done) refreshSub(); });
 
       mid.appendChild(nameInput); mid.appendChild(sub);
       row.appendChild(thumb); row.appendChild(mid); row.appendChild(stateEl); row.appendChild(del);
@@ -1899,8 +2032,11 @@ document.getElementById('homeLogo').onclick=goHome;
     // 1.5) grid thumbnail (best-effort)
     try { const tb = await makeThumbBlob(item.file); if(tb) await apiUploadThumb(tb, path); }
     catch(e){ console.warn('Thumbnail skipped:', e); }
-    // 2) record it
-    const tags = bkTags.value.split(',').map(t=>t.trim()).filter(Boolean);
+    // 2) record it — shared tags for the batch + this image's own auto-tags
+    const shared = bkTags.value.split(',').map(t=>t.trim()).filter(Boolean);
+    const seen = {};
+    const tags = shared.concat(item.autoTags || [])
+      .filter(t=>{ const k = t.toLowerCase(); if(seen[k]) return false; seen[k] = 1; return true; });
     const resolution = (item.w && item.h) ? (item.w + 'x' + item.h) : '3840x2160';
     const entry = await apiAdd({
       name, category: bkCat.value, tab: bkTab.value,
@@ -1956,7 +2092,7 @@ document.getElementById('homeLogo').onclick=goHome;
     bkProgress.classList.remove('show'); bkProgress.querySelector('i').style.width = '0';
     setBkMsg(''); updateBulkChrome(0);
   }
-  function openBulk(){ bulkOverlay.classList.add('open'); }
+  function openBulk(){ bulkOverlay.classList.add('open'); getTagModel().catch(()=>{}); }
   function closeBulk(){ if(bulkBusy) return; bulkOverlay.classList.remove('open'); }
 
   bkUploadBtn.onclick = ()=> bkFiles.click();
