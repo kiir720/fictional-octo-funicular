@@ -1686,7 +1686,7 @@ document.getElementById('homeLogo').onclick=goHome;
       img.onload = ()=>{
         elPrev.innerHTML=''; elPrev.appendChild(img);
         setMsg('Detected '+(ref.site==='pexels'?'Pexels':'Unsplash')+' image \u2713', 'ok');
-        suggestTagsInto(elTags, url);   // on-device tag suggestions for the pasted photo
+        suggestTagsInto(url);   // on-device tag + category suggestions for the pasted photo
       };
       img.onerror = ()=>{ elPrev.innerHTML=''; elPrev.textContent='Preview failed to load (the ID may be invalid)'; };
       img.src = url; img.alt='preview';
@@ -1714,8 +1714,8 @@ document.getElementById('homeLogo').onclick=goHome;
         elName.value = file.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
       }
       setMsg('Image ready to add \u2713', 'ok');
-      // analyze the image on-device and suggest tags (fills only an empty field)
-      suggestTagsInto(elTags, file);
+      // analyze the image on-device and suggest tags + category
+      suggestTagsInto(file);
     };
     reader.onerror = ()=> setMsg('Could not read that file.', 'err');
     reader.readAsDataURL(file);
@@ -1728,12 +1728,13 @@ document.getElementById('homeLogo').onclick=goHome;
 
   function setMsg(text, kind){ elMsg.textContent=text; elMsg.className='admin-msg '+(kind||''); }
 
-  function openAdmin(){ overlay.classList.add('open'); setTimeout(()=>elUrl.focus(),50); getTagModel().catch(()=>{}); }
+  function openAdmin(){ overlay.classList.add('open'); setTimeout(()=>elUrl.focus(),50); getClassifier().catch(()=>{}); }
   function closeAdmin(){ overlay.classList.remove('open'); }
 
   function resetForm(){
     elUrl.value=''; elName.value=''; elRes.value='3840x2160'; elTags.value='';
     elCat.value='Abstract'; elTab.value='RECENT';
+    _catAuto = true;                 // a fresh form may auto-pick the category again
     clearUpload();
     elPrev.innerHTML=''; elPrev.textContent='Image preview appears here'; setMsg('');
   }
@@ -1761,28 +1762,104 @@ document.getElementById('homeLogo').onclick=goHome;
   }
 
   // ============ Auto-tagging: analyze images on-device ============
-  // A small MobileNet classifier (TensorFlow.js, lazy-loaded from the CDN on
-  // first use) suggests subject tags, and a quick canvas pass adds brightness
-  // and dominant-color tags. Nothing leaves this browser — analysis runs
-  // locally. If the CDN or model can't load, color tags still work alone.
-  let _tagLibPromise = null;
-  function _loadScript(src){
-    return new Promise((resolve, reject)=>{
-      const s = document.createElement('script');
-      s.src = src; s.onload = resolve; s.onerror = ()=>reject(new Error('Could not load ' + src));
-      document.head.appendChild(s);
-    });
-  }
-  function getTagModel(){
-    if(!_tagLibPromise){
-      _tagLibPromise = (async ()=>{
-        if(!window.tf) await _loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js');
-        if(!window.mobilenet) await _loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js');
-        return await window.mobilenet.load({ version: 2, alpha: 0.5 });
+  // CLIP zero-shot classification (Transformers.js, lazy-loaded on first use)
+  // scores each image against a wallpaper-tuned tag vocabulary AND against the
+  // site's own categories — so both tags and the Category are suggested. A
+  // quick canvas pass adds brightness/color tags. Nothing leaves this browser;
+  // if the CDN or model can't load, color tags still work alone.
+  //
+  // Why CLIP and not an ImageNet classifier: ImageNet only knows 1000 photo
+  // objects (it called an anime wallpaper "mask, comic book"). CLIP matches
+  // images against arbitrary text, so it understands "anime artwork",
+  // "cyberpunk neon city", "a video game scene", …
+
+  // category → the text CLIP scores it by (order = the site's categories)
+  const CAT_LABELS = [
+    { c:'Abstract',     l:'abstract shapes and colors' },
+    { c:'Lifestyle',    l:'a lifestyle scene' },
+    { c:'Animals',      l:'a wild animal' },
+    { c:'Love',         l:'romantic love, hearts or a couple' },
+    { c:'Anime',        l:'anime or manga artwork' },
+    { c:'Military',     l:'soldiers or military weapons' },
+    { c:'Architecture', l:'a building or architecture' },
+    { c:'Minimal',      l:'a minimalist simple design' },
+    { c:'Bikes',        l:'a motorcycle' },
+    { c:'Movies',       l:'a movie scene or film poster' },
+    { c:'Black/Dark',   l:'a mostly black dark image' },
+    { c:'Music',        l:'musical instruments or a concert' },
+    { c:'Cars',         l:'a sports car' },
+    { c:'Nature',       l:'a nature landscape' },
+    { c:'Celebrations', l:'a festive celebration with fireworks' },
+    { c:'People',       l:'a portrait photo of a person' },
+    { c:'Cute',         l:'something cute and adorable' },
+    { c:'Photography',  l:'artistic photography' },
+    { c:'Fantasy',      l:'fantasy art with magical creatures' },
+    { c:'Quotes',       l:'an inspirational quote written as text' },
+    { c:'Flowers',      l:'flowers in bloom' },
+    { c:'Sci-Fi',       l:'science fiction with spaceships or robots' },
+    { c:'Food',         l:'delicious food' },
+    { c:'Space',        l:'outer space with stars, planets or galaxies' },
+    { c:'Games',        l:'a video game scene or game character' },
+    { c:'Sports',       l:'sports action' },
+    { c:'Gradients',    l:'a smooth color gradient' },
+    { c:'Technology',   l:'modern technology or gadgets' },
+    { c:'CGI',          l:'3D rendered computer graphics' },
+    { c:'World',        l:'a famous city or landmark' }
+  ];
+  // tag → the text CLIP scores it by (wallpaper-flavored vocabulary)
+  const TAG_LABELS = [
+    { t:'Anime', l:'anime or manga artwork' }, { t:'Comic Art', l:'comic book art' },
+    { t:'Painting', l:'a digital painting' }, { t:'Pixel Art', l:'pixel art' },
+    { t:'3D Render', l:'3D rendered graphics' }, { t:'Cyberpunk', l:'a cyberpunk neon city' },
+    { t:'Neon', l:'glowing neon lights' }, { t:'Gaming', l:'a video game scene' },
+    { t:'Superhero', l:'a superhero' }, { t:'Warrior', l:'a warrior fighting a battle' },
+    { t:'Samurai', l:'a samurai' }, { t:'Dragon', l:'a dragon' },
+    { t:'Robot', l:'a robot or mech' }, { t:'Spaceship', l:'a spaceship' },
+    { t:'Space', l:'outer space with stars' }, { t:'Galaxy', l:'a galaxy or nebula' },
+    { t:'Moon', l:'the moon' }, { t:'Stars', l:'a starry night sky' },
+    { t:'Night', l:'a night scene' }, { t:'Sunset', l:'a sunset sky' },
+    { t:'Sunrise', l:'a sunrise' }, { t:'Clouds', l:'clouds in the sky' },
+    { t:'Aurora', l:'aurora northern lights' }, { t:'Lightning', l:'lightning bolts' },
+    { t:'Fire', l:'fire and flames' }, { t:'Snow', l:'snow and ice' },
+    { t:'Rain', l:'rain' }, { t:'Winter', l:'a winter scene' },
+    { t:'Autumn', l:'autumn leaves' }, { t:'Mountains', l:'mountains' },
+    { t:'Forest', l:'a forest' }, { t:'Waterfall', l:'a waterfall' },
+    { t:'Lake', l:'a calm lake' }, { t:'Ocean', l:'the ocean' },
+    { t:'Beach', l:'a beach' }, { t:'Underwater', l:'underwater sea life' },
+    { t:'Desert', l:'a desert' }, { t:'City', l:'a city skyline' },
+    { t:'Castle', l:'a castle' }, { t:'Car', l:'a sports car' },
+    { t:'Motorcycle', l:'a motorcycle' }, { t:'Airplane', l:'an airplane' },
+    { t:'Cat', l:'a cat' }, { t:'Wolf', l:'a wolf' },
+    { t:'Lion', l:'a lion' }, { t:'Bird', l:'a bird' },
+    { t:'Horse', l:'a horse' }, { t:'Flowers', l:'flowers' },
+    { t:'Skull', l:'a skull' }, { t:'Fantasy', l:'fantasy magic' },
+    { t:'Geometric', l:'geometric patterns' }, { t:'Gradient', l:'a smooth color gradient' },
+    { t:'Minimal', l:'a minimalist design' }, { t:'Food', l:'delicious food' },
+    { t:'Sports', l:'sports action' }, { t:'Music', l:'musical instruments' }
+  ];
+
+  let _clipPromise = null;
+  function getClassifier(){
+    if(!_clipPromise){
+      _clipPromise = (async ()=>{
+        const T = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3');
+        let lastPct = -1;
+        const clf = await T.pipeline('zero-shot-image-classification', 'Xenova/clip-vit-base-patch32', {
+          dtype: 'q8',
+          progress_callback: (p)=>{
+            // one-time model download (~30 MB, then cached by the browser)
+            if(p && p.status === 'progress' && /onnx/.test(p.file || '')){
+              const pct = Math.round(p.progress || 0);
+              if(pct !== lastPct && pct % 5 === 0){ lastPct = pct; setStatus('Downloading the tagging AI… ' + pct + '% (one-time)', ''); }
+            }
+          }
+        });
+        setStatus('Tagging AI ready ✓', 'ok');
+        return clf;
       })();
-      _tagLibPromise.catch(()=>{ _tagLibPromise = null; });   // a later attempt may retry
+      _clipPromise.catch(()=>{ _clipPromise = null; });   // a later attempt may retry
     }
-    return _tagLibPromise;
+    return _clipPromise;
   }
 
   // Draw any image source (File/Blob or URL) onto a 224px analysis canvas
@@ -1842,35 +1919,63 @@ document.getElementById('homeLogo').onclick=goHome;
     return tags;
   }
 
-  // Full analysis -> up to 6 suggested tags (subjects first, then colors).
+  // Full analysis -> { tags: up to 6 (subjects first, then colors), category }.
   async function autoTags(src){
     let canvas;
-    try { canvas = await analysisCanvas(src); } catch(e){ return []; }
+    try { canvas = await analysisCanvas(src); } catch(e){ return { tags: [], category: null }; }
     const cTags = (()=>{ try { return colorTags(canvas); } catch(e){ return []; } })();
-    let mTags = [];
+    let mTags = [], category = null;
     try {
-      const model = await getTagModel();
-      const preds = await model.classify(canvas, 5);
-      mTags = preds.filter(p => p.probability >= 0.16).slice(0, 3)
-        .map(p => String(p.className).split(',')[0].trim().replace(/\b\w/g, c => c.toUpperCase()))
-        .filter(Boolean);
-    } catch(e){ console.warn('Classifier unavailable — using color tags only:', e); }
+      const clf = await getClassifier();
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
+      const u = URL.createObjectURL(blob);
+      try {
+        const tpl = { hypothesis_template: 'This wallpaper shows {}.' };
+        // best-matching site category (softmax over the 30 category texts)
+        const catOut = (await clf(u, CAT_LABELS.map(x => x.l), tpl)).slice()
+          .sort((a, b) => b.score - a.score);
+        const bestCat = CAT_LABELS.find(x => x.l === catOut[0].label);
+        if(bestCat && catOut[0].score >= 0.10) category = bestCat.c;
+        // top subject tags from the wallpaper vocabulary
+        const tagOut = (await clf(u, TAG_LABELS.map(x => x.l), tpl)).slice()
+          .sort((a, b) => b.score - a.score);
+        // absolute floor + relative cut: when one subject dominates (say a car
+        // at 0.6), weak "maybe" labels a tenth as confident don't tag along
+        const tagCut = Math.max(0.08, (tagOut[0] ? tagOut[0].score : 0) * 0.25);
+        // style judgements (painting / render / pixel / comic) need real
+        // confidence — they otherwise ride along on any stylized photo
+        const styleBar = { 'Painting':1, '3D Render':1, 'Pixel Art':1, 'Comic Art':1 };
+        mTags = tagOut.slice(0, 4)
+          .map(p => ({ t: (TAG_LABELS.find(x => x.l === p.label) || {}).t, s: p.score }))
+          .filter(x => x.t && x.s >= (styleBar[x.t] ? Math.max(0.18, tagCut) : tagCut))
+          .map(x => x.t);
+      } finally { URL.revokeObjectURL(u); }
+    } catch(e){ console.warn('Tag AI unavailable — using color tags only:', e); }
     const seen = {};
-    return mTags.concat(cTags)
+    const tags = mTags.concat(cTags)
       .filter(t => { const k = t.toLowerCase(); if(seen[k]) return false; seen[k] = 1; return true; })
       .slice(0, 6);
+    return { tags, category };
   }
 
-  // Fill the single-add tags input from an image — only if it's still empty.
+  // Fill the single-add tags input + category from an image. Tags only fill an
+  // empty field; the category only moves while the admin hasn't touched it.
   let _suggestSeq = 0;
-  async function suggestTagsInto(inputEl, src){
+  let _catAuto = true;
+  elCat.addEventListener('change', ()=>{ _catAuto = false; });
+  async function suggestTagsInto(src){
     const my = ++_suggestSeq;
     try {
-      const tags = await autoTags(src);
-      if(my !== _suggestSeq || !tags.length) return;   // a newer image superseded this one
-      if(inputEl.value.trim()) return;                 // never overwrite typed tags
-      inputEl.value = tags.join(', ');
-      setMsg('Tags suggested from the image ✓ — edit freely.', 'ok');
+      const res = await autoTags(src);
+      if(my !== _suggestSeq) return;                   // a newer image superseded this one
+      const setCat = !!(res.category && _catAuto);
+      if(setCat) elCat.value = res.category;
+      if(res.tags.length && !elTags.value.trim()){
+        elTags.value = res.tags.join(', ');
+        setMsg((setCat ? 'Category + tags' : 'Tags') + ' suggested from the image ✓ — edit freely.', 'ok');
+      } else if(setCat){
+        setMsg('Category suggested from the image ✓ — edit freely.', 'ok');
+      }
     } catch(e){ /* suggestions are best-effort */ }
   }
 
@@ -1953,10 +2058,13 @@ document.getElementById('homeLogo').onclick=goHome;
   let bulkItems = [];        // { file, name, w, h, objUrl, row, nameInput, stateEl, done }
   let bulkBusy = false;
 
+  const bkAutoOpt = document.createElement('option');
+  bkAutoOpt.value = '__auto__'; bkAutoOpt.textContent = 'Auto-detect (per image)';
+  bkCat.appendChild(bkAutoOpt);
   categories.slice().sort().forEach(c=>{
     const o=document.createElement('option'); o.value=c; o.textContent=c; bkCat.appendChild(o);
   });
-  bkCat.value = 'Abstract';
+  bkCat.value = '__auto__';
 
   function setBkMsg(text, kind){ bkMsg.textContent = text; bkMsg.className = 'admin-msg ' + (kind||''); }
   function titleFromFile(fn){ return fn.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase()).trim(); }
@@ -1977,11 +2085,15 @@ document.getElementById('homeLogo').onclick=goHome;
       const sub = document.createElement('div'); sub.className = 'bulk-sub';
       const oversize = file.size > 15 * 1024 * 1024;
       item.autoTags = null;   // null = still analyzing, [] = nothing found
+      item.autoCat = null;    // detected category (used when the batch is on Auto-detect)
       function refreshSub(){
         const parts = [file.name];
         parts.push(item.w ? (item.w + '×' + item.h) : (Math.round(file.size/1024) + ' KB'));
         if(item.autoTags === null) parts.push('finding tags…');
-        else if(item.autoTags.length) parts.push(item.autoTags.join(', '));
+        else {
+          if(item.autoCat) parts.push('→ ' + item.autoCat);
+          if(item.autoTags.length) parts.push(item.autoTags.join(', '));
+        }
         if(oversize) parts.push('too large (max 15 MB)');
         sub.textContent = parts.join(' • ');
       }
@@ -1994,9 +2106,10 @@ document.getElementById('homeLogo').onclick=goHome;
       thumb.onload = ()=>{ item.w = thumb.naturalWidth; item.h = thumb.naturalHeight; refreshSub(); };
       thumb.src = objUrl;
 
-      // analyze the image on-device; its tags publish alongside the shared ones
+      // analyze the image on-device; its tags publish alongside the shared
+      // ones, and its category is used when the batch is on Auto-detect
       autoTags(file)
-        .then(tags=>{ item.autoTags = tags; if(!item.done) refreshSub(); })
+        .then(res=>{ item.autoTags = res.tags; item.autoCat = res.category; if(!item.done) refreshSub(); })
         .catch(()=>{ item.autoTags = []; if(!item.done) refreshSub(); });
 
       mid.appendChild(nameInput); mid.appendChild(sub);
@@ -2032,20 +2145,22 @@ document.getElementById('homeLogo').onclick=goHome;
     // 1.5) grid thumbnail (best-effort)
     try { const tb = await makeThumbBlob(item.file); if(tb) await apiUploadThumb(tb, path); }
     catch(e){ console.warn('Thumbnail skipped:', e); }
-    // 2) record it — shared tags for the batch + this image's own auto-tags
+    // 2) record it — shared tags for the batch + this image's own auto-tags;
+    //    on Auto-detect each image publishes under its detected category
     const shared = bkTags.value.split(',').map(t=>t.trim()).filter(Boolean);
     const seen = {};
     const tags = shared.concat(item.autoTags || [])
       .filter(t=>{ const k = t.toLowerCase(); if(seen[k]) return false; seen[k] = 1; return true; });
+    const category = (bkCat.value === '__auto__') ? (item.autoCat || 'Abstract') : bkCat.value;
     const resolution = (item.w && item.h) ? (item.w + 'x' + item.h) : '3840x2160';
     const entry = await apiAdd({
-      name, category: bkCat.value, tab: bkTab.value,
+      name, category: category, tab: bkTab.value,
       resolution, tags: tags.length ? tags : ['Wallpaper'], image_path: path
     });
     // 3) show locally right away
     wallpapers.unshift({
       name, img: imageUrl(path), _ref:{site:'r2', path},
-      tab: bkTab.value, cat: bkCat.value, res: resolution,
+      tab: bkTab.value, cat: category, res: resolution,
       tags: tags.length ? tags : ['Wallpaper'],
       created_at: (entry && entry.created_at) || new Date().toISOString(), _new:true
     });
@@ -2088,11 +2203,11 @@ document.getElementById('homeLogo').onclick=goHome;
   function resetBulk(){
     bulkItems.forEach(it=>{ if(it.objUrl) URL.revokeObjectURL(it.objUrl); });
     bulkItems = []; bkQueueEl.innerHTML = ''; bkTags.value = '';
-    bkCat.value = 'Abstract'; bkTab.value = 'RECENT';
+    bkCat.value = '__auto__'; bkTab.value = 'RECENT';
     bkProgress.classList.remove('show'); bkProgress.querySelector('i').style.width = '0';
     setBkMsg(''); updateBulkChrome(0);
   }
-  function openBulk(){ bulkOverlay.classList.add('open'); getTagModel().catch(()=>{}); }
+  function openBulk(){ bulkOverlay.classList.add('open'); getClassifier().catch(()=>{}); }
   function closeBulk(){ if(bulkBusy) return; bulkOverlay.classList.remove('open'); }
 
   bkUploadBtn.onclick = ()=> bkFiles.click();
