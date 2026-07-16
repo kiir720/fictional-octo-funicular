@@ -1192,6 +1192,16 @@ async function downloadSized(name, imgUrl, tw, th){
   }
 }
 
+// The NEW badge is about age, not origin: it shows for two days after a
+// wallpaper is published, then retires itself. (`_new` only marks "came from
+// the server", which is true of every published wallpaper forever.)
+const NEW_FOR_MS = 2 * 24 * 60 * 60 * 1000;
+function isFresh(w){
+  if(!w.created_at) return false;
+  const t = Date.parse(w.created_at);
+  return !isNaN(t) && (Date.now() - t) < NEW_FOR_MS;
+}
+
 function render(){
   const grid=document.getElementById('grid');
   grid.innerHTML='';
@@ -1203,7 +1213,7 @@ function render(){
   if(!list.length){ grid.innerHTML="<p style='grid-column:1/-1;text-align:center;color:var(--muted);padding:40px'>No wallpapers match your search.</p>"; return; }
   list.forEach(w=>{
     const card=document.createElement('div'); card.className='card'; card.style.position='relative';
-    const badge = w._new ? "<span class='admin-badge'>NEW</span>" : "";
+    const badge = isFresh(w) ? "<span class='admin-badge'>NEW</span>" : "";
     // only wallpapers that live in the backend can be deleted (demo ones have no row)
     const canDelete = !!(w._ref && w._ref.site === 'r2' && w._ref.path);
     const delBtn = canDelete

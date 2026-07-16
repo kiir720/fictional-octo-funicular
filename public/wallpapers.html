@@ -1351,9 +1351,19 @@ async function downloadSized(name, imgUrl, tw, th){
   }
 }
 
+// The NEW badge is about age, not origin: it shows for two days after a
+// wallpaper is published, then retires itself. (`_new` only marks "came from
+// the server", which is true of every published wallpaper forever.)
+const NEW_FOR_MS = 2 * 24 * 60 * 60 * 1000;
+function isFresh(w){
+  if(!w.created_at) return false;
+  const t = Date.parse(w.created_at);
+  return !isNaN(t) && (Date.now() - t) < NEW_FOR_MS;
+}
+
 function makeCard(w, idx){
   const card=document.createElement('div'); card.className='card';
-  const badge = w._new ? "<span class='admin-badge'>NEW</span>" : "";
+  const badge = isFresh(w) ? "<span class='admin-badge'>NEW</span>" : "";
   const heart = "<button class='fav-btn"+(isFav(w)?' is-fav':'')+"' title='Save to favorites'><svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 21s-7.55-4.74-10.05-9.36C.32 8.4 1.96 5 5.2 5c2.04 0 3.3 1.13 4.1 2.32L12 9.6l2.7-2.28C15.5 6.13 16.76 5 18.8 5c3.24 0 4.88 3.4 3.25 6.64C19.55 16.26 12 21 12 21z'/></svg></button>";
   // the first row of cards paints immediately with high priority; the rest lazy-load
   const eager = typeof idx === 'number' && idx < 8;
