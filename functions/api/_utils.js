@@ -68,3 +68,23 @@ export function sanitizeName(s){
   return String(s || 'wallpaper').replace(/[^a-z0-9.-]+/gi, '-')
     .replace(/^-+|-+$/g, '').toLowerCase().slice(0, 60) || 'wallpaper';
 }
+
+// ---- SEO URLs: one crawlable page per wallpaper at /wallpaper/<slug> ----
+// The slug is the name plus the upload timestamp already baked into image_path,
+// so it's keyword-rich AND guaranteed unique (two same-named wallpapers differ).
+export function nameSlug(s){
+  return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+export function idOf(image_path){
+  const m = String(image_path || '').match(/(\d{6,})(?=\.[a-z0-9]+$)/i);
+  return m ? m[1] : '';
+}
+export function wallpaperSlug(row){
+  const base = nameSlug(row && row.name) || 'wallpaper';
+  const id = idOf(row && row.image_path);
+  return id ? base + '-' + id : base;
+}
+export function escapeHtml(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}

@@ -1951,6 +1951,7 @@ function showGallery(){
   galleryView.style.display='block';
   setHash('');
   document.title = '8K Wallpapers — Free 4K, 5K & 8K Ultra HD Backgrounds';
+  if(location.origin && location.origin !== 'null') setCanonical(location.origin + '/');
   safeScrollTop();
 }
 
@@ -1981,11 +1982,27 @@ function browseCat(name){ filterByCat(name); }
 // ---- Shareable deep links: every wallpaper gets a #w/<slug> URL ----
 function slugOf(w){ return String(w.name||'').replace(/[^a-z0-9]+/gi,'-').replace(/^-+|-+$/g,'').toLowerCase(); }
 function findBySlug(slug){ for(const w of wallpapers){ if(slugOf(w)===slug) return w; } return null; }
+// Real crawlable page for a PUBLISHED wallpaper (matches the server function):
+// name-slug + the upload id already in its image path. Demo/Unsplash images
+// aren't on the server, so they have no such page.
+function wpIdOf(w){ const p = (w._ref && w._ref.path) || ''; const m = String(p).match(/(\d{6,})(?=\.[a-z0-9]+$)/i); return m ? m[1] : ''; }
+function realPathOf(w){
+  if(!(w._ref && w._ref.site === 'r2' && w._ref.path)) return null;
+  const id = wpIdOf(w);
+  return '/wallpaper/' + slugOf(w) + (id ? '-' + id : '');
+}
 function pageUrlOf(w){
-  // location.origin is the string "null" when opened from a local file
-  return (location.origin && location.origin !== 'null')
-    ? location.origin + location.pathname + '#w/' + slugOf(w)
-    : location.href;
+  if(!location.origin || location.origin === 'null') return location.href;   // opened as a local file
+  const real = realPathOf(w);
+  // published wallpapers share their real, indexable URL; others keep the hash
+  return real ? location.origin + real : location.origin + location.pathname + '#w/' + slugOf(w);
+}
+// point <link rel=canonical> at the real page for published wallpapers so any
+// indexing of the SPA view consolidates onto the crawlable URL
+function setCanonical(href){
+  let l = document.querySelector('link[rel="canonical"]');
+  if(!l){ l = document.createElement('link'); l.rel = 'canonical'; document.head.appendChild(l); }
+  l.href = href;
 }
 let _suppressHash = false;
 function setHash(h){
@@ -2148,6 +2165,9 @@ function showDetail(w){
   updateShareLinks(w);
   setHash('w/' + slugOf(w));
   document.title = w.name + ' — 8K Wallpapers';
+  // canonical -> the real crawlable page for published wallpapers
+  const real = realPathOf(w);
+  setCanonical(real ? location.origin + real : location.origin + '/');
 
   galleryView.style.display='none';
   policyView.style.display='none';
