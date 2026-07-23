@@ -2437,7 +2437,10 @@ document.getElementById('homeLogo').onclick=goHome;
           try { iTags = await imaggaTagsFor(row.image_path); }
           catch(e){ useImagga = false; }
         }
-        const tags = mergeTags(keywordsFromName(row.name), iTags, res.tags, [tierOfRes(row.resolution)]);
+        // order = priority, because mergeTags caps the total: name keywords
+        // (the franchise/subject) first, then the resolution tier so it can't
+        // be crowded out, then the classifiers.
+        const tags = mergeTags(keywordsFromName(row.name), [tierOfRes(row.resolution)], res.tags, iTags.slice(0, 3));
         const category = res.category || row.category || 'Abstract';
         pending.push({ image_path: row.image_path, category: category, tags: tags });
         logRetag(row.name || '(untitled)', category, tags);

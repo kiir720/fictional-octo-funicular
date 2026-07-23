@@ -38,14 +38,27 @@ export async function onRequest(context){
     return cors(json({ error: 'Imagga HTTP ' + r.status + detail }, 502));
   }
 
+  // Imagga returns the whole hypernym chain — "car, motor vehicle, auto,
+  // automobile, sedan, vehicle, transportation" is eight tags for one subject.
+  // Those crowd out genuinely useful tags (the resolution tier, the franchise
+  // name), so the generic rungs of the ladder are dropped here.
+  const GENERIC = new Set([
+    'vehicle','motor vehicle','auto','automobile','transportation','transport','conveyance',
+    'machine','device','equipment','instrument','object','artifact','structure','building',
+    'architecture','construction','defensive structure','fortification','establishment',
+    'invertebrate','animal','organism','creature','being','fauna','mammal',
+    'celestial body','body','person','people','adult','human','man','woman',
+    'art','design','illustration','graphic','graphics','drawing','painting','print media','media',
+    'texture','pattern','backdrop','background','wallpaper','decoration','ornament','element',
+    'color','colour','light','shape','form','material','surface','style','sign','symbol'
+  ]);
   const tags = ((data && data.result && data.result.tags) || [])
-    .filter(t => t && t.confidence >= 30)
-    .slice(0, 8)
     .map(t => ({
       tag: String((t.tag && (t.tag.en || Object.values(t.tag)[0])) || '').trim(),
-      confidence: Math.round(t.confidence)
+      confidence: Math.round((t && t.confidence) || 0)
     }))
-    .filter(t => t.tag);
+    .filter(t => t.tag && t.confidence >= 40 && !GENERIC.has(t.tag.toLowerCase()))
+    .slice(0, 5);
 
   const res = json({ tags }, { headers: { 'cache-control': 'public, max-age=604800' } });
   context.waitUntil(cache.put(cacheKey, res.clone()));
