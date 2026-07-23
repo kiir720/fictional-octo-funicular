@@ -101,6 +101,17 @@
     if(!res.ok) throw await apiError(res, 'Delete failed');
     return res.json();
   }
+  // Apply many category/tag updates in one server write (KV allows only
+  // 1000 writes/day, so the retag pass must batch instead of saving per item).
+  async function apiBulk(updates){
+    const res = await fetch(API_BASE + '/api/bulk', {
+      method: 'POST',
+      headers: apiHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ updates: updates })
+    });
+    if(!res.ok) throw await apiError(res, 'Bulk update failed');
+    return res.json();
+  }
 
   // Public URL of a stored image — served by the site itself from R2.
   function imageUrl(path){ return API_BASE + '/images/' + encodeURI(path); }
@@ -346,6 +357,19 @@
   .bulk-progress { height: 6px; border-radius: 4px; background: rgba(255,255,255,0.1); overflow: hidden; margin: 12px 0 4px; display: none; }
   .bulk-progress.show { display: block; }
   .bulk-progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #7ee29a, #3aa0ff); transition: width 0.25s; }
+
+  /* ---- retag pass ---- */
+  .retag-note { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+  .retag-note b { color: var(--text); }
+  .retag-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin: 12px 0 4px; }
+  .retag-log {
+    margin-top: 12px; max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;
+    font-size: 12.5px;
+  }
+  .retag-row { display: flex; gap: 8px; align-items: baseline; padding: 6px 9px; border-radius: 8px; background: rgba(255,255,255,0.04); }
+  .retag-row .rn { font-weight: 600; color: var(--text); min-width: 120px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .retag-row .rc { color: #7ee29a; font-weight: 700; white-space: nowrap; }
+  .retag-row .rt { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* ---- Admin login gate ---- */
   .lock-screen {
@@ -796,6 +820,7 @@
     <button class="admin-export-btn" id="bulkBtn" title="Add many wallpapers at once">&#9776; Bulk add</button>
     <button class="admin-export-btn" id="exportBtn" title="Export wallpapers for the public site">&#8681; Export</button>
     <button class="admin-export-btn" id="statsBtn" title="Library statistics">&#128202; Stats</button>
+    <button class="admin-export-btn" id="retagBtn" title="Re-analyze every wallpaper and fix its category + tags">&#127991; Retag all</button>
     <button class="admin-export-btn" id="signoutBtn" title="Sign out and change the admin key">&#8631; Sign out</button>
     <a class="admin-export-btn" href="https://8k-wallpapers.pages.dev" target="_blank" rel="noopener" title="Open the public site" style="text-decoration:none;display:inline-flex;align-items:center">&#8599; View Site</a>
     <div class="search">
@@ -911,6 +936,37 @@
         <button class="admin-cancel" id="bkCancel">Cancel</button>
       </div>
       <div class="admin-msg" id="bkMsg"></div>
+    </div>
+  </div>
+</div>
+
+<div class="admin-overlay" id="retagOverlay">
+  <div class="admin-modal bulk-modal">
+    <div class="admin-mhead">
+      <h3>&#127991; Retag the whole library</h3>
+      <button class="admin-close" id="retagClose">&times;</button>
+    </div>
+    <div class="admin-body">
+      <div class="retag-note">
+        Re-analyzes every published wallpaper on this device and rewrites its <b>category</b> and
+        <b>tags</b> — combining what the AI sees in the image with keywords from its name and its
+        resolution. This fixes the old junk tags and the &ldquo;everything is Abstract&rdquo; problem,
+        which feeds straight into each wallpaper&rsquo;s search-engine page.<br><br>
+        It replaces existing tags. Keep this tab open and visible while it runs; you can stop
+        anytime and it resumes where it left off.
+      </div>
+      <div class="retag-stats">
+        <div class="stat-card"><b id="rtDone">0</b><span>PROCESSED</span></div>
+        <div class="stat-card"><b id="rtTotal">0</b><span>TOTAL</span></div>
+        <div class="stat-card"><b id="rtSaved">0</b><span>SAVED</span></div>
+      </div>
+      <div class="bulk-progress" id="rtProgress"><i></i></div>
+      <div class="retag-log" id="rtLog"></div>
+      <div class="admin-actions">
+        <button class="admin-submit" id="rtStart">Start retagging</button>
+        <button class="admin-cancel" id="rtStop">Stop</button>
+      </div>
+      <div class="admin-msg" id="rtMsg"></div>
     </div>
   </div>
 </div>
@@ -2231,6 +2287,157 @@ document.getElementById('homeLogo').onclick=goHome;
     bulkOverlay.addEventListener('click', e=>{ if(e.target===bulkOverlay) closeBulk(); });
     document.addEventListener('keydown', e=>{ if(e.key==='Escape' && bulkOverlay.classList.contains('open')) closeBulk(); });
   }
+
+  // ============ Retag pass: fix category + tags across the whole library ============
+  // Most wallpapers were published before the CLIP tagger existed, so they sit in
+  // "Abstract" with a placeholder "Wallpaper" tag. Those two fields feed each
+  // wallpaper's SEO page (title, description, alt text), so fixing them lifts the
+  // whole site. Runs on-device; saves in batches to stay inside KV's write limit.
+  const RETAG_KEY = 'retag_done_v1';
+  const RETAG_BATCH = 100;
+  let retagDone = (()=>{ try { return new Set(JSON.parse(localStorage.getItem(RETAG_KEY) || '[]')); } catch(e){ return new Set(); } })();
+  let retagRunning = false, retagStopReq = false, retagSaved = 0;
+
+  const rtOverlay = document.getElementById('retagOverlay');
+  const rtDoneEl = document.getElementById('rtDone');
+  const rtTotalEl = document.getElementById('rtTotal');
+  const rtSavedEl = document.getElementById('rtSaved');
+  const rtProgress = document.getElementById('rtProgress');
+  const rtLog = document.getElementById('rtLog');
+  const rtStart = document.getElementById('rtStart');
+  const rtStopBtn = document.getElementById('rtStop');
+  const rtMsg = document.getElementById('rtMsg');
+  function setRtMsg(t, kind){ rtMsg.textContent = t; rtMsg.className = 'admin-msg ' + (kind||''); }
+
+  // words that make poor tags (generic filler, or already covered elsewhere)
+  const NAME_STOP = /^(the|a|an|and|or|of|in|on|at|to|for|with|from|by|is|are|it|its|wallpaper|wallpapers|background|backgrounds|hd|uhd|image|images|photo|photos|pic|pics|new|best|free|top|cool|nice|desktop|screen)$/i;
+  function titleWord(s){ return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase(); }
+  // The wallpaper's NAME usually holds the most valuable search term — the
+  // franchise or subject ("Gohan", "Batman", "Porsche"). Mine it for tags.
+  function keywordsFromName(name){
+    const out = [];
+    String(name || '').split(/[^A-Za-z0-9]+/).forEach(tok=>{
+      if(!tok) return;
+      if(/^\d+k$/i.test(tok)){ const t = tok.toUpperCase(); if(out.indexOf(t) === -1) out.push(t); return; }
+      if(tok.length < 2 || NAME_STOP.test(tok) || /^\d+$/.test(tok)) return;
+      const t = titleWord(tok);
+      if(out.indexOf(t) === -1) out.push(t);
+    });
+    return out.slice(0, 4);
+  }
+  function tierOfRes(res){
+    const m = String(res || '').match(/(\d+)\s*[x×]\s*(\d+)/i);
+    if(!m) return null;
+    const w = +m[1], h = +m[2];
+    if(w >= 7680 || h >= 4320) return '8K';
+    if(w >= 5120 || h >= 2880) return '5K';
+    if(w >= 3840 || h >= 2160) return '4K';
+    return null;
+  }
+  function mergeTags(){
+    const seen = {}, out = [];
+    [].concat.apply([], Array.prototype.slice.call(arguments)).forEach(t=>{
+      if(!t) return;
+      const k = String(t).toLowerCase();
+      if(seen[k]) return;
+      seen[k] = 1; out.push(String(t));
+    });
+    return out.slice(0, 10);
+  }
+  function logRetag(name, category, tags){
+    const row = document.createElement('div'); row.className = 'retag-row';
+    row.innerHTML = "<span class='rn'></span><span class='rc'></span><span class='rt'></span>";
+    row.children[0].textContent = name;
+    row.children[1].textContent = '→ ' + category;
+    row.children[2].textContent = tags.join(', ');
+    rtLog.insertBefore(row, rtLog.firstChild);
+    while(rtLog.children.length > 60) rtLog.removeChild(rtLog.lastChild);
+  }
+
+  async function runRetag(){
+    if(retagRunning) return;
+    retagRunning = true; retagStopReq = false;
+    rtStart.disabled = true; rtStart.textContent = 'Retagging…';
+    rtProgress.classList.add('show');
+    const bar = rtProgress.querySelector('i');
+    try {
+      setRtMsg('Loading the tagging AI…', 'ok');
+      await getClassifier();   // fail loudly rather than writing color-only tags
+
+      const list = await apiList();
+      const todo = list.filter(r => r && r.image_path && !retagDone.has(r.image_path));
+      const total = list.length;
+      rtTotalEl.textContent = total;
+      rtDoneEl.textContent = total - todo.length;
+      if(!todo.length){ setRtMsg('Everything is already retagged. Use Reset to run it again.', 'ok'); return; }
+      setRtMsg('Retagging ' + todo.length + ' wallpaper(s)… keep this tab visible.', 'ok');
+
+      let pending = [];
+      const flush = async ()=>{
+        if(!pending.length) return;
+        const res = await apiBulk(pending);
+        pending.forEach(u => retagDone.add(u.image_path));
+        try { localStorage.setItem(RETAG_KEY, JSON.stringify([...retagDone])); } catch(e){}
+        retagSaved += (res && res.updated) || 0;
+        rtSavedEl.textContent = retagSaved;
+        pending = [];
+      };
+
+      for(let i = 0; i < todo.length; i++){
+        if(retagStopReq) break;
+        const row = todo[i];
+        // the small thumbnail is enough for the classifier and far quicker to fetch
+        let res = { tags: [], category: null };
+        try { res = await autoTags(API_BASE + '/images/thumbs/' + encodeURI(row.image_path)); } catch(e){}
+        if(!res.category && !res.tags.length){
+          try { res = await autoTags(API_BASE + '/images/' + encodeURI(row.image_path)); } catch(e){}
+        }
+        const tags = mergeTags(keywordsFromName(row.name), res.tags, [tierOfRes(row.resolution)]);
+        const category = res.category || row.category || 'Abstract';
+        pending.push({ image_path: row.image_path, category: category, tags: tags });
+        logRetag(row.name || '(untitled)', category, tags);
+
+        const done = (total - todo.length) + i + 1;
+        rtDoneEl.textContent = done;
+        bar.style.width = Math.round(done / total * 100) + '%';
+        if(pending.length >= RETAG_BATCH){ await flush(); }
+      }
+      await flush();
+
+      if(retagStopReq) setRtMsg('Stopped. ' + retagSaved + ' saved — press Start to resume where it left off.', 'ok');
+      else setRtMsg('Done! Retagged and saved ' + retagSaved + ' wallpaper(s). Their pages update automatically.', 'ok');
+      loadAdded();
+    } catch(err){
+      console.error(err);
+      setRtMsg('Retag failed: ' + (err.message || err), 'err');
+    } finally {
+      retagRunning = false;
+      rtStart.disabled = false; rtStart.textContent = 'Start retagging';
+    }
+  }
+
+  document.getElementById('retagBtn').onclick = ()=>{
+    rtOverlay.classList.add('open');
+    retagSaved = 0; rtSavedEl.textContent = '0';
+    const known = wallpapers.filter(w => w._ref && w._ref.site === 'r2').length;
+    rtTotalEl.textContent = known || 0;
+    rtDoneEl.textContent = retagDone.size;
+    setRtMsg(retagDone.size ? (retagDone.size + ' already done — Start resumes from there.') : '');
+    getClassifier().catch(()=>{});
+  };
+  document.getElementById('retagClose').onclick = ()=>{ if(!retagRunning) rtOverlay.classList.remove('open'); };
+  rtStart.onclick = runRetag;
+  rtStopBtn.onclick = ()=>{
+    if(retagRunning){ retagStopReq = true; setRtMsg('Stopping after the current wallpaper…', ''); return; }
+    // not running: this doubles as "reset progress" so the pass can be redone
+    if(confirm('Clear retag progress so the whole library is processed again?')){
+      retagDone = new Set();
+      try { localStorage.removeItem(RETAG_KEY); } catch(e){}
+      rtDoneEl.textContent = '0'; rtProgress.querySelector('i').style.width = '0';
+      rtLog.innerHTML = ''; setRtMsg('Progress cleared.', 'ok');
+    }
+  };
+  rtOverlay.addEventListener('click', e=>{ if(e.target === rtOverlay && !retagRunning) rtOverlay.classList.remove('open'); });
 
   // ---- load published wallpapers from the site's API ----
   function serialize(){
