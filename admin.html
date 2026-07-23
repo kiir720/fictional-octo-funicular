@@ -112,6 +112,27 @@
     if(!res.ok) throw await apiError(res, 'Bulk update failed');
     return res.json();
   }
+  // Imagga cloud tagging via the site's proxy (keys live server-side).
+  // Returns title-cased tag names; throws when unconfigured/unreachable.
+  async function apiImagga(url){
+    const res = await fetch(API_BASE + '/api/imagga?url=' + encodeURIComponent(url), { headers: apiHeaders() });
+    if(!res.ok) throw await apiError(res, 'Imagga tagging failed');
+    const data = await res.json();
+    return (data.tags || []).map(t => String(t.tag).replace(/\b\w/g, c => c.toUpperCase()));
+  }
+  // Tag a stored image: the small thumbnail first (fast for Imagga to fetch),
+  // the full image as fallback. Throws only when Imagga isn't configured.
+  async function imaggaTagsFor(path){
+    try { return await apiImagga(API_BASE + '/images/thumbs/' + encodeURI(path)); }
+    catch(e){
+      if(/configured/i.test(String(e && e.message))) throw e;
+    }
+    try { return await apiImagga(API_BASE + '/images/' + encodeURI(path)); }
+    catch(e){
+      if(/configured/i.test(String(e && e.message))) throw e;
+      return [];
+    }
+  }
 
   // Public URL of a stored image — served by the site itself from R2.
   function imageUrl(path){ return API_BASE + '/images/' + encodeURI(path); }
@@ -953,7 +974,10 @@
         resolution. This fixes the old junk tags and the &ldquo;everything is Abstract&rdquo; problem,
         which feeds straight into each wallpaper&rsquo;s search-engine page.<br><br>
         It replaces existing tags. Keep this tab open and visible while it runs; you can stop
-        anytime and it resumes where it left off.
+        anytime and it resumes where it left off.<br><br>
+        <b>Imagga note:</b> when Imagga is connected its cloud tags are added too — but its free
+        plan allows only 1000 requests/month, so a full-library run spends most of that.
+        (Already-tagged images are cached for a week and cost nothing to repeat.)
       </div>
       <div class="retag-stats">
         <div class="stat-card"><b id="rtDone">0</b><span>PROCESSED</span></div>
@@ -2078,6 +2102,15 @@ document.getElementById('homeLogo').onclick=goHome;
         if(tb) await apiUploadThumb(tb, path);
       } catch(e){ console.warn('Thumbnail skipped:', e); }
 
+      // 1.75) Imagga cloud tags (when connected) — merged with the field's
+      //       tags; if it's not configured or unreachable, these stand alone
+      let finalTags = tags.slice();
+      try {
+        setMsg('Tagging with Imagga…', 'ok');
+        const iTags = await imaggaTagsFor(path);
+        if(iTags.length) finalTags = mergeTags(finalTags, iTags);
+      } catch(e){ /* Imagga not configured — CLIP/manual tags stand */ }
+
       // 2) record it in the wallpaper list
       setMsg('Publishing…', 'ok');
       const entry = await apiAdd({
@@ -2085,7 +2118,7 @@ document.getElementById('homeLogo').onclick=goHome;
         category: elCat.value,
         tab: elTab.value,
         resolution: resolution,
-        tags: tags.length ? tags : ['Wallpaper'],
+        tags: finalTags.length ? finalTags : ['Wallpaper'],
         image_path: path
       });
 
@@ -2094,7 +2127,7 @@ document.getElementById('homeLogo').onclick=goHome;
         name, img: imageUrl(path), _ref:{site:'r2', path},
         tab: elTab.value, cat: elCat.value,
         res: resolution,
-        tags: tags.length ? tags : ['Wallpaper'],
+        tags: finalTags.length ? finalTags : ['Wallpaper'],
         created_at: (entry && entry.created_at) || new Date().toISOString(), _new:true
       });
       _seenPaths.add(path);  // already on screen — keep the live refresh from adding a duplicate
@@ -2215,8 +2248,11 @@ document.getElementById('homeLogo').onclick=goHome;
     //    on Auto-detect each image publishes under its detected category
     const shared = bkTags.value.split(',').map(t=>t.trim()).filter(Boolean);
     const seen = {};
-    const tags = shared.concat(item.autoTags || [])
+    let tags = shared.concat(item.autoTags || [])
       .filter(t=>{ const k = t.toLowerCase(); if(seen[k]) return false; seen[k] = 1; return true; });
+    // Imagga cloud tags (when connected) join the batch + auto tags
+    try { const iTags = await imaggaTagsFor(path); if(iTags.length) tags = mergeTags(tags, iTags); }
+    catch(e){ /* not configured — local tags stand */ }
     const category = (bkCat.value === '__auto__') ? (item.autoCat || 'Abstract') : bkCat.value;
     const resolution = (item.w && item.h) ? (item.w + 'x' + item.h) : '3840x2160';
     const entry = await apiAdd({
@@ -2383,6 +2419,10 @@ document.getElementById('homeLogo').onclick=goHome;
         pending = [];
       };
 
+      // Imagga joins in when configured; the first "not configured" reply
+      // turns it off for the whole run instead of failing 1000 more times
+      let useImagga = true;
+
       for(let i = 0; i < todo.length; i++){
         if(retagStopReq) break;
         const row = todo[i];
@@ -2392,7 +2432,12 @@ document.getElementById('homeLogo').onclick=goHome;
         if(!res.category && !res.tags.length){
           try { res = await autoTags(API_BASE + '/images/' + encodeURI(row.image_path)); } catch(e){}
         }
-        const tags = mergeTags(keywordsFromName(row.name), res.tags, [tierOfRes(row.resolution)]);
+        let iTags = [];
+        if(useImagga){
+          try { iTags = await imaggaTagsFor(row.image_path); }
+          catch(e){ useImagga = false; }
+        }
+        const tags = mergeTags(keywordsFromName(row.name), iTags, res.tags, [tierOfRes(row.resolution)]);
         const category = res.category || row.category || 'Abstract';
         pending.push({ image_path: row.image_path, category: category, tags: tags });
         logRetag(row.name || '(untitled)', category, tags);
