@@ -929,6 +929,55 @@
   html .detail-desc a, html.light .detail-desc a { color: var(--accent); text-decoration: underline; }
 
   /* ============================================================
+     v7 cards — image, then title / tags / views / action bar
+     ============================================================ */
+  html .card, html.light .card { text-align: left; }
+  /* the image sits flush with the card's top edge */
+  html .thumb, html.light .thumb { margin: 0; border-radius: 0; }
+  .card-badge {
+    position: absolute; top: 10px; z-index: 6;
+    font-size: 10.5px; font-weight: 800; letter-spacing: 0.4px;
+    padding: 5px 9px; border-radius: 7px;
+    background: rgba(10,12,16,0.72); color: #fff; border: 1px solid rgba(255,255,255,0.16);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .card-badge.is-new { left: 10px; }
+  .card-badge.is-res { right: 10px; }
+  .card-body { padding: 13px 14px 11px; }
+  .card-title {
+    font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; min-height: 24px; }
+  .card-tag {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: 6px; padding: 4px 8px; cursor: pointer; white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .card-tag:hover { color: var(--text); border-color: var(--accent); }
+  .card-views { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .card-views .i { width: 14px; height: 14px; opacity: 0.85; }
+  .card-actions {
+    display: flex; align-items: center; gap: 4px;
+    margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line);
+  }
+  .cact {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px 4px; border-radius: 8px; background: transparent; border: none;
+    color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 700;
+    font-family: inherit; transition: background 0.15s, color 0.15s;
+  }
+  .cact .i { width: 15px; height: 15px; }
+  .cact:hover { background: var(--surface-2); color: var(--text); }
+  .cact.on { color: var(--accent); }
+  .cact.on .i { fill: currentColor; fill-opacity: 0.18; }
+  .cact.fav.on { color: #ff2f5e; }
+  /* the hover overlay keeps only the fullscreen affordance now */
+  html .thumb .hover, html.light .thumb .hover { background: rgba(8,10,14,0.42); }
+  @media (max-width: 560px) { .card-tags { display: none; } }
+
+  /* ============================================================
      Icon set — one 24 grid, 1.75 stroke, round caps. Every icon
      inherits currentColor, so it picks up whatever color its
      button already uses in either theme.
@@ -1200,6 +1249,9 @@ const ICONS = {
   moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>',
   sun:  '<circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M22 12h-2.5M4.5 12H2M19 5l-1.8 1.8M6.8 17.2 5 19M19 19l-1.8-1.8M6.8 6.8 5 5"/>',
   // --- stats ---
+  like:      '<path d="M7 11v9H4a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1Z"/><path d="M7 11l4-7c1.3 0 2 .9 2 2.2V9h4.8a2 2 0 0 1 2 2.4l-1.2 6a2 2 0 0 1-2 1.6H7"/>',
+  dislike:   '<path d="M7 13V4H4a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1Z"/><path d="M7 13l4 7c1.3 0 2-.9 2-2.2V15h4.8a2 2 0 0 0 2-2.4l-1.2-6a2 2 0 0 0-2-1.6H7"/>',
+  heart:     '<path d="M12 20C7 17 3.5 13.4 3.5 9.4A4.4 4.4 0 0 1 12 6.8 4.4 4.4 0 0 1 20.5 9.4c0 4-3.5 7.6-8.5 10.6Z"/>',
   views:     '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
   downloads: '<path d="M12 3v12M7 11l5 5 5-5M4 20h16"/>',
   calendar:  '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/>',
@@ -1339,6 +1391,66 @@ function bumpStat(w, key){
   try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(e){}
 }
 
+// ---- Global counters: views / likes / dislikes, shared by every visitor ----
+// Served by /api/stats (D1). The browser remembers what it has already viewed
+// or voted on, so each person counts once per wallpaper.
+let gStats = {};
+const VIEWED_KEY = '8kw_viewed', VOTES_KEY = '8kw_votes';
+let viewedSet = (()=>{ try { return new Set(JSON.parse(localStorage.getItem(VIEWED_KEY) || '[]')); } catch(e){ return new Set(); } })();
+let votes = (()=>{ try { return JSON.parse(localStorage.getItem(VOTES_KEY) || '{}') || {}; } catch(e){ return {}; } })();
+
+// A stable id per wallpaper: the stored path for published ones, the photo id
+// for Unsplash, the slug for the built-in demos.
+function statKey(w){
+  if(w._ref && w._ref.site === 'r2' && w._ref.path) return w._ref.path;
+  if(w._ref && w._ref.site === 'unsplash' && w._ref.id) return 'u:' + w._ref.id;
+  return 'd:' + slugOf(w);
+}
+function gOf(w){ return gStats[statKey(w)] || { v:0, l:0, d:0 }; }
+function fmtCount(n){ return (+n || 0).toLocaleString(); }
+
+async function loadGlobalStats(){
+  try {
+    const res = await fetch(API_BASE + '/api/stats');
+    if(!res.ok) return;
+    const data = await res.json();
+    if(data && typeof data === 'object') gStats = data;
+    if(_list && _list.length) render(true);   // repaint with the real numbers
+  } catch(e){ /* counters are non-essential — the gallery works without them */ }
+}
+function postStat(key, action){
+  try {
+    fetch(API_BASE + '/api/stats', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: key, action: action })
+    }).catch(()=>{});
+  } catch(e){}
+}
+// counted once per browser, so the number tracks people rather than page loads
+function registerView(w){
+  const k = statKey(w);
+  const g = gStats[k] || (gStats[k] = { v:0, l:0, d:0 });
+  if(viewedSet.has(k)) return;
+  viewedSet.add(k);
+  try { localStorage.setItem(VIEWED_KEY, JSON.stringify([...viewedSet])); } catch(e){}
+  g.v++;
+  postStat(k, 'view');
+}
+// dir: 1 = like, -1 = dislike. Clicking the active one clears the vote.
+function voteOn(w, dir){
+  const k = statKey(w);
+  const cur = votes[k] || 0;
+  const next = (cur === dir) ? 0 : dir;
+  const g = gStats[k] || (gStats[k] = { v:0, l:0, d:0 });
+  if(cur === 1){ g.l = Math.max(0, g.l - 1); postStat(k, 'unlike'); }
+  if(cur === -1){ g.d = Math.max(0, g.d - 1); postStat(k, 'undislike'); }
+  if(next === 1){ g.l++; postStat(k, 'like'); }
+  if(next === -1){ g.d++; postStat(k, 'dislike'); }
+  if(next) votes[k] = next; else delete votes[k];
+  try { localStorage.setItem(VOTES_KEY, JSON.stringify(votes)); } catch(e){}
+  return next;
+}
+
 // Unsplash asks apps to ping a photo's download endpoint when it's downloaded;
 // the proxy holds the key, so just forward the trigger (fire-and-forget).
 function trackUnsplash(w){
@@ -1471,16 +1583,37 @@ function isFresh(w){
 
 function makeCard(w, idx){
   const card=document.createElement('div'); card.className='card';
-  const badge = isFresh(w) ? "<span class='admin-badge'>NEW</span>" : "";
-  const heart = "<button class='fav-btn"+(isFav(w)?' is-fav':'')+"' title='Save to favorites'><svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 21s-7.55-4.74-10.05-9.36C.32 8.4 1.96 5 5.2 5c2.04 0 3.3 1.13 4.1 2.32L12 9.6l2.7-2.28C15.5 6.13 16.76 5 18.8 5c3.24 0 4.88 3.4 3.25 6.64C19.55 16.26 12 21 12 21z'/></svg></button>";
   // the first row of cards paints immediately with high priority; the rest lazy-load
   const eager = typeof idx === 'number' && idx < 8;
-  card.innerHTML = badge + heart
+  const tier = resTier(w);
+  const g = gOf(w);
+  const myVote = votes[statKey(w)] || 0;
+  const cardTags = (w.tags || []).slice(0, 3);
+
+  card.innerHTML =
+      (isFresh(w) ? "<span class='card-badge is-new'>NEW</span>" : "")
+    + (tier ? "<span class='card-badge is-res'>" + esc(tier) + "</span>" : "")
     + "<div class='thumb'><div class='shimmer'></div>"
-    + "<img alt='"+esc(w.name)+"' loading='"+(eager?'eager':'lazy')+"'"+(eager?" fetchpriority='high'":"")+" decoding='async'>"
-    + "<div class='hover'><button class='act dl'>"+icon('download','i-sm')+"Download</button>"
-    + "<button class='act exp'>"+icon('fullscreen','i-sm')+"Full</button></div></div>"
-    + "<div class='caption'>"+esc(w.name)+"</div>";
+      + "<img alt='" + esc(w.name) + " wallpaper' loading='" + (eager?'eager':'lazy') + "'"
+        + (eager ? " fetchpriority='high'" : "") + " decoding='async'>"
+      + "<div class='hover'><button class='act exp'>" + icon('fullscreen','i-sm') + "Full</button></div>"
+    + "</div>"
+    + "<div class='card-body'>"
+      + "<div class='card-title'>" + esc(w.name) + "</div>"
+      + "<div class='card-tags'>"
+        + cardTags.map(t => "<span class='card-tag'>" + esc(t) + "</span>").join('')
+      + "</div>"
+      + "<div class='card-views'>" + icon('views') + "<span class='vn'>" + fmtCount(g.v) + " views</span></div>"
+      + "<div class='card-actions'>"
+        + "<button class='cact dl' title='Download' aria-label='Download'>" + icon('download') + "</button>"
+        + "<button class='cact fav" + (isFav(w)?' on':'') + "' title='Save to favorites' aria-label='Save'>" + icon('heart') + "</button>"
+        + "<button class='cact up" + (myVote===1?' on':'') + "' title='Like' aria-label='Like'>"
+          + icon('like') + "<span class='n'>" + fmtCount(g.l) + "</span></button>"
+        + "<button class='cact down" + (myVote===-1?' on':'') + "' title='Dislike' aria-label='Dislike'>"
+          + icon('dislike') + "</button>"
+      + "</div>"
+    + "</div>";
+
   const thumb=card.querySelector('.thumb'), img=card.querySelector('img');
   img.onload=()=>{ img.classList.add('loaded'); thumb.classList.add('loaded'); };
   let triedFull = false;
@@ -1491,10 +1624,25 @@ function makeCard(w, idx){
   };
   img.src = thumbUrl(w);
   if(img.complete && img.naturalWidth){ img.classList.add('loaded'); thumb.classList.add('loaded'); }
-  card.querySelector('.dl').onclick=e=>{ e.stopPropagation(); bumpStat(w,'d'); trackUnsplash(w); download(w.name, w.img); };
+
   card.querySelector('.exp').onclick=e=>{ e.stopPropagation(); openLightbox(w); };
-  const fb=card.querySelector('.fav-btn');
-  fb.onclick=e=>{ e.stopPropagation(); toggleFav(w); fb.classList.toggle('is-fav', isFav(w)); updateHeroStats(); if(showFavs) render(); };
+  card.querySelector('.dl').onclick=e=>{ e.stopPropagation(); bumpStat(w,'d'); trackUnsplash(w); download(w.name, w.img); };
+  // tag chips jump straight to that tag's view
+  card.querySelectorAll('.card-tag').forEach((el, i)=>{
+    el.onclick=e=>{ e.stopPropagation(); filterByTag(cardTags[i]); };
+  });
+  const fb=card.querySelector('.fav');
+  fb.onclick=e=>{ e.stopPropagation(); toggleFav(w); fb.classList.toggle('on', isFav(w)); updateHeroStats(); if(showFavs) render(); };
+  const up=card.querySelector('.up'), down=card.querySelector('.down');
+  function paintVotes(v){
+    const gg = gOf(w);
+    up.classList.toggle('on', v === 1);
+    down.classList.toggle('on', v === -1);
+    up.querySelector('.n').textContent = fmtCount(gg.l);
+  }
+  up.onclick=e=>{ e.stopPropagation(); paintVotes(voteOn(w, 1)); };
+  down.onclick=e=>{ e.stopPropagation(); paintVotes(voteOn(w, -1)); };
+
   card.onclick=()=>showDetail(w);
   return card;
 }
@@ -1654,6 +1802,7 @@ if(HAS_IO){
   io.observe(document.getElementById('gridSentinel'));
 }
 render();
+loadGlobalStats();   // fills in the real view / like counts, then repaints
 
 // ============================================================
 // v4 upgrade: real filtering, favorites, lightbox, hero, chrome
@@ -2087,6 +2236,7 @@ async function fetchFileSize(url){
 function showDetail(w){
   currentWp = w;
   bumpStat(w, 'v');
+  registerView(w);   // global counter, once per browser per wallpaper
   // collapse any open resolution list from a previous wallpaper
   if(typeof resList !== 'undefined' && resList){ resList.classList.remove('open'); resList.innerHTML=''; }
   if(typeof resDevBtns !== 'undefined' && resDevBtns){ resDevBtns.forEach(b=>b.classList.remove('active')); }
@@ -2145,8 +2295,10 @@ function showDetail(w){
 
   // ---- Details line: views, downloads, upload date, file size ----
   const st = statOf(w);
+  const gs = gOf(w);   // views + likes are global; downloads stay per-browser
   const parts = [
-    icon('views','i-sm') + '<span><b>' + st.v + '</b> view' + (st.v===1?'':'s') + '</span>',
+    icon('views','i-sm') + '<span><b>' + fmtCount(gs.v) + '</b> view' + (gs.v===1?'':'s') + '</span>',
+    icon('like','i-sm') + '<span><b>' + fmtCount(gs.l) + '</b> like' + (gs.l===1?'':'s') + '</span>',
     icon('downloads','i-sm') + '<span><b>' + (st.d||0) + '</b> download' + ((st.d||0)===1?'':'s') + '</span>'
   ];
   if(w.created_at){

@@ -13,3 +13,10 @@ pages_build_output_dir = "public"
 [[kv_namespaces]]
 binding = "STORE"
 id = "2ca57291d77147c998164738214212b1"
+
+# Global view/like counters. D1 rather than KV because KV's free tier allows
+# only 1000 writes/day — a like button would exhaust that; D1 allows 100k.
+[[d1_databases]]
+binding = "DB"
+database_name = "wallpaper-stats"
+database_id = "2cdf64a3-93bc-4898-840e-2b36d36d88b9"
