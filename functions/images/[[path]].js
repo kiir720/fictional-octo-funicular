@@ -9,12 +9,19 @@ export async function onRequestGet(context){
   const rel = Array.isArray(params.path) ? params.path.join('/') : String(params.path || '');
   if(!rel) return new Response('Not found', { status: 404 });
 
+  // Un-reviewed submissions must never be cached: a moderator previewing one
+  // would otherwise pin it at the edge, and it would keep being served after
+  // being rejected and deleted. Published files are immutable, so they cache.
+  const isPending = rel.indexOf('pending/') === 0;
   const cache = caches.default;
-  const hit = await cache.match(request);
-  if(hit){
-    const res = new Response(hit.body, hit);
-    res.headers.set('x-edge-cache', 'hit');
-    return res;
+
+  if(!isPending){
+    const hit = await cache.match(request);
+    if(hit){
+      const res = new Response(hit.body, hit);
+      res.headers.set('x-edge-cache', 'hit');
+      return res;
+    }
   }
 
   const obj = await getObject(env, 'images/' + rel);
@@ -23,11 +30,11 @@ export async function onRequestGet(context){
   const res = new Response(obj.body, {
     headers: {
       'content-type': obj.contentType,
-      'cache-control': 'public, max-age=31536000, immutable',
+      'cache-control': isPending ? 'no-store, private' : 'public, max-age=31536000, immutable',
       'access-control-allow-origin': '*',
-      'x-edge-cache': 'miss'
+      'x-edge-cache': isPending ? 'bypass' : 'miss'
     }
   });
-  context.waitUntil(cache.put(request, res.clone()));
+  if(!isPending) context.waitUntil(cache.put(request, res.clone()));
   return res;
 }

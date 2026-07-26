@@ -1249,6 +1249,7 @@
 
 <footer>
   <nav class="foot-nav">
+    <a href="/upload">Submit a wallpaper</a><span>|</span>
     <a href="#" data-policy="about">About</a><span>|</span>
     <a href="#" data-policy="privacy">Privacy</a><span>|</span>
     <a href="#" data-policy="tos">TOS</a><span>|</span>
@@ -2134,7 +2135,11 @@ const policies = {
     + "<p>Hot-linking to images and other large files hosted here is not permitted without our permission. You may of course link directly to individual web pages. Direct linking to small preview images is permitted but not guaranteed.</p>"
     + "<h3>User-Submitted Content</h3>"
     + "<p>This is a community-supported website that relies on its user community for the bulk of its content. To maintain quality, only a subset of submissions are selected to be published. Submitted content should not contain personal insults, explicit material, off-topic discussion, or anything not suited for a general audience.</p>"
-    + "<p>We reserve the right to moderate content posted here, both during and after the submission process. Moderators may remove or edit content at any time to keep the site appropriate for its audience.</p>",
+    + "<p>We reserve the right to moderate content posted here, both during and after the submission process. Moderators may remove or edit content at any time to keep the site appropriate for its audience.</p>"
+    + "<p>By submitting an image you confirm that you created it or otherwise hold the rights to share it, and you grant us a non-exclusive licence to host, display and distribute it on this website. You keep ownership of your work. Do not upload material you do not have the rights to.</p>"
+    + "<h3>Repeat Infringer Policy</h3>"
+    + "<p>We terminate the access of anyone who repeatedly submits material that infringes the rights of others. In practice: a submission that is the subject of a valid takedown notice is removed and recorded against the submitter; a submitter associated with repeated valid notices is blocked from making further submissions, and existing submissions from them may be removed.</p>"
+    + "<p>If you believe your material was removed in error, contact us and we will review it.</p>",
 
   copyright: "<h1>Copyright Policy</h1>"
     + "<p class='lead'>This is a community-supported website with the majority of published content being uploaded by our user community or collected from a wide range of free image resources.</p>"
@@ -2143,6 +2148,16 @@ const policies = {
     + "<p>We reserve the right to decide whether or not to host any wallpaper that was submitted by users.</p>"
     + "<p>We are an online service provider as defined in the Digital Millennium Copyright Act. We provide legal copyright owners with the ability to self-publish on the internet by uploading, storing, and displaying various media utilizing our services.</p>"
     + "<p class='emph'>We have no intention of violating anyone's copyright, and take the matter very seriously. If you are a copyright holder of a particular image, please report it using \"Report Image.\"</p>"
+    + "<h3>Filing a Takedown Notice</h3>"
+    + "<p>To report material you believe infringes your copyright, send a notice to our designated agent including: your contact details; identification of the work you say is infringed; the URL of the material in question; a statement that you have a good-faith belief the use is not authorised; a statement, under penalty of perjury, that the information is accurate and that you are the owner or authorised to act for them; and your signature.</p>"
+    + "<div class='contact-card'>"
+    + "<div class='row'><b>Agent</b><span>DMCA Agent, 8K Wallpapers</span></div>"
+    + "<div class='row'><b>Email</b><span>dmca@your-domain.example</span></div>"
+    + "<div class='row'><b>Response</b><span>Valid notices are actioned promptly, usually within 1&ndash;2 business days.</span></div>"
+    + "</div>"
+    + "<p style='font-size:13px;color:var(--muted)'>Site owner: replace the agent details above with your real contact address, and register a designated agent with the U.S. Copyright Office &mdash; safe-harbour protection depends on that registration being on file.</p>"
+    + "<h3>Repeat Infringers</h3>"
+    + "<p>We keep a record of submissions that are the subject of valid takedown notices and block submitters associated with repeated notices, as described in our Terms of Service.</p>"
     + "<p style='font-size:13px;color:var(--muted)'>Note: the wallpapers on this demo are original generated artwork. This policy text is a template and is not legal advice &mdash; have a professional review any policies before publishing a real site.</p>",
 
   contact: "<h1>Contact Us</h1>"
@@ -2530,6 +2545,8 @@ resDevBtns.forEach(btn=>{
 });
 
 document.querySelectorAll('.foot-nav a').forEach(a=>{
+  // only the policy links open in-page; real links (e.g. /upload) navigate
+  if(!a.dataset.policy) return;
   a.onclick=(e)=>{ e.preventDefault(); showPolicy(a.dataset.policy); };
 });
 document.getElementById('policyBack').onclick=showGallery;

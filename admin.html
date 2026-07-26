@@ -112,6 +112,21 @@
     if(!res.ok) throw await apiError(res, 'Bulk update failed');
     return res.json();
   }
+  // ---- visitor submissions awaiting review ----
+  async function apiSubmissions(status){
+    const res = await fetch(API_BASE + '/api/submissions?status=' + encodeURIComponent(status || 'pending'),
+      { headers: apiHeaders(), cache: 'no-store' });
+    if(!res.ok) throw await apiError(res, 'Could not load submissions');
+    return (await res.json()).submissions || [];
+  }
+  async function apiReview(body){
+    const res = await fetch(API_BASE + '/api/submissions', {
+      method: 'POST', headers: apiHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body)
+    });
+    if(!res.ok) throw await apiError(res, 'Review failed');
+    return res.json();
+  }
+
   // Imagga cloud tagging via the site's proxy (keys live server-side).
   // Returns title-cased tag names; throws when unconfigured/unreachable.
   async function apiImagga(url){
@@ -378,6 +393,42 @@
   .bulk-progress { height: 6px; border-radius: 4px; background: rgba(255,255,255,0.1); overflow: hidden; margin: 12px 0 4px; display: none; }
   .bulk-progress.show { display: block; }
   .bulk-progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #7ee29a, #3aa0ff); transition: width 0.25s; }
+
+  /* ---- submission queue ---- */
+  .sub-count {
+    display: none; margin-left: 6px; min-width: 18px; padding: 1px 5px; border-radius: 20px;
+    background: #ff9f43; color: #1a1206; font-size: 11px; font-weight: 800;
+  }
+  .sub-count.show { display: inline-block; }
+  .sub-list { display: flex; flex-direction: column; gap: 10px; max-height: 56vh; overflow-y: auto; margin-top: 4px; }
+  .sub-list:empty::after {
+    content: 'No submissions waiting.'; color: rgba(255,255,255,0.35);
+    font-size: 13px; text-align: center; padding: 26px 0; display: block;
+  }
+  .sub-item {
+    display: flex; gap: 12px; padding: 10px; border-radius: 11px;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+  }
+  .sub-thumb {
+    width: 104px; height: 66px; flex-shrink: 0; border-radius: 8px; object-fit: cover;
+    background: rgba(255,255,255,0.08); cursor: zoom-in;
+  }
+  .sub-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .sub-mid input, .sub-mid select {
+    width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 7px; color: var(--text); padding: 7px 9px; font-size: 13px; font-family: inherit; outline: none;
+  }
+  .sub-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .sub-meta { font-size: 11px; color: var(--muted); line-height: 1.5; word-break: break-all; }
+  .sub-meta a { color: #8ab4ff; }
+  .sub-btns { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; justify-content: center; }
+  .sub-btns button {
+    border: none; border-radius: 8px; padding: 8px 14px; font-size: 12.5px; font-weight: 700;
+    font-family: inherit; cursor: pointer; white-space: nowrap;
+  }
+  .sub-ok { background: rgba(126,226,154,0.92); color: #06210f; }
+  .sub-no { background: rgba(185,32,32,0.9); color: #fff; }
+  .sub-btns button:disabled { opacity: 0.55; cursor: default; }
 
   /* ---- retag pass ---- */
   .retag-note { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
@@ -842,6 +893,7 @@
     <button class="admin-export-btn" id="exportBtn" title="Export wallpapers for the public site">&#8681; Export</button>
     <button class="admin-export-btn" id="statsBtn" title="Library statistics">&#128202; Stats</button>
     <button class="admin-export-btn" id="retagBtn" title="Re-analyze every wallpaper and fix its category + tags">&#127991; Retag all</button>
+    <button class="admin-export-btn" id="subsBtn" title="Review wallpapers submitted by visitors">&#128235; Submissions<span class="sub-count" id="subCount"></span></button>
     <button class="admin-export-btn" id="signoutBtn" title="Sign out and change the admin key">&#8631; Sign out</button>
     <a class="admin-export-btn" href="https://8k-wallpapers.pages.dev" target="_blank" rel="noopener" title="Open the public site" style="text-decoration:none;display:inline-flex;align-items:center">&#8599; View Site</a>
     <div class="search">
@@ -957,6 +1009,27 @@
         <button class="admin-cancel" id="bkCancel">Cancel</button>
       </div>
       <div class="admin-msg" id="bkMsg"></div>
+    </div>
+  </div>
+</div>
+
+<div class="admin-overlay" id="subsOverlay">
+  <div class="admin-modal bulk-modal">
+    <div class="admin-mhead">
+      <h3>&#128235; Visitor submissions</h3>
+      <button class="admin-close" id="subsClose">&times;</button>
+    </div>
+    <div class="admin-body">
+      <div class="retag-note">
+        Wallpapers sent in through <b>/upload</b>. Nothing here is public until you approve it.
+        Each submitter confirmed they hold the rights; reject anything you don&rsquo;t recognise as
+        theirs. Approving moves the image into the library and builds its thumbnail.
+      </div>
+      <div class="sub-list" id="subList"></div>
+      <div class="admin-actions">
+        <button class="admin-cancel" id="subsRefresh">Refresh</button>
+      </div>
+      <div class="admin-msg" id="subsMsg"></div>
     </div>
   </div>
 </div>
@@ -2487,6 +2560,118 @@ document.getElementById('homeLogo').onclick=goHome;
   };
   rtOverlay.addEventListener('click', e=>{ if(e.target === rtOverlay && !retagRunning) rtOverlay.classList.remove('open'); });
 
+  // ============ Submission queue: review what visitors sent in ============
+  const subsOverlay = document.getElementById('subsOverlay');
+  const subListEl = document.getElementById('subList');
+  const subsMsgEl = document.getElementById('subsMsg');
+  const subCountEl = document.getElementById('subCount');
+  let subsPending = 0;
+  function setSubsMsg(t, kind){ subsMsgEl.textContent = t || ''; subsMsgEl.className = 'admin-msg ' + (kind || ''); }
+  function setSubCount(n){
+    subsPending = Math.max(0, n);
+    subCountEl.textContent = subsPending;
+    subCountEl.classList.toggle('show', subsPending > 0);
+  }
+
+  function subRow(s){
+    const row = document.createElement('div'); row.className = 'sub-item';
+    const url = API_BASE + '/images/' + encodeURI(s.image_path);
+
+    const img = document.createElement('img');
+    img.className = 'sub-thumb'; img.src = url; img.alt = s.name || '';
+    img.title = 'Open full size';
+    img.onclick = ()=> window.open(url, '_blank', 'noopener');
+
+    const mid = document.createElement('div'); mid.className = 'sub-mid';
+    const nameIn = document.createElement('input'); nameIn.value = s.name || ''; nameIn.placeholder = 'Name';
+    const two = document.createElement('div'); two.className = 'sub-row2';
+    const catSel = document.createElement('select');
+    categories.slice().sort().forEach(c=>{
+      const o = document.createElement('option'); o.value = c; o.textContent = c; catSel.appendChild(o);
+    });
+    catSel.value = categories.indexOf(s.category) > -1 ? s.category : 'Abstract';
+    const tagsIn = document.createElement('input'); tagsIn.value = s.tags || ''; tagsIn.placeholder = 'tags, comma separated';
+    two.appendChild(catSel); two.appendChild(tagsIn);
+
+    const meta = document.createElement('div'); meta.className = 'sub-meta';
+    const bits = [];
+    if(s.uploader) bits.push('by ' + s.uploader);
+    if(s.resolution) bits.push(s.resolution);
+    if(s.created_at) bits.push(s.created_at + ' UTC');
+    if(s.ip_hash) bits.push('id ' + String(s.ip_hash).slice(0, 8));
+    meta.textContent = bits.join(' · ');
+    if(s.source_url){
+      const a = document.createElement('a');
+      a.href = s.source_url; a.target = '_blank'; a.rel = 'noopener nofollow';
+      a.textContent = ' source';
+      meta.appendChild(document.createTextNode(' · ')); meta.appendChild(a);
+    }
+    mid.appendChild(nameIn); mid.appendChild(two); mid.appendChild(meta);
+
+    const btns = document.createElement('div'); btns.className = 'sub-btns';
+    const ok = document.createElement('button'); ok.className = 'sub-ok'; ok.textContent = '✓ Approve';
+    const no = document.createElement('button'); no.className = 'sub-no'; no.textContent = '✕ Reject';
+    btns.appendChild(ok); btns.appendChild(no);
+
+    function busy(v){ ok.disabled = v; no.disabled = v; }
+    ok.onclick = async ()=>{
+      busy(true); setSubsMsg('Approving "' + (nameIn.value || s.name) + '"…', 'ok');
+      try {
+        // trust the pixels over whatever the submitter typed — the resolution
+        // drives the 4K/5K/8K badge and the orientation filters
+        const real = (img.naturalWidth && img.naturalHeight)
+          ? img.naturalWidth + 'x' + img.naturalHeight : (s.resolution || '');
+        const res = await apiReview({
+          id: s.id, action: 'approve',
+          name: nameIn.value.trim() || s.name,
+          category: catSel.value,
+          resolution: real,
+          tags: tagsIn.value.split(',').map(t=>t.trim()).filter(Boolean)
+        });
+        // build the grid thumbnail for the now-live image (best effort)
+        const path = res && res.entry && res.entry.image_path;
+        if(path){
+          try {
+            const tb = await makeThumbBlob(API_BASE + '/images/' + encodeURI(path));
+            if(tb) await apiUploadThumb(tb, path);
+          } catch(e){ console.warn('Thumbnail skipped:', e); }
+        }
+        row.remove(); setSubCount(subsPending - 1);
+        setSubsMsg('Approved — it is live now.', 'ok');
+        loadAdded();
+      } catch(err){ console.error(err); setSubsMsg('Could not approve: ' + (err.message || err), 'err'); busy(false); }
+    };
+    no.onclick = async ()=>{
+      if(!confirm('Reject "' + (s.name || 'this submission') + '"? The uploaded file is deleted.')) return;
+      busy(true);
+      try {
+        await apiReview({ id: s.id, action: 'reject' });
+        row.remove(); setSubCount(subsPending - 1);
+        setSubsMsg('Rejected and deleted.', 'ok');
+      } catch(err){ console.error(err); setSubsMsg('Could not reject: ' + (err.message || err), 'err'); busy(false); }
+    };
+
+    row.appendChild(img); row.appendChild(mid); row.appendChild(btns);
+    return row;
+  }
+
+  async function loadSubs(quiet){
+    if(!adminKey()) return;
+    try {
+      const items = await apiSubmissions('pending');
+      setSubCount(items.length);
+      if(quiet) return;                     // badge-only refresh
+      subListEl.innerHTML = '';
+      items.forEach(s => subListEl.appendChild(subRow(s)));
+      setSubsMsg(items.length ? (items.length + ' waiting for review.') : '', items.length ? '' : 'ok');
+    } catch(e){ if(!quiet) setSubsMsg('Could not load: ' + (e.message || e), 'err'); }
+  }
+
+  document.getElementById('subsBtn').onclick = ()=>{ subsOverlay.classList.add('open'); loadSubs(); };
+  document.getElementById('subsClose').onclick = ()=> subsOverlay.classList.remove('open');
+  document.getElementById('subsRefresh').onclick = ()=> loadSubs();
+  subsOverlay.addEventListener('click', e=>{ if(e.target === subsOverlay) subsOverlay.classList.remove('open'); });
+
   // ---- load published wallpapers from the site's API ----
   function serialize(){
     // for the Export button: dump the backend wallpapers currently loaded
@@ -2580,7 +2765,8 @@ document.getElementById('homeLogo').onclick=goHome;
     if(!adminKey() || _syncStarted) return;   // nothing to sync until the admin key is set
     _syncStarted = true;
     loadAdded();
-    _setPolling(20000);   // re-read the list from GitHub every 20s
+    _setPolling(20000);   // re-read the wallpaper list every 20s
+    setInterval(function(){ loadSubs(true); }, 60000);   // keep the submissions badge current
     document.addEventListener('visibilitychange', function(){ if(!document.hidden) loadAdded(); });
     window.addEventListener('focus', loadAdded);
   }
@@ -2602,7 +2788,11 @@ document.getElementById('homeLogo').onclick=goHome;
   const lockBtn = document.getElementById('lockBtn');
 
   // re-entering after a key swap must reload immediately, not wait for the 20s poll
-  function showApp(){ lock.classList.add('hidden'); if(_syncStarted) loadAdded(); else startSync(); }
+  function showApp(){
+    lock.classList.add('hidden');
+    if(_syncStarted) loadAdded(); else startSync();
+    loadSubs(true);   // badge only — shows how many visitors are waiting on you
+  }
   function showLogin(){ lock.classList.remove('hidden'); lockKey.focus(); }
 
   async function doLogin(){
