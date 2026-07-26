@@ -978,6 +978,66 @@
   @media (max-width: 560px) { .card-tags { display: none; } }
 
   /* ============================================================
+     v8 phone view — tall portrait cards for phone wallpapers.
+     Used when the visitor picks the iPhone tag or the Portrait
+     filter, and by default on phones, where a 16:10 card wastes
+     most of the screen.
+     ============================================================ */
+  .section-desc {
+    max-width: 1680px; margin: -6px auto 14px; padding: 0 40px;
+    color: var(--muted); font-size: 14px; line-height: 1.6;
+  }
+  html .grid.phone-view, html.light .grid.phone-view { grid-template-columns: repeat(5, 1fr); gap: 18px; }
+  /* image-only cards: the title and action bar move into the overlay */
+  .grid.phone-view .card-body { display: none; }
+  .grid.phone-view .thumb { aspect-ratio: 9 / 16; }
+  .grid.phone-view .thumb::before { padding-top: 177.8%; }   /* pre-aspect-ratio fallback */
+  .grid.phone-view .card-badge.is-new { top: 8px; left: 8px; }
+  .grid.phone-view .card-badge.is-res { top: 8px; right: 8px; }
+  /* overlay: name along the top, actions along the bottom */
+  .grid.phone-view .thumb .hover {
+    flex-direction: column; justify-content: space-between; align-items: stretch;
+    gap: 8px; padding: 10px;
+    background: linear-gradient(180deg, rgba(8,10,14,0.72) 0%, rgba(8,10,14,0.12) 34%, rgba(8,10,14,0.12) 58%, rgba(8,10,14,0.82) 100%);
+  }
+  .hv-title { display: none; }
+  .grid.phone-view .hv-title {
+    display: block; color: #fff; font-size: 12.5px; font-weight: 700; line-height: 1.35;
+    text-align: center; text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .hv-actions { display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .grid.phone-view .hv-actions { gap: 8px; }
+  /* the overlay download only exists in phone view (the card body has one otherwise) */
+  .act.dl2 { display: none; }
+  .grid.phone-view .act.dl2 { display: inline-flex; }
+  .grid.phone-view .act {
+    background: rgba(18,20,26,0.82); color: #fff; border: 1px solid rgba(255,255,255,0.18);
+    padding: 8px 12px; font-size: 12px; border-radius: 9px;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .grid.phone-view .act.exp { padding: 8px 10px; }
+  /* the preview button is an expand icon in the normal grid, an eye in phone view */
+  .act.exp .i-views { display: none; }
+  .grid.phone-view .act.exp .i-views { display: inline-block; }
+  .grid.phone-view .act.exp .i-fullscreen, .grid.phone-view .act.exp .lbl { display: none; }
+  .grid.phone-view .act .i { color: #7ee29a; }        /* download tick, as in the reference */
+  .grid.phone-view .act.exp .i { color: #fff; }
+  /* Touch devices can't hover, so the actions must stay visible. Keyed on both
+     hover capability and width — an emulated narrow viewport still reports
+     hover, and a phone-width screen should behave like a phone either way. */
+  @media (hover: none) { .grid.phone-view .thumb .hover { opacity: 1; } }
+  @media (max-width: 700px) { .grid.phone-view .thumb .hover { opacity: 1; } }
+  @media (max-width: 1200px) { html .grid.phone-view, html.light .grid.phone-view { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 820px)  { html .grid.phone-view, html.light .grid.phone-view { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 560px)  {
+    html .grid.phone-view, html.light .grid.phone-view { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .section-desc { padding: 0 16px; font-size: 13px; }
+    .grid.phone-view .hv-title { font-size: 11px; }
+    .grid.phone-view .act { padding: 7px 9px; font-size: 11px; }
+  }
+
+  /* ============================================================
      Icon set — one 24 grid, 1.75 stroke, round caps. Every icon
      inherits currentColor, so it picks up whatever color its
      button already uses in either theme.
@@ -1124,6 +1184,7 @@
       <span class="result-count" id="resultCount"></span>
     </div>
   </div>
+  <p class="section-desc" id="sectionDesc" style="display:none"></p>
 
   <main class="grid" id="grid"></main>
   <div id="gridSentinel" aria-hidden="true" style="height:1px"></div>
@@ -1596,7 +1657,15 @@ function makeCard(w, idx){
     + "<div class='thumb'><div class='shimmer'></div>"
       + "<img alt='" + esc(w.name) + " wallpaper' loading='" + (eager?'eager':'lazy') + "'"
         + (eager ? " fetchpriority='high'" : "") + " decoding='async'>"
-      + "<div class='hover'><button class='act exp'>" + icon('fullscreen','i-sm') + "Full</button></div>"
+      + "<div class='hover'>"
+        + "<div class='hv-title'>" + esc(w.name) + "</div>"
+        + "<div class='hv-actions'>"
+          + "<button class='act exp' title='Preview' aria-label='Preview'>"
+            + icon('fullscreen','i-sm') + icon('views','i-sm') + "<span class='lbl'>Full</span></button>"
+          + "<button class='act dl2' title='Download for phone' aria-label='Download'>"
+            + icon('download','i-sm') + "Download</button>"
+        + "</div>"
+      + "</div>"
     + "</div>"
     + "<div class='card-body'>"
       + "<div class='card-title'>" + esc(w.name) + "</div>"
@@ -1626,6 +1695,11 @@ function makeCard(w, idx){
   if(img.complete && img.naturalWidth){ img.classList.add('loaded'); thumb.classList.add('loaded'); }
 
   card.querySelector('.exp').onclick=e=>{ e.stopPropagation(); openLightbox(w); };
+  // phone view's own download hands back a phone-shaped 1080x1920 crop
+  card.querySelector('.dl2').onclick=e=>{
+    e.stopPropagation(); bumpStat(w,'d'); trackUnsplash(w);
+    downloadSized(w.name, w.img, 1080, 1920);
+  };
   card.querySelector('.dl').onclick=e=>{ e.stopPropagation(); bumpStat(w,'d'); trackUnsplash(w); download(w.name, w.img); };
   // tag chips jump straight to that tag's view
   card.querySelectorAll('.card-tag').forEach((el, i)=>{
@@ -1647,6 +1721,32 @@ function makeCard(w, idx){
   return card;
 }
 
+// ---- Phone view: tall portrait cards ----
+// Turned on when the visitor asks for phone wallpapers (the iPhone tag or the
+// Portrait filter), and by default on phones, where a 16:10 card wastes most
+// of the screen.
+const _phoneMQ = window.matchMedia ? matchMedia('(max-width: 700px)') : null;
+function wantPhoneView(){
+  if(activeTag === 'iPhone Wallpapers' || activeOrient === 'Portrait') return true;
+  return !!(_phoneMQ && _phoneMQ.matches);
+}
+if(_phoneMQ && _phoneMQ.addEventListener){
+  // re-render only when the breakpoint actually flips, not on every resize tick
+  _phoneMQ.addEventListener('change', ()=>{ if(_list && _list.length) render(true); });
+}
+// "Explore beautiful wallpapers of A, B, C … from this X collection."
+function updateSectionDesc(){
+  const el = document.getElementById('sectionDesc');
+  if(!el) return;
+  const label = activeTag || activeCat || null;
+  const names = _list.slice(0, 6).map(w => w && w.name).filter(Boolean);
+  if(!label || names.length < 2){ el.style.display = 'none'; el.textContent = ''; return; }
+  const collection = (activeTag === 'iPhone Wallpapers') ? 'iPhone backgrounds' : label;
+  el.textContent = 'Explore beautiful wallpapers of ' + names.join(', ')
+    + ' from this ' + collection + ' collection.';
+  el.style.display = 'block';
+}
+
 // ---- Infinite scroll: cards render in pages as the visitor scrolls down ----
 const PAGE_SIZE = 24;
 const HAS_IO = 'IntersectionObserver' in window;
@@ -1664,6 +1764,8 @@ function render(preserveCount){
     _extra = []; _usPage = 0; _usDone = false; _usSeen.clear();
   }
   updateChrome(_list.length);
+  grid.classList.toggle('phone-view', wantPhoneView());
+  updateSectionDesc();
   if(!_list.length){
     _shown = 0;
     const msg = showFavs
@@ -1758,6 +1860,7 @@ async function loadMoreUnsplash(){
       _list = _list.concat(mapped);
       appendCards(mapped.length);
       updateChrome(_list.length);
+      updateSectionDesc();   // the blurb names wallpapers, which may only arrive now
       return;
     }
     // three pages in a row fell to the res/orientation filter — stop here so a
@@ -1883,7 +1986,9 @@ function filterByCat(name){
 function filterByTag(tag){
   showGallery(); activeTag=tag; activeCat=null; showFavs=false; query=''; activeTab='ALL';
   syncSearchInputs(''); resetActiveTabs();
-  setTitle(tag+' Wallpapers'); render(); safeScrollTop();
+  // several tags already end in "Wallpapers" — don't say it twice
+  setTitle(/wallpapers$/i.test(tag) ? tag : tag+' Wallpapers');
+  render(); safeScrollTop();
 }
 function showFavorites(btn){
   showGallery(); showFavs=true; activeCat=null; activeTag=null; query=''; activeTab='FAVS';
