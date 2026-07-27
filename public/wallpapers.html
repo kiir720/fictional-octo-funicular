@@ -1093,6 +1093,38 @@
     font-size: 12px; font-weight: 800;
   }
 
+  /* ---- ad slots (invisible until a publisher ID is configured) ---- */
+  .ad-slot { display: none; }
+  .ad-slot.on {
+    display: block; grid-column: 1 / -1; min-height: 100px; overflow: hidden;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  }
+  .ad-slot.on::before {
+    content: 'Advertisement'; display: block; text-align: center;
+    font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase;
+    color: var(--muted); opacity: 0.6; padding: 6px 0 2px;
+  }
+  .ad-detail { max-width: 1180px; margin: 0 auto 26px; }
+  /* ---- cookie / ads consent ---- */
+  .consent {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+    z-index: 300; width: min(680px, calc(100vw - 28px));
+    display: none; gap: 14px; align-items: center; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 15px 18px; box-shadow: 0 18px 50px rgba(0,0,0,0.55);
+  }
+  .consent.show { display: flex; }
+  .consent p { flex: 1; min-width: 240px; font-size: 12.5px; line-height: 1.55; color: var(--muted); }
+  .consent p a { color: var(--accent-glow); text-decoration: underline; }
+  .consent .btns { display: flex; gap: 8px; margin-left: auto; }
+  .consent button {
+    padding: 9px 16px; border-radius: 8px; cursor: pointer; font-family: inherit;
+    font-size: 12.5px; font-weight: 700; border: 1px solid var(--line);
+    background: var(--surface-2); color: var(--text);
+  }
+  .consent button.yes { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .consent button:hover { border-color: var(--accent-glow); }
+
   /* ---- header: Submit link + Google sign-in ---- */
   .submit-link { text-decoration: none; }
   .auth-wrap { position: relative; display: flex; align-items: center; }
@@ -1383,6 +1415,7 @@
       <h3>Choose a resolution</h3>
       <span>Click to set your download size</span>
     </div>
+    <div class="ad-slot ad-detail" data-ad="detail"></div>
     <div class="rescards" id="dtResCards"></div>
     <div class="aspnote" id="dtAspNote"></div>
     <div class="detail-meta">
@@ -2009,6 +2042,74 @@ function updateSectionDesc(){
   el.style.display = 'block';
 }
 
+// ============================================================
+// Ads. Everything here stays dormant until an ADS_CLIENT publisher ID is set
+// on the site, and — for visitors the law covers — until they have agreed.
+// Written network-agnostically around one config endpoint, so switching to a
+// different ad provider later only changes loadAdScript()/fillSlot().
+// ============================================================
+const AD_EVERY = 12;                 // one ad row per 12 wallpapers
+const AD_CONSENT_KEY = '8kw_ads_consent';
+const ADS = { configured:false, client:null, active:false };
+
+function makeAdSlot(){
+  const el = document.createElement('div');
+  el.className = 'ad-slot';
+  el.dataset.ad = 'grid';
+  if(ADS.active){ el.classList.add('on'); fillSlot(el); }
+  return el;
+}
+function fillSlot(el){
+  if(!ADS.active || el.dataset.filled) return;
+  el.dataset.filled = '1';
+  const ins = document.createElement('ins');
+  ins.className = 'adsbygoogle';
+  ins.style.display = 'block';
+  ins.setAttribute('data-ad-client', ADS.client);
+  ins.setAttribute('data-ad-format', 'auto');
+  ins.setAttribute('data-full-width-responsive', 'true');
+  el.appendChild(ins);
+  try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch(e){}
+}
+function loadAdScript(){
+  if(ADS.active) return;
+  ADS.active = true;
+  const s = document.createElement('script');
+  s.async = true; s.crossOrigin = 'anonymous';
+  s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(ADS.client);
+  document.head.appendChild(s);
+  document.querySelectorAll('.ad-slot').forEach(el=>{ el.classList.add('on'); fillSlot(el); });
+}
+function showConsent(){
+  const bar = document.createElement('div');
+  bar.className = 'consent show';
+  bar.innerHTML = "<p>We'd like to use cookies to show ads that help keep this site free. "
+    + "You can decline and still use everything here. See our "
+    + "<a href='#' data-policy-link='privacy'>Privacy policy</a>.</p>"
+    + "<div class='btns'><button class='no'>Decline</button><button class='yes'>Accept</button></div>";
+  document.body.appendChild(bar);
+  bar.querySelector('[data-policy-link]').onclick = e=>{ e.preventDefault(); showPolicy('privacy'); };
+  const close = (choice)=>{
+    try { localStorage.setItem(AD_CONSENT_KEY, choice); } catch(e){}
+    bar.remove();
+    if(choice === 'yes') loadAdScript();
+  };
+  bar.querySelector('.yes').onclick = ()=> close('yes');
+  bar.querySelector('.no').onclick  = ()=> close('no');
+}
+async function initAds(){
+  let cfg;
+  try { cfg = await (await fetch(API_BASE + '/api/ads')).json(); } catch(e){ return; }
+  if(!cfg || !cfg.configured) return;          // no publisher ID — nothing runs
+  ADS.configured = true; ADS.client = cfg.client;
+  let stored = null;
+  try { stored = localStorage.getItem(AD_CONSENT_KEY); } catch(e){}
+  if(!cfg.needsConsent){ loadAdScript(); return; }   // outside the consent regimes
+  if(stored === 'yes'){ loadAdScript(); return; }
+  if(stored === 'no') return;                        // previously declined
+  showConsent();
+}
+
 // ---- Infinite scroll: cards render in pages as the visitor scrolls down ----
 const PAGE_SIZE = 24;
 const HAS_IO = 'IntersectionObserver' in window;
@@ -2050,7 +2151,12 @@ function render(preserveCount){
 function appendCards(n){
   const grid=document.getElementById('grid');
   const end = Math.min(_list.length, _shown + n);
-  for(let i=_shown; i<end; i++) grid.appendChild(makeCard(_list[i], i));
+  for(let i=_shown; i<end; i++){
+    grid.appendChild(makeCard(_list[i], i));
+    // a full-width ad row every so often — the element is invisible unless
+    // ads are actually configured and permitted
+    if((i + 1) % AD_EVERY === 0) grid.appendChild(makeAdSlot());
+  }
   _shown = end;
 }
 
@@ -2173,6 +2279,7 @@ if(HAS_IO){
 render();
 buildResChecks();    // resolution options come from the library itself
 buildCatList();      // categories with live counts
+initAds();           // no-op until a publisher ID exists
 loadGlobalStats();   // fills in the real view / like counts, then repaints
 
 // ---- Header sign-in (Google). Hidden entirely until it's configured. ----
