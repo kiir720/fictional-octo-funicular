@@ -977,6 +977,47 @@
   html .thumb .hover, html.light .thumb .hover { background: rgba(8,10,14,0.42); }
   @media (max-width: 560px) { .card-tags { display: none; } }
 
+  /* ============================================================
+     v9 detail page — image first, then title, then a resolution
+     picker. Layout follows the reference; colours stay on the
+     site's own indigo theme.
+     ============================================================ */
+  html .detail-title, html.light .detail-title { margin-top: 22px; }
+  /* the download button now carries a live resolution pill */
+  html .detail-download, html.light .detail-download { gap: 12px; flex-wrap: wrap; }
+  .dl-pill {
+    font-size: 12.5px; font-weight: 800; letter-spacing: 0.2px;
+    background: rgba(255,255,255,0.18); color: #fff;
+    padding: 4px 12px; border-radius: 100px; font-variant-numeric: tabular-nums;
+  }
+  .rhead { display: flex; align-items: baseline; gap: 10px; max-width: 1180px; margin: 26px auto 12px; flex-wrap: wrap; }
+  .rhead h3 { font-size: 15px; font-weight: 800; color: var(--text); }
+  .rhead span { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+  .rescards {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 9px;
+    max-width: 1180px; margin: 0 auto 14px;
+  }
+  .rescard {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 13px 8px; cursor: pointer; text-align: center; font-family: inherit;
+    transition: transform 0.15s, border-color 0.15s, background 0.15s;
+  }
+  .rescard .nm { font-size: 12.5px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+  .rescard .dim { font-size: 13px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; margin-bottom: 4px; }
+  .rescard .asp { font-size: 10px; font-weight: 700; color: var(--muted); opacity: 0.75; letter-spacing: 0.3px; }
+  .rescard:hover { border-color: var(--accent); background: var(--surface-2); transform: translateY(-3px); }
+  .rescard.on { background: var(--accent); border-color: var(--accent); }
+  .rescard.on .nm { color: #fff; }
+  .rescard.on .dim { color: rgba(255,255,255,0.85); }
+  .rescard.on .asp { color: rgba(255,255,255,0.7); opacity: 1; }
+  .aspnote {
+    max-width: 1180px; margin: 0 auto 26px; text-align: center;
+    font-size: 12.5px; font-weight: 800; letter-spacing: 1.5px; color: var(--muted);
+    padding: 9px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  }
+  @media (max-width: 760px) { .rescards { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 430px) { .rescards { grid-template-columns: 1fr; } }
+
   /* ---- header: Submit link + Google sign-in ---- */
   .submit-link { text-decoration: none; }
   .auth-wrap { position: relative; display: flex; align-items: center; }
@@ -1243,13 +1284,19 @@
   <nav class="tabs tabs-detail" id="tabsDetail"></nav>
   <div class="detail">
     <button class="detail-back" id="detailBack">&#8592; Back to wallpapers</button>
-    <h2 class="detail-title"><span class="dt-cat" id="dtCat"></span> / <span class="dt-name" id="dtName"></span> Wallpaper</h2>
-    <p class="detail-desc" id="dtDesc"></p>
     <div class="detail-stage">
       <img id="dtImg" src="" alt="">
     </div>
     <div class="detail-report"><a href="#" id="dtReport"><svg class="i i-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-1.5 3.5L16 11H5"/></svg> Report Image</a></div>
-    <button class="detail-download" id="dtDownload"><svg class="i i-lg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11M7 10l5 5 5-5M5 20h14"/></svg> Download Original (<span id="dtRes"></span>)</button>
+    <h2 class="detail-title"><span class="dt-cat" id="dtCat"></span> / <span class="dt-name" id="dtName"></span> Wallpaper</h2>
+    <p class="detail-desc" id="dtDesc"></p>
+    <button class="detail-download" id="dtDownload"><svg class="i i-lg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11M7 10l5 5 5-5M5 20h14"/></svg> <span class="dl-label">Download Original</span> <span class="dl-pill" id="dtRes"></span></button>
+    <div class="rhead">
+      <h3>Choose a resolution</h3>
+      <span>Click to set your download size</span>
+    </div>
+    <div class="rescards" id="dtResCards"></div>
+    <div class="aspnote" id="dtAspNote"></div>
     <div class="detail-meta">
       <div class="meta-row"><span class="meta-lbl">Categories</span><span class="meta-chip" id="dtCatChip"></span></div>
       <div class="meta-row"><span class="meta-lbl">Tags</span><span id="dtTags"></span></div>
@@ -2366,6 +2413,67 @@ tabs.forEach(t=>{
 
 function browseCat(name){ filterByCat(name); }
 
+// ---- Resolution picker on the detail page ----
+// Cards set the size the Download button will hand back. "Original" gives the
+// file untouched; the others are cropped to that exact shape on download.
+let dtSelRes = null;   // null = original
+function aspectLabel(w, h){
+  const known = [[16/9,'16:9'],[16/10,'16:10'],[21/9,'21:9'],[32/9,'32:9'],[4/3,'4:3'],
+                 [3/2,'3:2'],[1,'1:1'],[9/16,'9:16'],[2/3,'2:3'],[1080/2400,'9:20']];
+  const r = w / h;
+  let best = known[0], bd = Infinity;
+  known.forEach(k => { const d = Math.abs(r - k[0]); if(d < bd){ bd = d; best = k; } });
+  return best[1];
+}
+// Classified on the SHORT edge, which is what names like FHD/QHD/4K actually
+// describe — judging by the long edge would call an ultrawide 3840x1080 "4K".
+function sizeWord(w, h){
+  const short = Math.min(w, h);
+  if(short >= 4320) return '8K';
+  if(short >= 2880) return '5K';
+  if(short >= 2160) return '4K UHD';
+  if(short >= 1440) return 'QHD';
+  if(short >= 1080) return 'FHD';
+  return 'HD';
+}
+function buildResCards(wp){
+  const host = document.getElementById('dtResCards');
+  const note = document.getElementById('dtAspNote');
+  const pill = document.getElementById('dtRes');
+  const label = document.querySelector('#dtDownload .dl-label');
+  if(!host) return;
+  host.innerHTML = '';
+  dtSelRes = null;
+
+  const p = parseResDims(wp.res);
+  const cards = [];
+  if(p) cards.push({ nm:'Original', w:p.w, h:p.h, orig:true });
+  cards.push({ nm:'Full HD', w:1920, h:1080 });
+  cards.push({ nm:'UltraWide', w:3440, h:1440 });
+  cards.push({ nm:'Super UltraWide', w:3840, h:1080 });
+  cards.push({ nm:'Mobile', w:1080, h:1920 });
+
+  function choose(c, el){
+    host.querySelectorAll('.rescard').forEach(x => x.classList.remove('on'));
+    if(el) el.classList.add('on');
+    dtSelRes = c.orig ? null : c;
+    pill.textContent = c.w + ' × ' + c.h;
+    note.textContent = (aspectLabel(c.w, c.h) + ' ' + sizeWord(c.w, c.h)).toUpperCase();
+    if(label) label.textContent = c.orig ? 'Download Original' : 'Download ' + c.nm;
+  }
+
+  cards.forEach((c, i) => {
+    const b = document.createElement('button');
+    b.className = 'rescard' + (i === 0 ? ' on' : '');
+    b.innerHTML = "<div class='nm'>" + esc(c.nm) + "</div>"
+      + "<div class='dim'>" + c.w + "×" + c.h + "</div>"
+      + "<div class='asp'>" + esc(aspectLabel(c.w, c.h) + ' ' + sizeWord(c.w, c.h)) + "</div>";
+    b.onclick = ()=> choose(c, b);
+    host.appendChild(b);
+  });
+  if(cards.length) choose(cards[0], host.firstChild);
+}
+
 // ---- Shareable deep links: every wallpaper gets a #w/<slug> URL ----
 function slugOf(w){ return String(w.name||'').replace(/[^a-z0-9]+/gi,'-').replace(/^-+|-+$/g,'').toLowerCase(); }
 function findBySlug(slug){ for(const w of wallpapers){ if(slugOf(w)===slug) return w; } return null; }
@@ -2480,7 +2588,7 @@ function showDetail(w){
   if(typeof resDevBtns !== 'undefined' && resDevBtns){ resDevBtns.forEach(b=>b.classList.remove('active')); }
   document.getElementById('dtCat').textContent = w.cat;
   document.getElementById('dtName').textContent = w.name;
-  document.getElementById('dtRes').textContent = w.res;
+  buildResCards(w);
   const dtDescEl = document.getElementById('dtDesc');
   dtDescEl.textContent =
     "Get this "+w.name+" background in "+w.res+" resolution from the "+w.cat+
@@ -2585,8 +2693,24 @@ async function downloadWithFeedback(btn, name, img, width){
   }
 }
 
-document.getElementById('dtDownload').onclick=(e)=>{
-  if(currentWp){ bumpStat(currentWp,'d'); trackUnsplash(currentWp); downloadWithFeedback(e.currentTarget, currentWp.name, currentWp.img); }
+document.getElementById('dtDownload').onclick=async (e)=>{
+  if(!currentWp) return;
+  bumpStat(currentWp,'d'); trackUnsplash(currentWp);
+  // a picked card downloads at that exact size; otherwise the file untouched
+  if(dtSelRes){
+    const btn = e.currentTarget;
+    if(btn.dataset.busy) return;
+    const orig = btn.innerHTML;
+    btn.dataset.busy = '1'; btn.style.opacity = '0.75'; btn.style.pointerEvents = 'none';
+    btn.textContent = 'Preparing ' + dtSelRes.w + '×' + dtSelRes.h + '…';
+    try { await downloadSized(currentWp.name, currentWp.img, dtSelRes.w, dtSelRes.h); }
+    finally {
+      btn.innerHTML = orig; btn.style.opacity = ''; btn.style.pointerEvents = '';
+      delete btn.dataset.busy;
+    }
+  } else {
+    downloadWithFeedback(e.currentTarget, currentWp.name, currentWp.img);
+  }
 };
 document.getElementById('dtReport').onclick=(e)=>{ e.preventDefault(); alert('Thanks — this image has been flagged for review.'); };
 
