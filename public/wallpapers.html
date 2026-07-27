@@ -1022,15 +1022,38 @@
      v10 categories panel — sidebar style: resolution checkboxes
      over a plain vertical category list, active one in the accent.
      ============================================================ */
-  html .cat-panel, html.light .cat-panel {
-    left: auto; right: 0; transform: translateY(-8px) scale(0.98);
-    width: 252px; max-height: min(74vh, 640px); overflow-y: auto;
-    padding: 14px 12px; border-radius: 14px;
+  /* the gallery is a sidebar + grid layout */
+  .gallery-body {
+    display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 24px;
+    max-width: 1680px; margin: 0 auto; padding: 0 40px; align-items: start;
   }
-  html .cat-wrap.open .cat-panel, html.light .cat-wrap.open .cat-panel {
-    transform: translateY(0) scale(1);
+  .gallery-main { min-width: 0; }
+  .side-panel {
+    position: sticky; top: 78px; max-height: calc(100vh - 98px); overflow-y: auto;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px 12px;
   }
-  html .cat-panel::before, html.light .cat-panel::before { display: none; }
+  .side-panel::-webkit-scrollbar { width: 8px; }
+  .side-panel::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+  /* inside the layout the grid no longer carries its own page gutters */
+  html .gallery-main .grid, html.light .gallery-main .grid { max-width: none; margin: 0; padding: 0 0 70px; }
+  html .gallery-main .section-head, html.light .gallery-main .section-head { max-width: none; margin: 0 0 16px; padding: 0; }
+  html .gallery-main .section-desc, html.light .gallery-main .section-desc { max-width: none; margin: -6px 0 14px; padding: 0; }
+  /* the header's Filters button is a mobile-only drawer toggle */
+  /* .categories-btn sets display later in the sheet, so match its specificity */
+  .categories-btn.burger { display: none; }
+  .side-scrim { position: fixed; inset: 0; z-index: 119; background: rgba(0,0,0,0.6); opacity: 0; visibility: hidden; transition: 0.2s; }
+  .side-scrim.on { opacity: 1; visibility: visible; }
+  @media (max-width: 1050px) {
+    .gallery-body { grid-template-columns: 1fr; padding: 0 20px; }
+    .categories-btn.burger { display: inline-flex; }
+    .side-panel {
+      position: fixed; top: 0; left: 0; bottom: 0; width: 258px; z-index: 120;
+      max-height: none; border-radius: 0; border-width: 0 1px 0 0;
+      transform: translateX(-100%); transition: transform 0.25s cubic-bezier(.2,.9,.25,1);
+    }
+    .side-panel.open { transform: none; }
+  }
   .filt-head {
     font-size: 10.5px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase;
     color: var(--muted); padding: 0 6px 8px;
@@ -1052,15 +1075,23 @@
     font-family: inherit; font-size: 10.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
   }
   .show-all:hover { border-color: var(--accent); }
-  /* categories become a plain single-column list */
+  /* categories become a plain single-column list with counts */
   html .cat-grid, html.light .cat-grid { display: flex; flex-direction: column; gap: 0; }
   html .cat-item, html.light .cat-item {
-    display: block; padding: 8px 6px; border-radius: 7px;
-    font-size: 14px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; padding: 7px 8px; border-radius: 6px;
+    font-size: 13px; font-weight: 600; color: var(--muted);
   }
-  html .cat-item:hover, html.light .cat-item:hover { background: var(--surface-2); color: var(--accent); }
-  html .cat-item.on, html.light .cat-item.on { color: var(--accent); font-weight: 700; }
+  html .cat-item:hover, html.light .cat-item:hover { background: var(--surface-2); color: var(--text); }
+  html .cat-item.on, html.light .cat-item.on { background: var(--accent); color: #fff; font-weight: 800; }
+  .cat-item .n { margin-left: auto; font-size: 10.5px; font-weight: 700; color: var(--muted); }
+  .cat-item.on .n { color: rgba(255,255,255,0.72); }
   .cat-item .chev, .cat-item .tip { display: none; }
+  /* signed-in account chip sits at the far right of the header */
+  .auth-me .initial {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    background: var(--accent); color: #fff; display: grid; place-items: center;
+    font-size: 12px; font-weight: 800;
+  }
 
   /* ---- header: Submit link + Google sign-in ---- */
   .submit-link { text-decoration: none; }
@@ -1204,18 +1235,7 @@
   <div class="logo" id="homeLogo" style="cursor:pointer"><b>8K</b> WALLPAPERS</div>
   <div class="top-right">
     <div class="cat-wrap">
-      <button class="categories-btn" id="catBtn"><svg class="i i-sm" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>Categories <span class="caret"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></button>
-      <div class="cat-panel" id="catPanel">
-        <div class="filt-sec">
-          <div class="filt-head">Resolutions</div>
-          <div class="res-checks" id="resChecks"></div>
-          <button class="show-all" id="resShowAll" hidden></button>
-        </div>
-        <div class="filt-sec">
-          <div class="filt-head">Categories</div>
-          <div class="cat-grid" id="catGrid"></div>
-        </div>
-      </div>
+      <button class="categories-btn burger" id="catBtn" aria-label="Show filters"><svg class="i i-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>Filters</button>
     </div>
     <div class="search">
       <input type="text" placeholder="Search" id="searchInput">
@@ -1223,6 +1243,7 @@
     </div>
     <a class="categories-btn submit-link" href="/upload" title="Submit your own wallpaper">
       <svg class="i i-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V9M7 13l5-5 5 5M5 4h14"/></svg>Submit</a>
+    <button class="theme-btn" id="themeBtn" title="Toggle light / dark mode" aria-label="Toggle light or dark mode"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg></button>
     <div class="auth-wrap" id="authWrap" hidden>
       <button class="categories-btn" id="authBtn">Sign in</button>
       <div class="auth-panel" id="authPanel">
@@ -1231,7 +1252,6 @@
         <button class="auth-signout" id="authSignout" hidden>Sign out</button>
       </div>
     </div>
-    <button class="theme-btn" id="themeBtn" title="Toggle light / dark mode" aria-label="Toggle light or dark mode"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg></button>
   </div>
 </header>
 
@@ -1310,18 +1330,34 @@
   <nav class="tabs" id="tabs"></nav>
   <div class="resbar" id="resBar"></div>
 
-  <div class="section-head">
-    <div class="bar"></div>
-    <h2 id="sectionTitle">Recent Wallpapers</h2>
-    <div class="section-sub">
-      <span class="filter-chip" id="filterChip"></span>
-      <span class="result-count" id="resultCount"></span>
+  <div class="gallery-body">
+    <aside class="side-panel" id="sidePanel">
+      <div class="filt-sec">
+        <div class="filt-head">Resolutions</div>
+        <div class="res-checks" id="resChecks"></div>
+        <button class="show-all" id="resShowAll" hidden></button>
+      </div>
+      <div class="filt-sec">
+        <div class="filt-head">Categories</div>
+        <div class="cat-grid" id="catGrid"></div>
+      </div>
+    </aside>
+
+    <div class="gallery-main">
+      <div class="section-head">
+        <div class="bar"></div>
+        <h2 id="sectionTitle">Recent Wallpapers</h2>
+        <div class="section-sub">
+          <span class="filter-chip" id="filterChip"></span>
+          <span class="result-count" id="resultCount"></span>
+        </div>
+      </div>
+      <p class="section-desc" id="sectionDesc" style="display:none"></p>
+
+      <main class="grid" id="grid"></main>
+      <div id="gridSentinel" aria-hidden="true" style="height:1px"></div>
     </div>
   </div>
-  <p class="section-desc" id="sectionDesc" style="display:none"></p>
-
-  <main class="grid" id="grid"></main>
-  <div id="gridSentinel" aria-hidden="true" style="height:1px"></div>
 </div>
 
 <div id="policyView" class="policy-view" style="display:none">
@@ -1699,18 +1735,33 @@ function setTitle(t){ document.getElementById('sectionTitle').textContent=t; }
 
 // ---- Categories dropdown ----
 const catGrid = document.getElementById('catGrid');
-categories.forEach(name=>{
-  const item=document.createElement('div');
-  item.className='cat-item';
-  item.dataset.cat = name;
-  item.innerHTML="<span>"+esc(name)+"</span><span class='chev'>&#10095;</span><span class='tip'>"+esc(name)+" Wallpapers</span>";
-  item.onclick=()=>{ filterByCat(name); };
-  catGrid.appendChild(item);
-});
+// The full category list, each with how many wallpapers it holds. Rebuilt
+// whenever the library changes so the counts stay honest.
+function buildCatList(){
+  const counts = {};
+  wallpapers.forEach(w=>{ if(w.cat) counts[w.cat] = (counts[w.cat] || 0) + 1; });
+  catGrid.innerHTML = '';
+  const all = document.createElement('div');
+  all.className = 'cat-item'; all.dataset.cat = '';
+  all.innerHTML = "<span>All wallpapers</span><span class='n'>" + wallpapers.length + "</span>";
+  all.onclick = ()=>{ clearFilter(); closeSide(); };
+  catGrid.appendChild(all);
+  categories.forEach(name=>{
+    const item = document.createElement('div');
+    item.className = 'cat-item';
+    item.dataset.cat = name;
+    const n = counts[name] || 0;
+    item.innerHTML = "<span>" + esc(name) + "</span>" + (n ? "<span class='n'>" + n + "</span>" : "");
+    item.onclick = ()=>{ filterByCat(name); };
+    catGrid.appendChild(item);
+  });
+  paintActiveCat();
+}
 // keep the list showing which category is currently being browsed
 function paintActiveCat(){
   catGrid.querySelectorAll('.cat-item').forEach(el=>{
-    el.classList.toggle('on', el.dataset.cat === activeCat);
+    const c = el.dataset.cat;
+    el.classList.toggle('on', c ? (c === activeCat) : !activeCat);
   });
 }
 
@@ -1766,11 +1817,22 @@ function buildResChecks(){
   } else { more.hidden = true; }
 }
 
+// The sidebar is permanent on desktop; on narrow screens the header's Filters
+// button slides it in over a scrim.
 const catWrap = document.querySelector('.cat-wrap');
 const catBtn = document.getElementById('catBtn');
-catBtn.onclick=(e)=>{ e.stopPropagation(); catWrap.classList.toggle('open'); };
-document.addEventListener('click', e=>{ if(!catWrap.contains(e.target)) catWrap.classList.remove('open'); });
-document.addEventListener('keydown', e=>{ if(e.key==='Escape') catWrap.classList.remove('open'); });
+const sidePanel = document.getElementById('sidePanel');
+const sideScrim = document.createElement('div');
+sideScrim.className = 'side-scrim';
+document.body.appendChild(sideScrim);
+function closeSide(){ sidePanel.classList.remove('open'); sideScrim.classList.remove('on'); }
+catBtn.onclick=(e)=>{
+  e.stopPropagation();
+  const open = sidePanel.classList.toggle('open');
+  sideScrim.classList.toggle('on', open);
+};
+sideScrim.onclick = closeSide;
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeSide(); });
 
 document.getElementById('searchInput').addEventListener('input', e=>{ runSearch(e.target.value); });
 
@@ -2110,6 +2172,7 @@ if(HAS_IO){
 }
 render();
 buildResChecks();    // resolution options come from the library itself
+buildCatList();      // categories with live counts
 loadGlobalStats();   // fills in the real view / like counts, then repaints
 
 // ---- Header sign-in (Google). Hidden entirely until it's configured. ----
@@ -2156,9 +2219,20 @@ loadGlobalStats();   // fills in the real view / like counts, then repaints
       // signed in: avatar + name, panel becomes the sign-out menu
       btn.className = 'auth-me';
       btn.innerHTML = '';
+      const who = me.user.name || me.user.email || 'Account';
       if(me.user.picture){
         const im = document.createElement('img'); im.src = me.user.picture; im.alt = ''; im.referrerPolicy = 'no-referrer';
+        // Google avatars occasionally fail to load — fall back to an initial
+        im.onerror = ()=>{
+          const ini = document.createElement('span');
+          ini.className = 'initial'; ini.textContent = who.trim().charAt(0).toUpperCase();
+          im.replaceWith(ini);
+        };
         btn.appendChild(im);
+      } else {
+        const ini = document.createElement('span');
+        ini.className = 'initial'; ini.textContent = who.trim().charAt(0).toUpperCase();
+        btn.appendChild(ini);
       }
       const sp = document.createElement('span');
       sp.textContent = me.user.name || me.user.email || 'Account';
@@ -2261,7 +2335,7 @@ function selectTab(label, btn){
 }
 function filterByCat(name){
   showGallery(); activeCat=name; activeTag=null; showFavs=false; query=''; activeTab='ALL';
-  syncSearchInputs(''); resetActiveTabs(); catWrap.classList.remove('open');
+  syncSearchInputs(''); resetActiveTabs(); closeSide();
   setTitle(name+' Wallpapers'); render(); safeScrollTop();
 }
 function filterByTag(tag){
@@ -2500,7 +2574,7 @@ function showPolicy(key){
   galleryView.style.display='none';
   detailView.style.display='none';
   policyView.style.display='block';
-  catWrap.classList.remove('open');
+  closeSide();
   safeScrollTop();
 }
 function showGallery(){
@@ -2794,7 +2868,7 @@ function showDetail(w){
   galleryView.style.display='none';
   policyView.style.display='none';
   detailView.style.display='block';
-  catWrap.classList.remove('open');
+  closeSide();
   safeScrollTop();
 }
 
@@ -3172,7 +3246,7 @@ document.getElementById('homeLogo').onclick=goHome;
         });
         added++; changed++;
       });
-      if(changed){ render(true); buildResChecks(); }   // repaint, keeping the visitor's scroll depth
+      if(changed){ render(true); buildResChecks(); buildCatList(); }   // repaint, keeping scroll depth
       // a shared #w/<slug> link may point at a wallpaper that just arrived
       if(changed && _pendingRoute) _pendingRoute = !routeFromHash();
       if(data.length === 0){
