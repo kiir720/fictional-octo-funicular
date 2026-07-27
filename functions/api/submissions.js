@@ -16,9 +16,12 @@ export async function onRequest({ request, env }){
   if(request.method === 'GET'){
     const url = new URL(request.url);
     const status = url.searchParams.get('status') || 'pending';
+    // join the account through so the moderator can see who actually sent it
     const rows = await env.DB.prepare(
-      'SELECT id, image_path, name, category, tags, resolution, uploader, source_url, ip_hash, status, created_at ' +
-      'FROM submissions WHERE status = ? ORDER BY id DESC LIMIT 200'
+      'SELECT s.id, s.image_path, s.name, s.category, s.tags, s.resolution, s.uploader, s.source_url, ' +
+      's.ip_hash, s.status, s.created_at, s.user_id, u.email AS user_email, u.name AS user_name, u.blocked AS user_blocked ' +
+      'FROM submissions s LEFT JOIN users u ON u.id = s.user_id ' +
+      'WHERE s.status = ? ORDER BY s.id DESC LIMIT 200'
     ).bind(status).all();
     return cors(json({ submissions: rows.results || [] }, { headers: { 'cache-control': 'no-store' } }));
   }
@@ -26,10 +29,20 @@ export async function onRequest({ request, env }){
   if(request.method === 'POST'){
     let b;
     try { b = await request.json(); } catch(e){ return cors(json({ error: 'invalid JSON' }, 400)); }
-    const id = parseInt(b && b.id, 10);
     const action = b && b.action;
+
+    // repeat-infringer enforcement: suspend or restore an account
+    if(action === 'block' || action === 'unblock'){
+      const uid = parseInt(b && b.user_id, 10);
+      if(!uid) return cors(json({ error: 'user_id is required' }, 400));
+      await env.DB.prepare('UPDATE users SET blocked = ? WHERE id = ?')
+        .bind(action === 'block' ? 1 : 0, uid).run();
+      return cors(json({ ok: true, user_id: uid, blocked: action === 'block' }));
+    }
+
+    const id = parseInt(b && b.id, 10);
     if(!id || ['approve','reject'].indexOf(action) === -1){
-      return cors(json({ error: 'id and action (approve|reject) are required' }, 400));
+      return cors(json({ error: 'id and action (approve|reject|block|unblock) are required' }, 400));
     }
     const row = await env.DB.prepare('SELECT * FROM submissions WHERE id = ?').bind(id).first();
     if(!row) return cors(json({ error: 'submission not found' }, 404));

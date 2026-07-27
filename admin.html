@@ -2595,10 +2595,13 @@ document.getElementById('homeLogo').onclick=goHome;
 
     const meta = document.createElement('div'); meta.className = 'sub-meta';
     const bits = [];
-    if(s.uploader) bits.push('by ' + s.uploader);
+    // a signed-in submitter is a real identity; anonymous ones only have an IP hash
+    if(s.user_email) bits.push('👤 ' + s.user_email + (s.user_blocked ? ' (BLOCKED)' : ''));
+    else if(s.uploader) bits.push('by ' + s.uploader + ' (not signed in)');
+    else bits.push('anonymous');
     if(s.resolution) bits.push(s.resolution);
     if(s.created_at) bits.push(s.created_at + ' UTC');
-    if(s.ip_hash) bits.push('id ' + String(s.ip_hash).slice(0, 8));
+    if(s.ip_hash) bits.push('ip ' + String(s.ip_hash).slice(0, 8));
     meta.textContent = bits.join(' · ');
     if(s.source_url){
       const a = document.createElement('a');
@@ -2612,6 +2615,25 @@ document.getElementById('homeLogo').onclick=goHome;
     const ok = document.createElement('button'); ok.className = 'sub-ok'; ok.textContent = '✓ Approve';
     const no = document.createElement('button'); no.className = 'sub-no'; no.textContent = '✕ Reject';
     btns.appendChild(ok); btns.appendChild(no);
+    // repeat-infringer enforcement, only possible for signed-in submitters
+    if(s.user_id){
+      const blk = document.createElement('button');
+      blk.className = 'sub-no'; blk.style.background = 'rgba(120,120,130,0.85)';
+      blk.textContent = s.user_blocked ? '↺ Unblock' : '⃠ Block user';
+      blk.onclick = async ()=>{
+        const blocking = !s.user_blocked;
+        if(blocking && !confirm('Block ' + (s.user_email || 'this account') + ' from submitting?')) return;
+        blk.disabled = true;
+        try {
+          await apiReview({ action: blocking ? 'block' : 'unblock', user_id: s.user_id });
+          s.user_blocked = blocking ? 1 : 0;
+          blk.textContent = blocking ? '↺ Unblock' : '⃠ Block user';
+          setSubsMsg(blocking ? 'Account blocked from submitting.' : 'Account restored.', 'ok');
+        } catch(err){ setSubsMsg('Could not update: ' + (err.message || err), 'err'); }
+        finally { blk.disabled = false; }
+      };
+      btns.appendChild(blk);
+    }
 
     function busy(v){ ok.disabled = v; no.disabled = v; }
     ok.onclick = async ()=>{

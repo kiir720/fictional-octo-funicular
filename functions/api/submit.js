@@ -7,6 +7,7 @@
 // that makes the DMCA safe-harbour posture meaningful, and the IP hash is what
 // lets a repeat-infringer policy actually be enforced.
 import { json, cors, preflight, putObject, sanitizeName } from './_utils.js';
+import { readSession } from './_auth.js';
 
 const MAX_BYTES = 15 * 1024 * 1024;
 const PER_IP_PER_HOUR = 10;
@@ -50,6 +51,20 @@ export async function onRequest({ request, env }){
   const ip = request.headers.get('cf-connecting-ip') || '';
   const ipHash = await hashIp(ip, env.ADMIN_KEY || 'salt');
 
+  // A signed-in submitter gets a real identity attached, which is what makes
+  // the repeat-infringer policy enforceable — and a suspended account is
+  // refused outright.
+  const secret = String(env.SESSION_SECRET || env.ADMIN_KEY || '').trim();
+  const sess = secret ? await readSession(request, secret) : null;
+  let userId = null;
+  if(sess && sess.uid){
+    const u = await env.DB.prepare('SELECT id, blocked, name FROM users WHERE id = ?').bind(sess.uid).first();
+    if(u){
+      if(u.blocked) return cors(json({ error: 'This account is not permitted to submit wallpapers.' }, 403));
+      userId = u.id;
+    }
+  }
+
   // --- abuse limits ---
   const recent = await env.DB.prepare(
     "SELECT COUNT(*) AS n FROM submissions WHERE ip_hash = ? AND created_at > datetime('now','-1 hour')"
@@ -69,17 +84,19 @@ export async function onRequest({ request, env }){
   await putObject(env, 'images/' + path, await file.arrayBuffer(), type);
 
   const tags = String(form.get('tags') || '').split(',').map(t=>t.trim()).filter(Boolean).slice(0,10).join(', ');
+  // fall back to the signed-in display name for the credit line
+  const credit = String(form.get('uploader') || '').trim() || (sess && sess.name) || '';
   await env.DB.prepare(
-    'INSERT INTO submissions (image_path, name, category, tags, resolution, uploader, source_url, rights_ack, ip_hash, status, created_at) ' +
-    "VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 'pending', datetime('now'))"
+    'INSERT INTO submissions (image_path, name, category, tags, resolution, uploader, source_url, rights_ack, ip_hash, user_id, status, created_at) ' +
+    "VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 'pending', datetime('now'))"
   ).bind(
     path, name,
     String(form.get('category') || 'Abstract').slice(0, 40),
     tags,
     String(form.get('resolution') || '').slice(0, 20),
-    String(form.get('uploader') || '').trim().slice(0, 60),
+    credit.slice(0, 60),
     String(form.get('source_url') || '').trim().slice(0, 300),
-    ipHash
+    ipHash, userId
   ).run();
 
   return cors(json({ ok: true, message: 'Thanks! Your wallpaper is queued for review.' }, 201));
