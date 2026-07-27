@@ -977,6 +977,37 @@
   html .thumb .hover, html.light .thumb .hover { background: rgba(8,10,14,0.42); }
   @media (max-width: 560px) { .card-tags { display: none; } }
 
+  /* ---- header: Submit link + Google sign-in ---- */
+  .submit-link { text-decoration: none; }
+  .auth-wrap { position: relative; display: flex; align-items: center; }
+  .auth-me {
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
+    padding: 5px 12px 5px 5px; border-radius: 100px; font-size: 13px; font-weight: 600;
+  }
+  .auth-me:hover { border-color: var(--accent); }
+  .auth-me img { width: 26px; height: 26px; border-radius: 50%; display: block; }
+  .auth-me span { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .auth-panel {
+    position: absolute; top: calc(100% + 10px); right: 0; z-index: 70; display: none;
+    min-width: 268px; padding: 15px; border-radius: 14px;
+    background: var(--surface); border: 1px solid var(--line);
+    box-shadow: 0 18px 44px rgba(0,0,0,0.42);
+  }
+  .auth-panel.open { display: block; }
+  .auth-panel p { font-size: 12.5px; color: var(--muted); line-height: 1.55; margin-bottom: 12px; }
+  .auth-signout {
+    width: 100%; margin-top: 4px; padding: 9px; border-radius: 9px; cursor: pointer;
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
+    font-size: 13px; font-weight: 600; font-family: inherit;
+  }
+  .auth-signout:hover { border-color: var(--accent); }
+  @media (max-width: 820px) {
+    .submit-link span, .submit-link { font-size: 13px; }
+    .auth-panel { right: -60px; }
+  }
+  @media (max-width: 560px) { .submit-link { display: none; } }
+
   /* ============================================================
      v8 phone view — tall portrait cards for phone wallpapers.
      Used when the visitor picks the iPhone tag or the Portrait
@@ -1096,6 +1127,16 @@
     <div class="search">
       <input type="text" placeholder="Search" id="searchInput">
       <button aria-label="Search"><svg class="i i-sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+    </div>
+    <a class="categories-btn submit-link" href="/upload" title="Submit your own wallpaper">
+      <svg class="i i-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V9M7 13l5-5 5 5M5 4h14"/></svg>Submit</a>
+    <div class="auth-wrap" id="authWrap" hidden>
+      <button class="categories-btn" id="authBtn">Sign in</button>
+      <div class="auth-panel" id="authPanel">
+        <p id="authPanelText">Sign in with Google to submit your own wallpapers and be credited for them.</p>
+        <div id="gbtnMain"></div>
+        <button class="auth-signout" id="authSignout" hidden>Sign out</button>
+      </div>
     </div>
     <button class="theme-btn" id="themeBtn" title="Toggle light / dark mode" aria-label="Toggle light or dark mode"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg></button>
   </div>
@@ -1907,6 +1948,75 @@ if(HAS_IO){
 }
 render();
 loadGlobalStats();   // fills in the real view / like counts, then repaints
+
+// ---- Header sign-in (Google). Hidden entirely until it's configured. ----
+(function(){
+  const wrap = document.getElementById('authWrap');
+  const btn = document.getElementById('authBtn');
+  const panel = document.getElementById('authPanel');
+  const panelText = document.getElementById('authPanelText');
+  const signout = document.getElementById('authSignout');
+  const gbtn = document.getElementById('gbtnMain');
+  if(!wrap) return;
+  let gsiLoaded = false;
+
+  function closePanel(){ panel.classList.remove('open'); }
+  document.addEventListener('click', e=>{ if(!wrap.contains(e.target)) closePanel(); });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closePanel(); });
+
+  function loadGsi(clientId){
+    if(gsiLoaded) return;
+    gsiLoaded = true;
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
+    s.onload = ()=>{
+      try {
+        google.accounts.id.initialize({ client_id: clientId, callback: (r)=>{
+          fetch(API_BASE + '/api/auth/google', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ credential: r.credential })
+          }).then(x=>x.json().then(d=>({ok:x.ok,d}))).then(res=>{
+            if(res.ok) refresh(); else panelText.textContent = (res.d && res.d.error) || 'Sign-in failed.';
+          }).catch(()=>{ panelText.textContent = 'Could not reach the server.'; });
+        }});
+        google.accounts.id.renderButton(gbtn, { theme:'filled_blue', size:'large', text:'signin_with', shape:'pill' });
+      } catch(e){ panelText.textContent = 'Google sign-in could not load.'; }
+    };
+    s.onerror = ()=>{ panelText.textContent = 'Google sign-in could not load (blocked?).'; };
+    document.head.appendChild(s);
+  }
+
+  function paint(me){
+    if(!me.configured){ wrap.hidden = true; return; }   // not set up yet — show nothing
+    wrap.hidden = false;
+    if(me.user){
+      // signed in: avatar + name, panel becomes the sign-out menu
+      btn.className = 'auth-me';
+      btn.innerHTML = '';
+      if(me.user.picture){
+        const im = document.createElement('img'); im.src = me.user.picture; im.alt = ''; im.referrerPolicy = 'no-referrer';
+        btn.appendChild(im);
+      }
+      const sp = document.createElement('span');
+      sp.textContent = me.user.name || me.user.email || 'Account';
+      btn.appendChild(sp);
+      panelText.textContent = me.user.email || '';
+      gbtn.hidden = true; signout.hidden = false;
+    } else {
+      btn.className = 'categories-btn'; btn.textContent = 'Sign in';
+      panelText.textContent = 'Sign in with Google to submit your own wallpapers and be credited for them.';
+      gbtn.hidden = false; signout.hidden = true;
+      loadGsi(me.client_id);
+    }
+  }
+  function refresh(){
+    fetch(API_BASE + '/api/auth/me', { cache:'no-store' })
+      .then(r=>r.json()).then(paint).catch(()=>{ wrap.hidden = true; });
+  }
+  btn.onclick = e=>{ e.stopPropagation(); panel.classList.toggle('open'); };
+  signout.onclick = ()=>{ fetch(API_BASE + '/api/auth/logout', { method:'POST' }).then(()=>location.reload()); };
+  refresh();
+})();
 
 // ============================================================
 // v4 upgrade: real filtering, favorites, lightbox, hero, chrome
