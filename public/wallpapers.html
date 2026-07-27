@@ -1018,6 +1018,50 @@
   @media (max-width: 760px) { .rescards { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 430px) { .rescards { grid-template-columns: 1fr; } }
 
+  /* ============================================================
+     v10 categories panel — sidebar style: resolution checkboxes
+     over a plain vertical category list, active one in the accent.
+     ============================================================ */
+  html .cat-panel, html.light .cat-panel {
+    left: auto; right: 0; transform: translateY(-8px) scale(0.98);
+    width: 252px; max-height: min(74vh, 640px); overflow-y: auto;
+    padding: 14px 12px; border-radius: 14px;
+  }
+  html .cat-wrap.open .cat-panel, html.light .cat-wrap.open .cat-panel {
+    transform: translateY(0) scale(1);
+  }
+  html .cat-panel::before, html.light .cat-panel::before { display: none; }
+  .filt-head {
+    font-size: 10.5px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase;
+    color: var(--muted); padding: 0 6px 8px;
+  }
+  .filt-sec + .filt-sec { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .res-checks { display: flex; flex-direction: column; }
+  .res-check {
+    display: flex; align-items: center; gap: 10px; padding: 6px; border-radius: 7px;
+    cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .res-check:hover { background: var(--surface-2); }
+  .res-check input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+  .res-check .n { margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 700; }
+  .res-check.hidden-row { display: none; }
+  .show-all {
+    margin: 8px 6px 0; padding: 7px 12px; border-radius: 6px; cursor: pointer;
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
+    font-family: inherit; font-size: 10.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .show-all:hover { border-color: var(--accent); }
+  /* categories become a plain single-column list */
+  html .cat-grid, html.light .cat-grid { display: flex; flex-direction: column; gap: 0; }
+  html .cat-item, html.light .cat-item {
+    display: block; padding: 8px 6px; border-radius: 7px;
+    font-size: 14px; font-weight: 600; color: var(--text);
+  }
+  html .cat-item:hover, html.light .cat-item:hover { background: var(--surface-2); color: var(--accent); }
+  html .cat-item.on, html.light .cat-item.on { color: var(--accent); font-weight: 700; }
+  .cat-item .chev, .cat-item .tip { display: none; }
+
   /* ---- header: Submit link + Google sign-in ---- */
   .submit-link { text-decoration: none; }
   .auth-wrap { position: relative; display: flex; align-items: center; }
@@ -1162,7 +1206,15 @@
     <div class="cat-wrap">
       <button class="categories-btn" id="catBtn"><svg class="i i-sm" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>Categories <span class="caret"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></button>
       <div class="cat-panel" id="catPanel">
-        <div class="cat-grid" id="catGrid"></div>
+        <div class="filt-sec">
+          <div class="filt-head">Resolutions</div>
+          <div class="res-checks" id="resChecks"></div>
+          <button class="show-all" id="resShowAll" hidden></button>
+        </div>
+        <div class="filt-sec">
+          <div class="filt-head">Categories</div>
+          <div class="cat-grid" id="catGrid"></div>
+        </div>
       </div>
     </div>
     <div class="search">
@@ -1650,10 +1702,69 @@ const catGrid = document.getElementById('catGrid');
 categories.forEach(name=>{
   const item=document.createElement('div');
   item.className='cat-item';
-  item.innerHTML="<span>"+name+"</span><span class='chev'>&#10095;</span><span class='tip'>"+name+" Wallpapers</span>";
+  item.dataset.cat = name;
+  item.innerHTML="<span>"+esc(name)+"</span><span class='chev'>&#10095;</span><span class='tip'>"+esc(name)+" Wallpapers</span>";
   item.onclick=()=>{ filterByCat(name); };
   catGrid.appendChild(item);
 });
+// keep the list showing which category is currently being browsed
+function paintActiveCat(){
+  catGrid.querySelectorAll('.cat-item').forEach(el=>{
+    el.classList.toggle('on', el.dataset.cat === activeCat);
+  });
+}
+
+// ---- Resolution checkboxes, built from what's actually in the library ----
+// Exact sizes rather than a fixed list, so the options always match the
+// wallpapers on offer. Ten are shown; the rest sit behind "Show all".
+const activeExactRes = new Set();
+function normRes(r){
+  const p = parseResDims(r);
+  return p ? (p.w + 'x' + p.h) : null;
+}
+function buildResChecks(){
+  const host = document.getElementById('resChecks');
+  const more = document.getElementById('resShowAll');
+  if(!host) return;
+  const counts = {};
+  wallpapers.forEach(w=>{ const k = normRes(w.res); if(k) counts[k] = (counts[k] || 0) + 1; });
+  const all = Object.keys(counts).sort((a,b)=>{
+    if(counts[b] !== counts[a]) return counts[b] - counts[a];    // commonest first
+    return parseInt(b) - parseInt(a);
+  });
+  if(!all.length){ host.innerHTML = ''; more.hidden = true; return; }
+
+  host.innerHTML = '';
+  const SHOWN = 10;
+  all.forEach((key, i)=>{
+    const row = document.createElement('label');
+    row.className = 'res-check' + (i >= SHOWN ? ' hidden-row' : '');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = activeExactRes.has(key);
+    cb.onchange = ()=>{
+      if(cb.checked) activeExactRes.add(key); else activeExactRes.delete(key);
+      render();
+    };
+    const txt = document.createElement('span'); txt.textContent = key.replace('x', '×');
+    const n = document.createElement('span'); n.className = 'n'; n.textContent = counts[key];
+    row.appendChild(cb); row.appendChild(txt); row.appendChild(n);
+    host.appendChild(row);
+  });
+
+  if(all.length > SHOWN){
+    more.hidden = false;
+    let open = false;
+    more.textContent = 'Show all (' + all.length + ')';
+    more.onclick = (e)=>{
+      e.stopPropagation();
+      open = !open;
+      host.querySelectorAll('.res-check').forEach((el, i)=>{
+        el.classList.toggle('hidden-row', !open && i >= SHOWN);
+      });
+      more.textContent = open ? 'Show fewer' : 'Show all (' + all.length + ')';
+    };
+  } else { more.hidden = true; }
+}
 
 const catWrap = document.querySelector('.cat-wrap');
 const catBtn = document.getElementById('catBtn');
@@ -1855,6 +1966,7 @@ function render(preserveCount){
   updateChrome(_list.length);
   grid.classList.toggle('phone-view', wantPhoneView());
   updateSectionDesc();
+  paintActiveCat();
   if(!_list.length){
     _shown = 0;
     const msg = showFavs
@@ -1891,6 +2003,9 @@ const _usSeen = new Set();
 
 function usQuery(){
   if(showFavs) return null;
+  // an exact-size filter can't be satisfied by arbitrary stock photos, so the
+  // endless feed stands down rather than showing results that don't match
+  if(activeExactRes.size) return null;
   if(query) return { q: query };
   if(activeTag) return { q: activeTag };
   if(activeCat) return { q: activeCat + ' wallpaper' };
@@ -1994,6 +2109,7 @@ if(HAS_IO){
   io.observe(document.getElementById('gridSentinel'));
 }
 render();
+buildResChecks();    // resolution options come from the library itself
 loadGlobalStats();   // fills in the real view / like counts, then repaints
 
 // ---- Header sign-in (Google). Hidden entirely until it's configured. ----
@@ -2090,6 +2206,8 @@ function applyFilters(){
   // resolution / orientation chips refine every view (tabs, search, favorites…)
   if(activeRes) list = list.filter(w => resTier(w) === activeRes);
   if(activeOrient) list = list.filter(w => orientOf(w) === activeOrient);
+  // exact-size checkboxes from the categories panel
+  if(activeExactRes.size) list = list.filter(w => activeExactRes.has(normRes(w.res)));
   return list;
 }
 
@@ -2125,6 +2243,11 @@ function applyFilters(){
 function clearResChips(){
   activeRes=null; activeOrient=null;
   document.querySelectorAll('#resBar .res-chip').forEach(x=>x.classList.remove('active'));
+  // also drop any exact-size checkboxes chosen in the categories panel
+  if(activeExactRes.size){
+    activeExactRes.clear();
+    document.querySelectorAll('#resChecks input').forEach(cb=>{ cb.checked = false; });
+  }
 }
 
 function resetActiveTabs(){ [...tabsEl.children].forEach(c=>c.classList.remove('active')); }
@@ -2177,6 +2300,7 @@ function updateChrome(count){
   else if(activeCat) label='Category: '+activeCat;
   else if(activeTag) label='Tag: '+activeTag;
   else if(query) label='Search: “'+query+'”';
+  if(!label && activeExactRes.size) label = activeExactRes.size + ' resolution' + (activeExactRes.size===1?'':'s');
   if(label){
     chip.classList.add('show');
     chip.innerHTML="<span>"+esc(label)+"</span><button class='x' title='Clear filter'>&times;</button>";
@@ -3048,7 +3172,7 @@ document.getElementById('homeLogo').onclick=goHome;
         });
         added++; changed++;
       });
-      if(changed) render(true);   // repaint, keeping the visitor's scroll depth
+      if(changed){ render(true); buildResChecks(); }   // repaint, keeping the visitor's scroll depth
       // a shared #w/<slug> link may point at a wallpaper that just arrived
       if(changed && _pendingRoute) _pendingRoute = !routeFromHash();
       if(data.length === 0){
