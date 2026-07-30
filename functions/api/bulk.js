@@ -5,9 +5,13 @@
 // retagging 1000+ wallpapers one-by-one would burn straight through Workers
 // KV's 1000-writes-per-day free limit and fail halfway. This applies a whole
 // batch against a single read/write cycle.
-import { json, cors, preflight, authorized, readList, writeList } from './_utils.js';
+import { json, cors, preflight, authorized, readList, writeList, deleteObject } from './_utils.js';
 
 const MAX_UPDATES = 500;
+const MAX_DELETES = 600;
+// Purging files costs 2 KV deletes each (image + thumbnail) and KV's free tier
+// allows 1000 writes/day, so file removal is capped per call and reported back.
+const MAX_FILE_PURGE = 150;
 
 export async function onRequest({ request, env }){
   if(request.method === 'OPTIONS') return preflight();
@@ -16,6 +20,33 @@ export async function onRequest({ request, env }){
 
   let body;
   try { body = await request.json(); } catch(e){ return cors(json({ error: 'invalid JSON' }, 400)); }
+
+  // ---- bulk delete: { deletes: [image_path…], purgeFiles?: bool } ----
+  // Taking entries out of the list is ONE write and makes them instantly gone
+  // from the site. Deleting the stored files is separate and rate-limited.
+  if(body && Array.isArray(body.deletes)){
+    const paths = body.deletes.map(p => String(p || '')).filter(Boolean).slice(0, MAX_DELETES);
+    if(!paths.length) return cors(json({ error: 'deletes[] was empty' }, 400));
+    const list = await readList(env);
+    const drop = new Set(paths);
+    const next = list.filter(r => !(r && drop.has(r.image_path)));
+    const removed = list.length - next.length;
+    if(removed) await writeList(env, next);
+
+    let filesDeleted = 0, filesPending = 0;
+    if(body.purgeFiles){
+      for(const p of paths){
+        if(filesDeleted >= MAX_FILE_PURGE){ filesPending++; continue; }
+        try { await deleteObject(env, 'images/' + p); } catch(e){}
+        try { await deleteObject(env, 'images/thumbs/' + p); } catch(e){}
+        filesDeleted++;
+      }
+    } else {
+      filesPending = paths.length;
+    }
+    return cors(json({ removed, filesDeleted, filesPending, remaining: next.length }));
+  }
+
   const updates = body && Array.isArray(body.updates) ? body.updates : null;
   if(!updates || !updates.length) return cors(json({ error: 'updates[] required' }, 400));
   if(updates.length > MAX_UPDATES) return cors(json({ error: 'too many updates (max ' + MAX_UPDATES + ')' }, 413));

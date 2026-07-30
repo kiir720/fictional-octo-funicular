@@ -127,6 +127,18 @@
     return res.json();
   }
 
+  // Remove many wallpapers in one server write. purgeFiles also deletes the
+  // stored images, which the server caps per call to stay inside KV's limits.
+  async function apiBulkDelete(paths, purgeFiles){
+    const res = await fetch(API_BASE + '/api/bulk', {
+      method: 'POST',
+      headers: apiHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ deletes: paths, purgeFiles: !!purgeFiles })
+    });
+    if(!res.ok) throw await apiError(res, 'Bulk delete failed');
+    return res.json();
+  }
+
   // Imagga cloud tagging via the site's proxy (keys live server-side).
   // Returns title-cased tag names; throws when unconfigured/unreachable.
   async function apiImagga(url){
@@ -894,6 +906,7 @@
     <button class="admin-export-btn" id="statsBtn" title="Library statistics">&#128202; Stats</button>
     <button class="admin-export-btn" id="retagBtn" title="Re-analyze every wallpaper and fix its category + tags">&#127991; Retag all</button>
     <button class="admin-export-btn" id="subsBtn" title="Review wallpapers submitted by visitors">&#128235; Submissions<span class="sub-count" id="subCount"></span></button>
+    <button class="admin-export-btn" id="purgeBtn" title="Bulk-remove wallpapers from the site">&#128465; Purge</button>
     <button class="admin-export-btn" id="signoutBtn" title="Sign out and change the admin key">&#8631; Sign out</button>
     <a class="admin-export-btn" href="https://8k-wallpapers.pages.dev" target="_blank" rel="noopener" title="Open the public site" style="text-decoration:none;display:inline-flex;align-items:center">&#8599; View Site</a>
     <div class="search">
@@ -1009,6 +1022,46 @@
         <button class="admin-cancel" id="bkCancel">Cancel</button>
       </div>
       <div class="admin-msg" id="bkMsg"></div>
+    </div>
+  </div>
+</div>
+
+<div class="admin-overlay" id="purgeOverlay">
+  <div class="admin-modal bulk-modal">
+    <div class="admin-mhead">
+      <h3>&#128465; Purge wallpapers</h3>
+      <button class="admin-close" id="purgeClose">&times;</button>
+    </div>
+    <div class="admin-body">
+      <div class="retag-note">
+        Removes wallpapers from the public site in bulk. <b>This cannot be undone.</b><br><br>
+        <b>Copied</b> counts anything whose stored filename still carries another site&rsquo;s
+        resolution/ID naming &mdash; the giveaway for the 4kwallpapers imports.
+        Removing them from the listing is instant. Deleting the stored image files is a
+        separate, slower job because the free storage tier allows only 1000 write
+        operations a day, so large purges continue across several days.
+      </div>
+      <div class="retag-stats">
+        <div class="stat-card"><b id="pgCopied">0</b><span>LOOK COPIED</span></div>
+        <div class="stat-card"><b id="pgOther">0</b><span>EVERYTHING ELSE</span></div>
+        <div class="stat-card"><b id="pgSel">0</b><span>SELECTED</span></div>
+      </div>
+      <div class="admin-actions" style="margin-top:14px">
+        <button class="admin-cancel" id="pgSelCopied">Select copied</button>
+        <button class="admin-cancel" id="pgSelAll">Select all</button>
+        <button class="admin-cancel" id="pgSelNone">Clear</button>
+      </div>
+      <label class="admin-hint" style="display:flex;gap:9px;align-items:center;margin:14px 0 4px;cursor:pointer">
+        <input type="checkbox" id="pgPurgeFiles" style="width:16px;height:16px;accent-color:#7ee29a">
+        <span>Also delete the stored image files (frees space, but limited to ~150 per run)</span>
+      </label>
+      <div class="bulk-progress" id="pgProgress"><i></i></div>
+      <div class="retag-log" id="pgLog"></div>
+      <div class="admin-actions">
+        <button class="admin-submit" id="pgGo" style="background:rgba(214,40,40,0.95);color:#fff">Delete selected</button>
+        <button class="admin-cancel" id="pgCancel">Close</button>
+      </div>
+      <div class="admin-msg" id="pgMsg"></div>
     </div>
   </div>
 </div>
@@ -2559,6 +2612,96 @@ document.getElementById('homeLogo').onclick=goHome;
     }
   };
   rtOverlay.addEventListener('click', e=>{ if(e.target === rtOverlay && !retagRunning) rtOverlay.classList.remove('open'); });
+
+  // ============ Purge: bulk-remove wallpapers ============
+  // Built because removing ~1300 imported wallpapers one at a time is both
+  // painful and impossible inside KV's 1000-writes-a-day allowance: each
+  // single delete rewrites the whole list document.
+  const pgOverlay = document.getElementById('purgeOverlay');
+  const pgMsgEl = document.getElementById('pgMsg');
+  const pgLog = document.getElementById('pgLog');
+  const pgProgress = document.getElementById('pgProgress');
+  let pgAll = [], pgSelected = new Set(), pgBusy = false;
+  function setPgMsg(t, k){ pgMsgEl.textContent = t || ''; pgMsgEl.className = 'admin-msg ' + (k || ''); }
+
+  // A stored filename still carrying "3840x2160" (or a truncated "3840x") is
+  // another site's download name, not one this admin generated.
+  function looksCopied(path){
+    return /\d{3,5}x\d{3,5}/.test(path) || /\d{3,5}x-\d{10,}\./.test(path);
+  }
+  function pgPaint(){
+    const copied = pgAll.filter(r => looksCopied(r.image_path)).length;
+    document.getElementById('pgCopied').textContent = copied;
+    document.getElementById('pgOther').textContent = pgAll.length - copied;
+    document.getElementById('pgSel').textContent = pgSelected.size;
+  }
+  async function pgLoad(){
+    setPgMsg('Loading the library…', '');
+    try {
+      pgAll = await apiList();
+      pgSelected = new Set();
+      pgLog.innerHTML = '';
+      pgPaint();
+      setPgMsg(pgAll.length + ' wallpapers in the library.', '');
+    } catch(e){ setPgMsg('Could not load: ' + (e.message || e), 'err'); }
+  }
+
+  document.getElementById('pgSelCopied').onclick = ()=>{
+    pgSelected = new Set(pgAll.filter(r => looksCopied(r.image_path)).map(r => r.image_path));
+    pgPaint(); setPgMsg(pgSelected.size + ' selected — these look copied.', '');
+  };
+  document.getElementById('pgSelAll').onclick = ()=>{
+    pgSelected = new Set(pgAll.map(r => r.image_path));
+    pgPaint(); setPgMsg('Everything selected (' + pgSelected.size + ').', 'err');
+  };
+  document.getElementById('pgSelNone').onclick = ()=>{ pgSelected = new Set(); pgPaint(); setPgMsg(''); };
+
+  document.getElementById('pgGo').onclick = async ()=>{
+    if(pgBusy) return;
+    const paths = [...pgSelected];
+    if(!paths.length){ setPgMsg('Nothing selected.', 'err'); return; }
+    const purgeFiles = document.getElementById('pgPurgeFiles').checked;
+    if(!confirm('Permanently remove ' + paths.length + ' wallpaper(s) from the site?\n\n'
+      + (purgeFiles ? 'Stored image files will also be deleted where the daily limit allows.\n\n' : '')
+      + 'This cannot be undone.')) return;
+
+    pgBusy = true;
+    const go = document.getElementById('pgGo');
+    go.disabled = true; go.textContent = 'Deleting…';
+    pgProgress.classList.add('show');
+    const bar = pgProgress.querySelector('i');
+    let done = 0, removed = 0, filesGone = 0, filesLeft = 0;
+    try {
+      const BATCH = 400;
+      for(let i = 0; i < paths.length; i += BATCH){
+        const slice = paths.slice(i, i + BATCH);
+        const res = await apiBulkDelete(slice, purgeFiles);
+        removed += (res && res.removed) || 0;
+        filesGone += (res && res.filesDeleted) || 0;
+        filesLeft += (res && res.filesPending) || 0;
+        done += slice.length;
+        bar.style.width = Math.round(done / paths.length * 100) + '%';
+        const row = document.createElement('div'); row.className = 'retag-row';
+        row.textContent = 'Removed ' + removed + ' so far — ' + ((res && res.remaining) || 0) + ' left in the library';
+        pgLog.insertBefore(row, pgLog.firstChild);
+        setPgMsg('Removed ' + removed + ' of ' + paths.length + '…', 'ok');
+      }
+      setPgMsg('Done — ' + removed + ' removed from the site.'
+        + (purgeFiles ? ' ' + filesGone + ' image files deleted' + (filesLeft ? ', ' + filesLeft + ' still stored (retry tomorrow to reclaim the rest).' : '.') : ''), 'ok');
+      await pgLoad();
+      loadAdded();
+    } catch(err){
+      console.error(err);
+      setPgMsg('Stopped: ' + (err.message || err) + ' — reopen to see what remains.', 'err');
+    } finally {
+      pgBusy = false; go.disabled = false; go.textContent = 'Delete selected';
+    }
+  };
+
+  document.getElementById('purgeBtn').onclick = ()=>{ pgOverlay.classList.add('open'); pgLoad(); };
+  document.getElementById('purgeClose').onclick = ()=>{ if(!pgBusy) pgOverlay.classList.remove('open'); };
+  document.getElementById('pgCancel').onclick = ()=>{ if(!pgBusy) pgOverlay.classList.remove('open'); };
+  pgOverlay.addEventListener('click', e=>{ if(e.target === pgOverlay && !pgBusy) pgOverlay.classList.remove('open'); });
 
   // ============ Submission queue: review what visitors sent in ============
   const subsOverlay = document.getElementById('subsOverlay');
