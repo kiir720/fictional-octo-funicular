@@ -1,0 +1,21 @@
+# Headers for Cloudflare Pages (also works on Netlify — same format).
+#
+# 1) The browser must revalidate the HTML on every load instead of reusing a
+#    stale cached copy. This guarantees every browser runs the current sync code
+#    and complements the no-cache <meta> tags inside the HTML. The wallpaper
+#    images themselves are served from Supabase, so this only affects page files.
+# 2) Basic security headers (checklist item 21): no MIME sniffing, no
+#    click-jacking via iframes, no leaking full referrer URLs, and the page
+#    never needs camera/microphone/geolocation access.
+/*
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# robots.txt / sitemap.xml change rarely — let the CDN cache them for an hour.
+/robots.txt
+  Cache-Control: public, max-age=3600
+/sitemap.xml
+  Cache-Control: public, max-age=3600

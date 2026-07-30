@@ -8,109 +8,161 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>8K Wallpapers — Admin</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  // ===== Supabase connection =====
-  const SUPABASE_URL = 'https://vqidoafmudhlnmvohevx.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_37ExIEVSeN8NHZrf49J_mg_BCQOyuf5';
-  const BUCKET = 'wallpapers';
-  // Guard client creation: if the Supabase CDN is blocked or can't run in this browser,
-  // fall back gracefully instead of throwing and blanking the page.
-  let sb = null;
-  // Bypass the browser HTTP cache on REST reads so the admin always sees the true
-  // current list (and so does the public page, which uses the same pattern).
-  function _noStoreFetch(input, init){
-    init = init || {};
-    init.cache = 'no-store';
-    return fetch(input, init);
+  // ===== Wallpaper data: Cloudflare (Pages Functions + R2) =====
+  // This admin page runs as a LOCAL file on the admin's PC and talks to the
+  // live site's own API. One admin key (the site's ADMIN_KEY secret) authorizes
+  // every write — no Supabase account, no GitHub token, nothing else to expire.
+  const API_BASE = 'https://8k-wallpapers.pages.dev';
+
+  // The key lives only in this browser's localStorage — never committed, never
+  // sent anywhere except the site's own API over HTTPS.
+  function adminKey(){ return (localStorage.getItem('admin_key') || '').trim(); }
+  function setAdminKey(k){ k = (k||'').trim(); if(k) localStorage.setItem('admin_key', k); else localStorage.removeItem('admin_key'); }
+
+  // ---- API client: every call goes to the site's own Pages Functions ----
+  function apiHeaders(extra){
+    return Object.assign({ 'X-Admin-Key': adminKey() }, extra || {});
   }
-  function initSupabase(){
-    if (sb) return sb;
-    try {
-      if (window.supabase && window.supabase.createClient) {
-        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-          global: { fetch: _noStoreFetch }
-        });
-      }
-    } catch (e) { if (window.console) console.warn('Supabase unavailable:', e); }
-    return sb;
-  }
-  initSupabase();
-
-  // ===== GitHub metadata store (replaces the Supabase "wallpapers" table) =====
-  // The wallpaper LIST is a plain wallpapers.json file in a GitHub repo. The admin
-  // commits to it with a GitHub token; the public page reads it from GitHub's CDN.
-  // Image FILES still go to the Supabase Storage bucket above.
-  const GH_OWNER  = 'kiir720';
-  const GH_REPO   = 'fictional-octo-funicular';
-  const GH_BRANCH = 'main';
-  const GH_FILE   = 'wallpapers.json';
-
-  // The token lives only in this browser's localStorage — never committed, never sent
-  // anywhere except GitHub's own API over HTTPS.
-  function ghToken(){ return (localStorage.getItem('gh_token') || '').trim(); }
-  function ghSetToken(t){ t = (t||'').trim(); if(t) localStorage.setItem('gh_token', t); else localStorage.removeItem('gh_token'); }
-
-  // UTF-8-safe base64 (image names may contain non-ASCII characters).
-  function _b64encodeUtf8(str){ return btoa(unescape(encodeURIComponent(str))); }
-  function _b64decodeUtf8(b64){ return decodeURIComponent(escape(atob(String(b64).replace(/\s/g,'')))); }
-
-  function ghHeaders(){
-    return {
-      'Authorization': 'Bearer ' + ghToken(),
-      'Accept': 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28'
-    };
+  async function apiError(res, fallback){
+    if(res.status === 401) return new Error('The admin key was rejected (401). Paste the site’s current ADMIN_KEY.');
+    let m = ''; try { m = (await res.json()).error || ''; } catch(e){}
+    return new Error((fallback || 'Request failed') + ' (HTTP ' + res.status + (m ? ': ' + m : '') + ')');
   }
 
-  // Public URL of a stored image, built straight from its storage path (no auth needed
-  // to read a public bucket). Mirrors the helper on the public page.
-  function imageUrl(path){
-    return SUPABASE_URL + '/storage/v1/object/public/' + BUCKET + '/' + encodeURI(path);
+  // Read the full wallpaper list (public endpoint, no key needed).
+  async function apiList(){
+    const res = await fetch(API_BASE + '/api/wallpapers', { cache: 'no-store' });
+    if(!res.ok) throw await apiError(res, 'Could not load the list');
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
   }
-
-  // Read wallpapers.json -> { list:[...], sha:string|null }. A repo without the file
-  // yet returns 404, which we treat as an empty list (sha null => "create on save").
-  async function ghLoad(){
-    if(!ghToken()) throw new Error('No GitHub token set. Sign in again and paste a token with Contents: Read & write.');
-    const url = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO
-      + '/contents/' + GH_FILE + '?ref=' + GH_BRANCH + '&t=' + Date.now();
-    const res = await fetch(url, { headers: ghHeaders(), cache:'no-store' });
-    if(res.status === 404) return { list: [], sha: null };
-    if(res.status === 401) throw new Error('GitHub rejected the token (401). Paste a valid token with Contents: Read & write on this repo.');
-    if(res.status === 403) throw new Error('GitHub denied access (403). The token is missing Contents write permission on ' + GH_OWNER + '/' + GH_REPO + '.');
-    if(!res.ok) throw new Error('GitHub read failed (HTTP ' + res.status + ').');
-    const json = await res.json();
-    let parsed = [];
-    try { parsed = JSON.parse(_b64decodeUtf8(json.content)); } catch(e){ parsed = []; }
-    const list = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.wallpapers) ? parsed.wallpapers : []);
-    return { list, sha: json.sha };
+  // Check the admin key without changing anything (used by the sign-in gate).
+  async function apiVerify(){
+    const res = await fetch(API_BASE + '/api/verify', { headers: apiHeaders() });
+    if(!res.ok) throw await apiError(res, 'Key check failed');
+    return true;
   }
-
-  // Commit the full list back to wallpapers.json. Pass the sha from ghLoad() (or null
-  // to create the file). Returns the new sha.
-  async function ghSave(list, sha, message){
-    const body = {
-      message: message || 'Update wallpapers.json',
-      content: _b64encodeUtf8(JSON.stringify(list, null, 2)),
-      branch: GH_BRANCH
-    };
-    if(sha) body.sha = sha;
-    const url = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/contents/' + GH_FILE;
-    const res = await fetch(url, {
-      method: 'PUT',
-      headers: Object.assign({ 'Content-Type': 'application/json' }, ghHeaders()),
-      body: JSON.stringify(body)
+  // Upload raw image bytes to R2; returns the stored path.
+  async function apiUpload(fileBlob, name){
+    const res = await fetch(API_BASE + '/api/upload?name=' + encodeURIComponent(name || 'wallpaper'), {
+      method: 'POST',
+      headers: apiHeaders({ 'Content-Type': fileBlob.type || 'image/jpeg' }),
+      body: fileBlob
     });
-    if(res.status === 401) throw new Error('GitHub rejected the token (401) on save.');
-    if(res.status === 409) throw new Error('Conflict (409) — wallpapers.json changed since it was read. Try the action again.');
-    if(!res.ok){
-      let m = ''; try { m = (await res.json()).message; } catch(e){}
-      throw new Error('GitHub write failed (HTTP ' + res.status + (m ? ': ' + m : '') + ').');
-    }
-    const out = await res.json();
-    return out && out.content && out.content.sha;
+    if(!res.ok) throw await apiError(res, 'Image upload failed');
+    return (await res.json()).path;
   }
+  // Import a stock photo by URL (the server fetches + stores it); returns the path.
+  async function apiImport(url, name){
+    const res = await fetch(API_BASE + '/api/import', {
+      method: 'POST',
+      headers: apiHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ url: url, name: name })
+    });
+    if(!res.ok) throw await apiError(res, 'Image import failed');
+    return (await res.json()).path;
+  }
+  // Upload the small grid thumbnail for an already-stored image.
+  async function apiUploadThumb(blob, forPath){
+    const res = await fetch(API_BASE + '/api/upload?thumb=' + encodeURIComponent(forPath), {
+      method: 'POST',
+      headers: apiHeaders({ 'Content-Type': 'image/jpeg' }),
+      body: blob
+    });
+    if(!res.ok) throw await apiError(res, 'Thumbnail upload failed');
+    return true;
+  }
+  // Add / rename / delete entries in the wallpaper list.
+  async function apiAdd(row){
+    const res = await fetch(API_BASE + '/api/wallpapers', {
+      method: 'POST',
+      headers: apiHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(row)
+    });
+    if(!res.ok) throw await apiError(res, 'Publish failed');
+    return res.json();
+  }
+  async function apiRename(image_path, name){
+    const res = await fetch(API_BASE + '/api/wallpapers', {
+      method: 'PATCH',
+      headers: apiHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ image_path: image_path, name: name })
+    });
+    if(!res.ok) throw await apiError(res, 'Rename failed');
+    return res.json();
+  }
+  async function apiDelete(image_path){
+    const res = await fetch(API_BASE + '/api/wallpapers', {
+      method: 'DELETE',
+      headers: apiHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ image_path: image_path })
+    });
+    if(!res.ok) throw await apiError(res, 'Delete failed');
+    return res.json();
+  }
+  // Apply many category/tag updates in one server write (KV allows only
+  // 1000 writes/day, so the retag pass must batch instead of saving per item).
+  async function apiBulk(updates){
+    const res = await fetch(API_BASE + '/api/bulk', {
+      method: 'POST',
+      headers: apiHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ updates: updates })
+    });
+    if(!res.ok) throw await apiError(res, 'Bulk update failed');
+    return res.json();
+  }
+  // ---- visitor submissions awaiting review ----
+  async function apiSubmissions(status){
+    const res = await fetch(API_BASE + '/api/submissions?status=' + encodeURIComponent(status || 'pending'),
+      { headers: apiHeaders(), cache: 'no-store' });
+    if(!res.ok) throw await apiError(res, 'Could not load submissions');
+    return (await res.json()).submissions || [];
+  }
+  async function apiReview(body){
+    const res = await fetch(API_BASE + '/api/submissions', {
+      method: 'POST', headers: apiHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body)
+    });
+    if(!res.ok) throw await apiError(res, 'Review failed');
+    return res.json();
+  }
+
+  // Remove many wallpapers in one server write. purgeFiles also deletes the
+  // stored images, which the server caps per call to stay inside KV's limits.
+  async function apiBulkDelete(paths, purgeFiles){
+    const res = await fetch(API_BASE + '/api/bulk', {
+      method: 'POST',
+      headers: apiHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ deletes: paths, purgeFiles: !!purgeFiles })
+    });
+    if(!res.ok) throw await apiError(res, 'Bulk delete failed');
+    return res.json();
+  }
+
+  // Imagga cloud tagging via the site's proxy (keys live server-side).
+  // Returns title-cased tag names; throws when unconfigured/unreachable.
+  async function apiImagga(url){
+    const res = await fetch(API_BASE + '/api/imagga?url=' + encodeURIComponent(url), { headers: apiHeaders() });
+    if(!res.ok) throw await apiError(res, 'Imagga tagging failed');
+    const data = await res.json();
+    return (data.tags || []).map(t => String(t.tag).replace(/\b\w/g, c => c.toUpperCase()));
+  }
+  // Tag a stored image: the small thumbnail first (fast for Imagga to fetch),
+  // the full image as fallback. Throws only when Imagga isn't configured.
+  async function imaggaTagsFor(path){
+    try { return await apiImagga(API_BASE + '/images/thumbs/' + encodeURI(path)); }
+    catch(e){
+      if(/configured/i.test(String(e && e.message))) throw e;
+    }
+    try { return await apiImagga(API_BASE + '/images/' + encodeURI(path)); }
+    catch(e){
+      if(/configured/i.test(String(e && e.message))) throw e;
+      return [];
+    }
+  }
+
+  // Public URL of a stored image — served by the site itself from R2.
+  function imageUrl(path){ return API_BASE + '/images/' + encodeURI(path); }
 
   // Flag browsers without CSS custom properties (e.g. IE11) so the stylesheet can
   // supply literal color fallbacks and keep text readable.
@@ -296,6 +348,112 @@
   .del-btn svg { width: 16px; height: 16px; }
   .del-btn:hover { background: rgba(214,40,40,1); transform: scale(1.08); }
   .del-btn:disabled { opacity: 0.6; cursor: default; transform: none; }
+  /* rename (pencil) button on admin-managed posts */
+  .edit-btn {
+    position: absolute; top: 10px; right: 50px; z-index: 6;
+    width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
+    background: rgba(40,110,185,0.92); border: 1px solid rgba(255,255,255,0.28); color: #fff;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.45); transition: transform 0.15s, background 0.15s;
+  }
+  .edit-btn svg { width: 15px; height: 15px; }
+  .edit-btn:hover { background: rgba(50,130,214,1); transform: scale(1.08); }
+  .edit-btn:disabled { opacity: 0.6; cursor: default; transform: none; }
+  /* ---- library statistics modal ---- */
+  .stat-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 6px; }
+  .stat-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; padding: 14px 12px; text-align: center; }
+  .stat-card b { display: block; font-size: 22px; color: var(--text); }
+  .stat-card span { font-size: 11px; color: var(--muted); font-weight: 700; letter-spacing: 0.5px; }
+  .stat-sec { font-size: 11.5px; font-weight: 700; letter-spacing: 0.8px; color: var(--muted); margin: 16px 0 8px; text-transform: uppercase; }
+  .stat-row { display: flex; align-items: center; gap: 10px; margin: 5px 0; font-size: 13px; color: var(--text); }
+  .stat-row .sr-label { width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+  .stat-row .sr-bar { flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  .stat-row .sr-bar i { display: block; height: 100%; background: linear-gradient(90deg, #7c8cff, #3aa0ff); border-radius: 4px; }
+  .stat-row .sr-count { width: 34px; text-align: right; font-weight: 700; color: var(--muted); }
+  .stat-note { margin-top: 18px; font-size: 12px; color: var(--muted); line-height: 1.55; }
+
+  /* ---- bulk upload modal ---- */
+  .bulk-modal { max-width: 720px; }
+  .bulk-queue { margin-top: 6px; display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; }
+  .bulk-queue:empty::after {
+    content: 'Selected images will be listed here.'; color: rgba(255,255,255,0.35);
+    font-size: 13px; display: block; text-align: center; padding: 22px 0;
+  }
+  .bulk-item {
+    display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 10px;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+  }
+  .bulk-thumb {
+    width: 62px; height: 40px; flex-shrink: 0; border-radius: 6px; object-fit: cover;
+    background: rgba(255,255,255,0.08) center/cover no-repeat;
+  }
+  .bulk-mid { flex: 1; min-width: 0; }
+  .bulk-name {
+    width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 7px; color: var(--text); padding: 7px 9px; font-size: 13px; font-family: inherit; outline: none;
+  }
+  .bulk-name:focus { border-color: rgba(126,226,154,0.5); }
+  .bulk-sub { font-size: 11px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bulk-state { flex-shrink: 0; width: 24px; text-align: center; font-size: 15px; }
+  .bulk-state.err { color: #ff8080; }
+  .bulk-state.ok { color: #7ee29a; }
+  .bulk-del {
+    flex-shrink: 0; background: none; border: none; color: var(--muted); font-size: 20px; line-height: 1;
+    cursor: pointer; padding: 0 4px; transition: color 0.15s;
+  }
+  .bulk-del:hover { color: #ff8080; }
+  .bulk-progress { height: 6px; border-radius: 4px; background: rgba(255,255,255,0.1); overflow: hidden; margin: 12px 0 4px; display: none; }
+  .bulk-progress.show { display: block; }
+  .bulk-progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #7ee29a, #3aa0ff); transition: width 0.25s; }
+
+  /* ---- submission queue ---- */
+  .sub-count {
+    display: none; margin-left: 6px; min-width: 18px; padding: 1px 5px; border-radius: 20px;
+    background: #ff9f43; color: #1a1206; font-size: 11px; font-weight: 800;
+  }
+  .sub-count.show { display: inline-block; }
+  .sub-list { display: flex; flex-direction: column; gap: 10px; max-height: 56vh; overflow-y: auto; margin-top: 4px; }
+  .sub-list:empty::after {
+    content: 'No submissions waiting.'; color: rgba(255,255,255,0.35);
+    font-size: 13px; text-align: center; padding: 26px 0; display: block;
+  }
+  .sub-item {
+    display: flex; gap: 12px; padding: 10px; border-radius: 11px;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+  }
+  .sub-thumb {
+    width: 104px; height: 66px; flex-shrink: 0; border-radius: 8px; object-fit: cover;
+    background: rgba(255,255,255,0.08); cursor: zoom-in;
+  }
+  .sub-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .sub-mid input, .sub-mid select {
+    width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 7px; color: var(--text); padding: 7px 9px; font-size: 13px; font-family: inherit; outline: none;
+  }
+  .sub-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .sub-meta { font-size: 11px; color: var(--muted); line-height: 1.5; word-break: break-all; }
+  .sub-meta a { color: #8ab4ff; }
+  .sub-btns { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; justify-content: center; }
+  .sub-btns button {
+    border: none; border-radius: 8px; padding: 8px 14px; font-size: 12.5px; font-weight: 700;
+    font-family: inherit; cursor: pointer; white-space: nowrap;
+  }
+  .sub-ok { background: rgba(126,226,154,0.92); color: #06210f; }
+  .sub-no { background: rgba(185,32,32,0.9); color: #fff; }
+  .sub-btns button:disabled { opacity: 0.55; cursor: default; }
+
+  /* ---- retag pass ---- */
+  .retag-note { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+  .retag-note b { color: var(--text); }
+  .retag-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin: 12px 0 4px; }
+  .retag-log {
+    margin-top: 12px; max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;
+    font-size: 12.5px;
+  }
+  .retag-row { display: flex; gap: 8px; align-items: baseline; padding: 6px 9px; border-radius: 8px; background: rgba(255,255,255,0.04); }
+  .retag-row .rn { font-weight: 600; color: var(--text); min-width: 120px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .retag-row .rc { color: #7ee29a; font-weight: 700; white-space: nowrap; }
+  .retag-row .rt { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* ---- Admin login gate ---- */
   .lock-screen {
@@ -721,11 +879,9 @@
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     </div>
     <h2>Admin Access</h2>
-    <p>This is the private upload panel. Sign in with your admin account.</p>
-    <input type="email" id="lockEmail" placeholder="Email" autocomplete="username" style="margin-bottom:10px">
-    <input type="password" id="lockInput" placeholder="Password" autocomplete="current-password" style="margin-bottom:10px">
-    <input type="password" id="lockToken" placeholder="GitHub token (ghp_… or github_pat_…)" autocomplete="off" spellcheck="false">
-    <p style="font-size:11px;opacity:.6;margin:6px 0 0;text-align:left">Fine-grained token with <b>Contents: Read &amp; write</b> on your wallpapers repo. Stored only in this browser — never uploaded or committed.</p>
+    <p>This is the private upload panel. Paste the site&rsquo;s admin key to continue.</p>
+    <input type="password" id="lockKey" placeholder="Admin key" autocomplete="off" spellcheck="false">
+    <p style="font-size:11px;opacity:.6;margin:6px 0 0;text-align:left">The site&rsquo;s <b>ADMIN_KEY</b> secret (set with <b>wrangler pages secret put ADMIN_KEY</b>). Stored only in this browser &mdash; never sent anywhere except the site&rsquo;s own API.</p>
     <button class="lock-btn" id="lockBtn">Sign in</button>
     <div class="lock-err" id="lockErr"></div>
   </div>
@@ -745,8 +901,14 @@
       </div>
     </div>
     <button class="admin-btn" id="adminBtn" title="Add wallpaper">+</button>
+    <button class="admin-export-btn" id="bulkBtn" title="Add many wallpapers at once">&#9776; Bulk add</button>
     <button class="admin-export-btn" id="exportBtn" title="Export wallpapers for the public site">&#8681; Export</button>
-    <a class="admin-export-btn" href="wallpapers.html" title="Open the public site" style="text-decoration:none;display:inline-flex;align-items:center">&#8599; View Site</a>
+    <button class="admin-export-btn" id="statsBtn" title="Library statistics">&#128202; Stats</button>
+    <button class="admin-export-btn" id="retagBtn" title="Re-analyze every wallpaper and fix its category + tags">&#127991; Retag all</button>
+    <button class="admin-export-btn" id="subsBtn" title="Review wallpapers submitted by visitors">&#128235; Submissions<span class="sub-count" id="subCount"></span></button>
+    <button class="admin-export-btn" id="purgeBtn" title="Bulk-remove wallpapers from the site">&#128465; Purge</button>
+    <button class="admin-export-btn" id="signoutBtn" title="Sign out and change the admin key">&#8631; Sign out</button>
+    <a class="admin-export-btn" href="https://8k-wallpapers.pages.dev" target="_blank" rel="noopener" title="Open the public site" style="text-decoration:none;display:inline-flex;align-items:center">&#8599; View Site</a>
     <div class="search">
       <input type="text" placeholder="Search" id="searchInput">
       <button>&#9906;</button>
@@ -811,6 +973,161 @@
       </div>
       <div class="admin-msg" id="afMsg"></div>
     </div>
+  </div>
+</div>
+
+<div class="admin-overlay" id="bulkOverlay">
+  <div class="admin-modal bulk-modal">
+    <div class="admin-mhead">
+      <h3>&#9776; Bulk Add Wallpapers</h3>
+      <button class="admin-close" id="bulkClose">&times;</button>
+    </div>
+    <div class="admin-body">
+      <div class="admin-field">
+        <label>Choose images from your computer</label>
+        <button type="button" class="admin-upload" id="bkUploadBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+          <span id="bkUploadLabel">Select multiple images…</span>
+        </button>
+        <input type="file" id="bkFiles" accept="image/*" multiple hidden>
+        <div class="admin-hint">Pick several JPG, PNG, or WebP files at once. Each name defaults from its filename; edit any of them below. Resolution is detected automatically, and tags are suggested from each image on-device.</div>
+      </div>
+
+      <div class="admin-or"><span>shared settings for all</span></div>
+
+      <div class="admin-row2">
+        <div class="admin-field">
+          <label>Category</label>
+          <select id="bkCat"></select>
+        </div>
+        <div class="admin-field">
+          <label>Tab</label>
+          <select id="bkTab">
+            <option value="RECENT">Recent</option>
+            <option value="POPULAR">Popular</option>
+            <option value="FEATURED">Featured</option>
+          </select>
+        </div>
+      </div>
+      <div class="admin-field">
+        <label>Tags for all (comma-separated)</label>
+        <input type="text" id="bkTags" placeholder="Space, Stars, Dark, 4K">
+      </div>
+
+      <div class="bulk-queue" id="bkQueue"></div>
+      <div class="bulk-progress" id="bkProgress"><i></i></div>
+
+      <div class="admin-actions">
+        <button class="admin-submit" id="bkSubmit">Publish all</button>
+        <button class="admin-cancel" id="bkCancel">Cancel</button>
+      </div>
+      <div class="admin-msg" id="bkMsg"></div>
+    </div>
+  </div>
+</div>
+
+<div class="admin-overlay" id="purgeOverlay">
+  <div class="admin-modal bulk-modal">
+    <div class="admin-mhead">
+      <h3>&#128465; Purge wallpapers</h3>
+      <button class="admin-close" id="purgeClose">&times;</button>
+    </div>
+    <div class="admin-body">
+      <div class="retag-note">
+        Removes wallpapers from the public site in bulk. <b>This cannot be undone.</b><br><br>
+        <b>Copied</b> counts anything whose stored filename still carries another site&rsquo;s
+        resolution/ID naming &mdash; the giveaway for the 4kwallpapers imports.
+        Removing them from the listing is instant. Deleting the stored image files is a
+        separate, slower job because the free storage tier allows only 1000 write
+        operations a day, so large purges continue across several days.
+      </div>
+      <div class="retag-stats">
+        <div class="stat-card"><b id="pgCopied">0</b><span>LOOK COPIED</span></div>
+        <div class="stat-card"><b id="pgOther">0</b><span>EVERYTHING ELSE</span></div>
+        <div class="stat-card"><b id="pgSel">0</b><span>SELECTED</span></div>
+      </div>
+      <div class="admin-actions" style="margin-top:14px">
+        <button class="admin-cancel" id="pgSelCopied">Select copied</button>
+        <button class="admin-cancel" id="pgSelAll">Select all</button>
+        <button class="admin-cancel" id="pgSelNone">Clear</button>
+      </div>
+      <label class="admin-hint" style="display:flex;gap:9px;align-items:center;margin:14px 0 4px;cursor:pointer">
+        <input type="checkbox" id="pgPurgeFiles" style="width:16px;height:16px;accent-color:#7ee29a">
+        <span>Also delete the stored image files (frees space, but limited to ~150 per run)</span>
+      </label>
+      <div class="bulk-progress" id="pgProgress"><i></i></div>
+      <div class="retag-log" id="pgLog"></div>
+      <div class="admin-actions">
+        <button class="admin-submit" id="pgGo" style="background:rgba(214,40,40,0.95);color:#fff">Delete selected</button>
+        <button class="admin-cancel" id="pgCancel">Close</button>
+      </div>
+      <div class="admin-msg" id="pgMsg"></div>
+    </div>
+  </div>
+</div>
+
+<div class="admin-overlay" id="subsOverlay">
+  <div class="admin-modal bulk-modal">
+    <div class="admin-mhead">
+      <h3>&#128235; Visitor submissions</h3>
+      <button class="admin-close" id="subsClose">&times;</button>
+    </div>
+    <div class="admin-body">
+      <div class="retag-note">
+        Wallpapers sent in through <b>/upload</b>. Nothing here is public until you approve it.
+        Each submitter confirmed they hold the rights; reject anything you don&rsquo;t recognise as
+        theirs. Approving moves the image into the library and builds its thumbnail.
+      </div>
+      <div class="sub-list" id="subList"></div>
+      <div class="admin-actions">
+        <button class="admin-cancel" id="subsRefresh">Refresh</button>
+      </div>
+      <div class="admin-msg" id="subsMsg"></div>
+    </div>
+  </div>
+</div>
+
+<div class="admin-overlay" id="retagOverlay">
+  <div class="admin-modal bulk-modal">
+    <div class="admin-mhead">
+      <h3>&#127991; Retag the whole library</h3>
+      <button class="admin-close" id="retagClose">&times;</button>
+    </div>
+    <div class="admin-body">
+      <div class="retag-note">
+        Re-analyzes every published wallpaper on this device and rewrites its <b>category</b> and
+        <b>tags</b> — combining what the AI sees in the image with keywords from its name and its
+        resolution. This fixes the old junk tags and the &ldquo;everything is Abstract&rdquo; problem,
+        which feeds straight into each wallpaper&rsquo;s search-engine page.<br><br>
+        It replaces existing tags. Keep this tab open and visible while it runs; you can stop
+        anytime and it resumes where it left off.<br><br>
+        <b>Imagga note:</b> when Imagga is connected its cloud tags are added too — but its free
+        plan allows only 1000 requests/month, so a full-library run spends most of that.
+        (Already-tagged images are cached for a week and cost nothing to repeat.)
+      </div>
+      <div class="retag-stats">
+        <div class="stat-card"><b id="rtDone">0</b><span>PROCESSED</span></div>
+        <div class="stat-card"><b id="rtTotal">0</b><span>TOTAL</span></div>
+        <div class="stat-card"><b id="rtSaved">0</b><span>SAVED</span></div>
+      </div>
+      <div class="bulk-progress" id="rtProgress"><i></i></div>
+      <div class="retag-log" id="rtLog"></div>
+      <div class="admin-actions">
+        <button class="admin-submit" id="rtStart">Start retagging</button>
+        <button class="admin-cancel" id="rtStop">Stop</button>
+      </div>
+      <div class="admin-msg" id="rtMsg"></div>
+    </div>
+  </div>
+</div>
+
+<div class="admin-overlay" id="statsOverlay">
+  <div class="admin-modal">
+    <div class="admin-mhead">
+      <h3>&#128202; Library Statistics</h3>
+      <button class="admin-close" id="statsClose">&times;</button>
+    </div>
+    <div class="admin-body" id="statsBody"></div>
   </div>
 </div>
 
@@ -1081,6 +1398,16 @@ async function downloadSized(name, imgUrl, tw, th){
   }
 }
 
+// The NEW badge is about age, not origin: it shows for two days after a
+// wallpaper is published, then retires itself. (`_new` only marks "came from
+// the server", which is true of every published wallpaper forever.)
+const NEW_FOR_MS = 2 * 24 * 60 * 60 * 1000;
+function isFresh(w){
+  if(!w.created_at) return false;
+  const t = Date.parse(w.created_at);
+  return !isNaN(t) && (Date.now() - t) < NEW_FOR_MS;
+}
+
 function render(){
   const grid=document.getElementById('grid');
   grid.innerHTML='';
@@ -1092,21 +1419,111 @@ function render(){
   if(!list.length){ grid.innerHTML="<p style='grid-column:1/-1;text-align:center;color:var(--muted);padding:40px'>No wallpapers match your search.</p>"; return; }
   list.forEach(w=>{
     const card=document.createElement('div'); card.className='card'; card.style.position='relative';
-    const badge = w._new ? "<span class='admin-badge'>NEW</span>" : "";
+    const badge = isFresh(w) ? "<span class='admin-badge'>NEW</span>" : "";
     // only wallpapers that live in the backend can be deleted (demo ones have no row)
-    const canDelete = !!(w._ref && w._ref.site === 'supabase' && w._ref.path);
+    const canDelete = !!(w._ref && w._ref.site === 'r2' && w._ref.path);
     const delBtn = canDelete
       ? "<button class='del-btn' title='Delete this wallpaper'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 6h18'/><path d='M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'/><path d='M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6'/><line x1='10' y1='11' x2='10' y2='17'/><line x1='14' y1='11' x2='14' y2='17'/></svg></button>"
       : "";
-    card.innerHTML=badge+delBtn+"<div class='thumb'><img src='"+w.img+"' alt='"+w.name+"' loading='lazy'><div class='hover'><button class='act dl'>&#11245; Download</button><button class='act ghost'>&#9829; Save</button></div></div><div class='caption'>"+w.name+"</div>";
+    const editBtn = canDelete
+      ? "<button class='edit-btn' title='Rename this wallpaper'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z'/></svg></button>"
+      : "";
+    card.innerHTML=badge+delBtn+editBtn+"<div class='thumb'><img src='"+w.img+"' alt='"+w.name+"' loading='lazy'><div class='hover'><button class='act dl'>&#11245; Download</button><button class='act ghost'>&#9829; Save</button></div></div><div class='caption'>"+w.name+"</div>";
     card.querySelector('.dl').onclick=e=>{ e.stopPropagation(); download(w.name, w.img); };
     if(canDelete){
       card.querySelector('.del-btn').onclick=e=>{ e.stopPropagation(); deleteWallpaper(w, e.currentTarget); };
+      card.querySelector('.edit-btn').onclick=e=>{ e.stopPropagation(); renameWallpaper(w, e.currentTarget); };
     }
     card.onclick=()=>showDetail(w);
     grid.appendChild(card);
   });
 }
+
+// ---- Admin: rename a published wallpaper (edits its entry in wallpapers.json) ----
+async function renameWallpaper(w, btn){
+  const path = w._ref && w._ref.path;
+  if(!path) return;   // only backend posts can be renamed
+  const entered = prompt('New name for this wallpaper:', w.name);
+  if(entered === null) return;
+  const name = entered.trim();
+  if(!name || name === w.name) return;
+  if(btn){ btn.disabled = true; }
+  try {
+    await apiRename(path, name);
+    w.name = name;
+    render();
+  } catch(err){
+    console.error(err);
+    alert('Could not rename: ' + (err.message || err));
+  } finally {
+    if(btn){ btn.disabled = false; }
+  }
+}
+
+// ---- Admin: library statistics (checklist item 17: "View statistics") ----
+(function(){
+  const overlay = document.getElementById('statsOverlay');
+  const body = document.getElementById('statsBody');
+  const btn = document.getElementById('statsBtn');
+  if(!overlay || !body || !btn) return;
+  function escS(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function dims(res){ const m=String(res||'').match(/(\d+)\s*[x×]\s*(\d+)/i); return m?{w:+m[1],h:+m[2]}:null; }
+  function tierOf(w){
+    const p=dims(w.res); if(!p) return 'Unknown';
+    if(p.w>=7680||p.h>=4320) return '8K';
+    if(p.w>=5120||p.h>=2880) return '5K';
+    if(p.w>=3840||p.h>=2160) return '4K';
+    return 'HD';
+  }
+  // one "label · bar · count" row per entry, biggest first
+  function bars(title, counts, total, limit){
+    const entries = Object.keys(counts).map(k=>[k, counts[k]]).sort((a,b)=>b[1]-a[1]).slice(0, limit||10);
+    if(!entries.length) return '';
+    let html = "<div class='stat-sec'>"+escS(title)+"</div>";
+    entries.forEach(pair=>{
+      const pct = total ? Math.round(pair[1]/total*100) : 0;
+      html += "<div class='stat-row'><span class='sr-label' title='"+escS(pair[0])+"'>"+escS(pair[0])+"</span>"
+            + "<span class='sr-bar'><i style='width:"+Math.max(pct,3)+"%'></i></span>"
+            + "<span class='sr-count'>"+pair[1]+"</span></div>";
+    });
+    return html;
+  }
+  function buildStats(){
+    const total = wallpapers.length;
+    const published = wallpapers.filter(w=>w._ref && w._ref.site==='r2').length;
+    const cats={}, tabsC={}, tiers={}, tags={};
+    wallpapers.forEach(w=>{
+      if(w.cat) cats[w.cat]=(cats[w.cat]||0)+1;
+      if(w.tab) tabsC[w.tab]=(tabsC[w.tab]||0)+1;
+      const t=tierOf(w); tiers[t]=(tiers[t]||0)+1;
+      (w.tags||[]).forEach(tg=>{ tags[tg]=(tags[tg]||0)+1; });
+    });
+    let html = "<div class='stat-cards'>"
+      + "<div class='stat-card'><b>"+total+"</b><span>TOTAL</span></div>"
+      + "<div class='stat-card'><b>"+published+"</b><span>PUBLISHED</span></div>"
+      + "<div class='stat-card'><b>"+(total-published)+"</b><span>BUILT-IN DEMO</span></div>"
+      + "</div>";
+    const newest = wallpapers.find(w=>w._ref && w._ref.site==='r2');   // list is newest-first
+    if(newest){
+      const when = newest.created_at ? new Date(newest.created_at).toLocaleString() : 'date unknown';
+      html += "<div class='stat-sec'>Latest publish</div>"
+            + "<div class='stat-row'><span style='font-weight:600'>"+escS(newest.name)+"</span>"
+            + "<span style='color:var(--muted);margin-left:auto'>"+escS(when)+"</span></div>";
+    }
+    html += bars('By resolution', tiers, total);
+    html += bars('By tab', tabsC, total);
+    html += bars('Top categories', cats, total);
+    html += bars('Top tags', tags, total);
+    html += "<div class='stat-note'>Visitor views and downloads are counted per browser on the public site "
+          + "(there is no server). Global counters need a small backend — e.g. a Cloudflare Worker + KV; "
+          + "see CLOUDFLARE-SETUP.md.</div>";
+    body.innerHTML = html;
+  }
+  btn.onclick = ()=>{ buildStats(); overlay.classList.add('open'); };
+  document.getElementById('statsClose').onclick = ()=> overlay.classList.remove('open');
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.classList.remove('open'); });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape' && overlay.classList.contains('open')) overlay.classList.remove('open'); });
+})();
 
 // ---- Admin: delete a published wallpaper (database row + stored image) ----
 async function deleteWallpaper(w, btn){
@@ -1115,22 +1532,14 @@ async function deleteWallpaper(w, btn){
   if(!confirm('Delete "'+w.name+'"?\n\nThis removes it from the public 8K Wallpapers site for everyone, and cannot be undone.')) return;
   if(btn){ btn.disabled = true; }
   try {
-    // 1) remove its entry from wallpapers.json on GitHub (read current file, filter, commit)
-    const { list, sha } = await ghLoad();
-    const next = list.filter(r => r.image_path !== path);
-    if(next.length === list.length){
-      throw new Error('That wallpaper was not found in wallpapers.json — it may already be deleted. The list will refresh.');
-    }
-    await ghSave(next, sha, 'Delete wallpaper: ' + (w.name || path));
-    // 2) delete the stored image file (best-effort)
-    try { await sb.storage.from(BUCKET).remove([path]); } catch(e){ console.warn('Image file remove failed:', e); }
-    // 3) remove it from the gallery on screen
+    // removes the list entry AND the stored image file in one call
+    await apiDelete(path);
     const idx = wallpapers.indexOf(w);
     if(idx > -1) wallpapers.splice(idx, 1);
     render();
   } catch(err){
     console.error(err);
-    alert('Could not delete: ' + (err.message || err) + '\n\nMake sure you are signed in as the admin.');
+    alert('Could not delete: ' + (err.message || err));
     if(btn){ btn.disabled = false; }
   }
 }
@@ -1490,7 +1899,11 @@ document.getElementById('homeLogo').onclick=goHome;
       if(!ref){ elPrev.innerHTML=''; elPrev.textContent = elUrl.value ? 'Could not read an Unsplash or Pexels ID from that' : 'Image preview appears here'; return; }
       const url = buildUrl(ref, 800);
       const img = new Image();
-      img.onload = ()=>{ elPrev.innerHTML=''; elPrev.appendChild(img); setMsg('Detected '+(ref.site==='pexels'?'Pexels':'Unsplash')+' image \u2713', 'ok'); };
+      img.onload = ()=>{
+        elPrev.innerHTML=''; elPrev.appendChild(img);
+        setMsg('Detected '+(ref.site==='pexels'?'Pexels':'Unsplash')+' image \u2713', 'ok');
+        suggestTagsInto(url);   // on-device tag + category suggestions for the pasted photo
+      };
       img.onerror = ()=>{ elPrev.innerHTML=''; elPrev.textContent='Preview failed to load (the ID may be invalid)'; };
       img.src = url; img.alt='preview';
     }, 400);
@@ -1517,6 +1930,8 @@ document.getElementById('homeLogo').onclick=goHome;
         elName.value = file.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
       }
       setMsg('Image ready to add \u2713', 'ok');
+      // analyze the image on-device and suggest tags + category
+      suggestTagsInto(file);
     };
     reader.onerror = ()=> setMsg('Could not read that file.', 'err');
     reader.readAsDataURL(file);
@@ -1529,84 +1944,317 @@ document.getElementById('homeLogo').onclick=goHome;
 
   function setMsg(text, kind){ elMsg.textContent=text; elMsg.className='admin-msg '+(kind||''); }
 
-  function openAdmin(){ overlay.classList.add('open'); setTimeout(()=>elUrl.focus(),50); }
+  function openAdmin(){ overlay.classList.add('open'); setTimeout(()=>elUrl.focus(),50); getClassifier().catch(()=>{}); }
   function closeAdmin(){ overlay.classList.remove('open'); }
 
   function resetForm(){
     elUrl.value=''; elName.value=''; elRes.value='3840x2160'; elTags.value='';
     elCat.value='Abstract'; elTab.value='RECENT';
+    _catAuto = true;                 // a fresh form may auto-pick the category again
     clearUpload();
     elPrev.innerHTML=''; elPrev.textContent='Image preview appears here'; setMsg('');
+  }
+
+  // Downscale an image (Blob or URL) to a ~640px-wide JPEG for grid thumbnails.
+  async function makeThumbBlob(src){
+    const isBlob = (typeof Blob !== 'undefined') && (src instanceof Blob);
+    const objUrl = isBlob ? URL.createObjectURL(src) : null;
+    try {
+      const img = await new Promise((resolve, reject)=>{
+        const im = new Image();
+        if(!isBlob) im.crossOrigin = 'anonymous';
+        im.onload = ()=>resolve(im);
+        im.onerror = reject;
+        im.src = objUrl || src;
+      });
+      if(!img.width) return null;
+      const w = Math.min(640, img.width);
+      const h = Math.max(1, Math.round(img.height * (w / img.width)));
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      if(!c.toBlob) return null;
+      return await new Promise(r=>c.toBlob(r, 'image/jpeg', 0.78));
+    } finally { if(objUrl) URL.revokeObjectURL(objUrl); }
+  }
+
+  // ============ Auto-tagging: analyze images on-device ============
+  // CLIP zero-shot classification (Transformers.js, lazy-loaded on first use)
+  // scores each image against a wallpaper-tuned tag vocabulary AND against the
+  // site's own categories — so both tags and the Category are suggested. A
+  // quick canvas pass adds brightness/color tags. Nothing leaves this browser;
+  // if the CDN or model can't load, color tags still work alone.
+  //
+  // Why CLIP and not an ImageNet classifier: ImageNet only knows 1000 photo
+  // objects (it called an anime wallpaper "mask, comic book"). CLIP matches
+  // images against arbitrary text, so it understands "anime artwork",
+  // "cyberpunk neon city", "a video game scene", …
+
+  // category → the text CLIP scores it by (order = the site's categories)
+  const CAT_LABELS = [
+    { c:'Abstract',     l:'abstract shapes and colors' },
+    { c:'Lifestyle',    l:'a lifestyle scene' },
+    { c:'Animals',      l:'a wild animal' },
+    { c:'Love',         l:'romantic love, hearts or a couple' },
+    { c:'Anime',        l:'anime or manga artwork' },
+    { c:'Military',     l:'soldiers or military weapons' },
+    { c:'Architecture', l:'a building or architecture' },
+    { c:'Minimal',      l:'a minimalist simple design' },
+    { c:'Bikes',        l:'a motorcycle' },
+    { c:'Movies',       l:'a movie scene or film poster' },
+    { c:'Black/Dark',   l:'a mostly black dark image' },
+    { c:'Music',        l:'musical instruments or a concert' },
+    { c:'Cars',         l:'a sports car' },
+    { c:'Nature',       l:'a nature landscape' },
+    { c:'Celebrations', l:'a festive celebration with fireworks' },
+    { c:'People',       l:'a portrait photo of a person' },
+    { c:'Cute',         l:'something cute and adorable' },
+    { c:'Photography',  l:'artistic photography' },
+    { c:'Fantasy',      l:'fantasy art with magical creatures' },
+    { c:'Quotes',       l:'an inspirational quote written as text' },
+    { c:'Flowers',      l:'flowers in bloom' },
+    { c:'Sci-Fi',       l:'science fiction with spaceships or robots' },
+    { c:'Food',         l:'delicious food' },
+    { c:'Space',        l:'outer space with stars, planets or galaxies' },
+    { c:'Games',        l:'a video game scene or game character' },
+    { c:'Sports',       l:'sports action' },
+    { c:'Gradients',    l:'a smooth color gradient' },
+    { c:'Technology',   l:'modern technology or gadgets' },
+    { c:'CGI',          l:'3D rendered computer graphics' },
+    { c:'World',        l:'a famous city or landmark' }
+  ];
+  // tag → the text CLIP scores it by (wallpaper-flavored vocabulary)
+  const TAG_LABELS = [
+    { t:'Anime', l:'anime or manga artwork' }, { t:'Comic Art', l:'comic book art' },
+    { t:'Painting', l:'a digital painting' }, { t:'Pixel Art', l:'pixel art' },
+    { t:'3D Render', l:'3D rendered graphics' }, { t:'Cyberpunk', l:'a cyberpunk neon city' },
+    { t:'Neon', l:'glowing neon lights' }, { t:'Gaming', l:'a video game scene' },
+    { t:'Superhero', l:'a superhero' }, { t:'Warrior', l:'a warrior fighting a battle' },
+    { t:'Samurai', l:'a samurai' }, { t:'Dragon', l:'a dragon' },
+    { t:'Robot', l:'a robot or mech' }, { t:'Spaceship', l:'a spaceship' },
+    { t:'Space', l:'outer space with stars' }, { t:'Galaxy', l:'a galaxy or nebula' },
+    { t:'Moon', l:'the moon' }, { t:'Stars', l:'a starry night sky' },
+    { t:'Night', l:'a night scene' }, { t:'Sunset', l:'a sunset sky' },
+    { t:'Sunrise', l:'a sunrise' }, { t:'Clouds', l:'clouds in the sky' },
+    { t:'Aurora', l:'aurora northern lights' }, { t:'Lightning', l:'lightning bolts' },
+    { t:'Fire', l:'fire and flames' }, { t:'Snow', l:'snow and ice' },
+    { t:'Rain', l:'rain' }, { t:'Winter', l:'a winter scene' },
+    { t:'Autumn', l:'autumn leaves' }, { t:'Mountains', l:'mountains' },
+    { t:'Forest', l:'a forest' }, { t:'Waterfall', l:'a waterfall' },
+    { t:'Lake', l:'a calm lake' }, { t:'Ocean', l:'the ocean' },
+    { t:'Beach', l:'a beach' }, { t:'Underwater', l:'underwater sea life' },
+    { t:'Desert', l:'a desert' }, { t:'City', l:'a city skyline' },
+    { t:'Castle', l:'a castle' }, { t:'Car', l:'a sports car' },
+    { t:'Motorcycle', l:'a motorcycle' }, { t:'Airplane', l:'an airplane' },
+    { t:'Cat', l:'a cat' }, { t:'Wolf', l:'a wolf' },
+    { t:'Lion', l:'a lion' }, { t:'Bird', l:'a bird' },
+    { t:'Horse', l:'a horse' }, { t:'Flowers', l:'flowers' },
+    { t:'Skull', l:'a skull' }, { t:'Fantasy', l:'fantasy magic' },
+    { t:'Geometric', l:'geometric patterns' }, { t:'Gradient', l:'a smooth color gradient' },
+    { t:'Minimal', l:'a minimalist design' }, { t:'Food', l:'delicious food' },
+    { t:'Sports', l:'sports action' }, { t:'Music', l:'musical instruments' }
+  ];
+
+  let _clipPromise = null;
+  function getClassifier(){
+    if(!_clipPromise){
+      _clipPromise = (async ()=>{
+        const T = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3');
+        let lastPct = -1;
+        const clf = await T.pipeline('zero-shot-image-classification', 'Xenova/clip-vit-base-patch32', {
+          dtype: 'q8',
+          progress_callback: (p)=>{
+            // one-time model download (~30 MB, then cached by the browser)
+            if(p && p.status === 'progress' && /onnx/.test(p.file || '')){
+              const pct = Math.round(p.progress || 0);
+              if(pct !== lastPct && pct % 5 === 0){ lastPct = pct; setStatus('Downloading the tagging AI… ' + pct + '% (one-time)', ''); }
+            }
+          }
+        });
+        setStatus('Tagging AI ready ✓', 'ok');
+        return clf;
+      })();
+      _clipPromise.catch(()=>{ _clipPromise = null; });   // a later attempt may retry
+    }
+    return _clipPromise;
+  }
+
+  // Draw any image source (File/Blob or URL) onto a 224px analysis canvas
+  // (cover-fit center crop — the classifier's expected input shape).
+  async function analysisCanvas(src){
+    const isBlob = (typeof Blob !== 'undefined') && (src instanceof Blob);
+    const objUrl = isBlob ? URL.createObjectURL(src) : null;
+    try {
+      const img = await new Promise((resolve, reject)=>{
+        const im = new Image();
+        if(!isBlob) im.crossOrigin = 'anonymous';
+        im.onload = ()=>resolve(im);
+        im.onerror = reject;
+        im.src = objUrl || src;
+      });
+      if(!img.width) throw new Error('empty image');
+      const S = 224, c = document.createElement('canvas'); c.width = S; c.height = S;
+      const ctx = c.getContext('2d');
+      const scale = Math.max(S / img.width, S / img.height);
+      const dw = img.width * scale, dh = img.height * scale;
+      ctx.drawImage(img, (S - dw) / 2, (S - dh) / 2, dw, dh);
+      return c;
+    } finally { if(objUrl) URL.revokeObjectURL(objUrl); }
+  }
+
+  // Brightness + dominant color straight from the pixels — no ML needed.
+  function colorTags(canvas){
+    const d = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+    const hueNames = ['Red','Orange','Yellow','Green','Teal','Blue','Purple','Pink'];
+    const hueEdges = [15, 45, 70, 160, 200, 250, 290, 345];
+    const buckets = [0,0,0,0,0,0,0,0];
+    let lum = 0, sat = 0;
+    const n = d.length / 4;
+    for(let i = 0; i < d.length; i += 4){
+      const r = d[i], g = d[i+1], b = d[i+2];
+      lum += 0.299*r + 0.587*g + 0.114*b;
+      const max = Math.max(r,g,b), min = Math.min(r,g,b), delta = max - min;
+      if(delta < 26 || max < 40) continue;         // grey or near-black pixel
+      sat++;
+      let h;
+      if(max === r) h = ((g - b) / delta + 6) % 6;
+      else if(max === g) h = (b - r) / delta + 2;
+      else h = (r - g) / delta + 4;
+      h = h * 60;
+      let k = 0; while(k < hueEdges.length && h >= hueEdges[k]) k++;
+      buckets[k % 8]++;                            // 345–360° wraps back to Red
+    }
+    const tags = [];
+    lum /= n;
+    if(lum < 62) tags.push('Dark'); else if(lum > 195) tags.push('Bright');
+    if(sat / n >= 0.12){
+      let best = 0; for(let k = 1; k < 8; k++) if(buckets[k] > buckets[best]) best = k;
+      if(buckets[best] / sat >= 0.34) tags.push(hueNames[best]);
+    } else if(lum >= 62 && lum <= 195){
+      tags.push('Minimal');                        // desaturated mid-tone image
+    }
+    return tags;
+  }
+
+  // Full analysis -> { tags: up to 6 (subjects first, then colors), category }.
+  async function autoTags(src){
+    let canvas;
+    try { canvas = await analysisCanvas(src); } catch(e){ return { tags: [], category: null }; }
+    const cTags = (()=>{ try { return colorTags(canvas); } catch(e){ return []; } })();
+    let mTags = [], category = null;
+    try {
+      const clf = await getClassifier();
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
+      const u = URL.createObjectURL(blob);
+      try {
+        const tpl = { hypothesis_template: 'This wallpaper shows {}.' };
+        // best-matching site category (softmax over the 30 category texts)
+        const catOut = (await clf(u, CAT_LABELS.map(x => x.l), tpl)).slice()
+          .sort((a, b) => b.score - a.score);
+        const bestCat = CAT_LABELS.find(x => x.l === catOut[0].label);
+        if(bestCat && catOut[0].score >= 0.10) category = bestCat.c;
+        // top subject tags from the wallpaper vocabulary
+        const tagOut = (await clf(u, TAG_LABELS.map(x => x.l), tpl)).slice()
+          .sort((a, b) => b.score - a.score);
+        // absolute floor + relative cut: when one subject dominates (say a car
+        // at 0.6), weak "maybe" labels a tenth as confident don't tag along
+        const tagCut = Math.max(0.08, (tagOut[0] ? tagOut[0].score : 0) * 0.25);
+        // style judgements (painting / render / pixel / comic) need real
+        // confidence — they otherwise ride along on any stylized photo
+        const styleBar = { 'Painting':1, '3D Render':1, 'Pixel Art':1, 'Comic Art':1 };
+        mTags = tagOut.slice(0, 4)
+          .map(p => ({ t: (TAG_LABELS.find(x => x.l === p.label) || {}).t, s: p.score }))
+          .filter(x => x.t && x.s >= (styleBar[x.t] ? Math.max(0.18, tagCut) : tagCut))
+          .map(x => x.t);
+      } finally { URL.revokeObjectURL(u); }
+    } catch(e){ console.warn('Tag AI unavailable — using color tags only:', e); }
+    const seen = {};
+    const tags = mTags.concat(cTags)
+      .filter(t => { const k = t.toLowerCase(); if(seen[k]) return false; seen[k] = 1; return true; })
+      .slice(0, 6);
+    return { tags, category };
+  }
+
+  // Fill the single-add tags input + category from an image. Tags only fill an
+  // empty field; the category only moves while the admin hasn't touched it.
+  let _suggestSeq = 0;
+  let _catAuto = true;
+  elCat.addEventListener('change', ()=>{ _catAuto = false; });
+  async function suggestTagsInto(src){
+    const my = ++_suggestSeq;
+    try {
+      const res = await autoTags(src);
+      if(my !== _suggestSeq) return;                   // a newer image superseded this one
+      const setCat = !!(res.category && _catAuto);
+      if(setCat) elCat.value = res.category;
+      if(res.tags.length && !elTags.value.trim()){
+        elTags.value = res.tags.join(', ');
+        setMsg((setCat ? 'Category + tags' : 'Tags') + ' suggested from the image ✓ — edit freely.', 'ok');
+      } else if(setCat){
+        setMsg('Category suggested from the image ✓ — edit freely.', 'ok');
+      }
+    } catch(e){ /* suggestions are best-effort */ }
   }
 
   async function addWallpaper(){
     const name = elName.value.trim();
     if(!name){ setMsg('Please enter a name for the wallpaper.', 'err'); elName.focus(); return; }
 
-    // Confirm we still have a valid admin session. Tokens expire while the page is
-    // left open, and without one Supabase's RLS silently blocks the upload + insert —
-    // which looks like "I added a wallpaper and nothing happened, on both sites".
-    try {
-      const { data: sess } = await sb.auth.getSession();
-      if(!sess || !sess.session){
-        setMsg('Your admin session has expired. Refresh the page and sign in again before adding.', 'err');
-        return;
-      }
-    } catch(e){ /* if the check itself fails, fall through and let the upload surface the real error */ }
-
-    // figure out the image source: an uploaded file, or a pasted stock URL
-    let fileBlob, ext;
-    if(uploadedDataUrl && elFile.files && elFile.files[0]){
-      fileBlob = elFile.files[0];
-      ext = (fileBlob.name.split('.').pop() || 'jpg').toLowerCase();
-    } else {
-      const ref = parseSource(elUrl.value);
-      if(!ref){ setMsg('Upload an image, or paste a valid Unsplash or Pexels URL.', 'err'); return; }
-      // fetch the stock image so we can host it ourselves (largest reasonable size)
-      setMsg('Fetching image…', 'ok');
-      try {
-        const url = buildUrl(ref, 2400);
-        const r = await fetch(url);
-        if(!r.ok) throw new Error('fetch failed');
-        fileBlob = await r.blob();
-        ext = 'jpg';
-      } catch(e){ setMsg('Could not fetch that image. Try uploading the file instead.', 'err'); return; }
-    }
-
     const tags = elTags.value.split(',').map(t=>t.trim()).filter(Boolean);
-    const safe = name.replace(/[^a-z0-9]+/gi,'-').toLowerCase().slice(0,40);
-    const path = safe + '-' + Date.now() + '.' + ext;
-
-    setMsg('Uploading…', 'ok');
+    const resolution = elRes.value.trim() || '3840x2160';
     const submitBtn = document.getElementById('afSubmit');
     submitBtn.disabled = true;
     try {
-      // 1) upload the image to Storage
-      const up = await sb.storage.from(BUCKET).upload(path, fileBlob, {
-        cacheControl: '3600', upsert: false,
-        contentType: fileBlob.type || ('image/' + ext)
-      });
-      if(up.error) throw up.error;
+      // 1) get the image into R2 — raw bytes from this PC, or a server-side
+      //    import of a stock-photo URL (no browser CORS limits that way)
+      let path;
+      if(uploadedDataUrl && elFile.files && elFile.files[0]){
+        setMsg('Uploading…', 'ok');
+        path = await apiUpload(elFile.files[0], elFile.files[0].name);
+      } else {
+        const ref = parseSource(elUrl.value);
+        if(!ref){ setMsg('Upload an image, or paste a valid Unsplash or Pexels URL.', 'err'); return; }
+        setMsg('Importing image…', 'ok');
+        path = await apiImport(buildUrl(ref, 2400), name);
+      }
 
-      // 2) record it in wallpapers.json on GitHub (read current file, prepend, commit)
-      const { list, sha } = await ghLoad();
-      list.unshift({
+      // 1.5) small grid thumbnail so the public site loads fast. Best-effort:
+      //      the grid falls back to the full image if this step fails.
+      try {
+        setMsg('Creating thumbnail…', 'ok');
+        const src = (uploadedDataUrl && elFile.files && elFile.files[0])
+          ? elFile.files[0]
+          : API_BASE + '/images/' + encodeURI(path);
+        const tb = await makeThumbBlob(src);
+        if(tb) await apiUploadThumb(tb, path);
+      } catch(e){ console.warn('Thumbnail skipped:', e); }
+
+      // 1.75) Imagga cloud tags (when connected) — merged with the field's
+      //       tags; if it's not configured or unreachable, these stand alone
+      let finalTags = tags.slice();
+      try {
+        setMsg('Tagging with Imagga…', 'ok');
+        const iTags = await imaggaTagsFor(path);
+        if(iTags.length) finalTags = mergeTags(finalTags, iTags);
+      } catch(e){ /* Imagga not configured — CLIP/manual tags stand */ }
+
+      // 2) record it in the wallpaper list
+      setMsg('Publishing…', 'ok');
+      const entry = await apiAdd({
         name,
         category: elCat.value,
         tab: elTab.value,
-        resolution: elRes.value.trim() || '3840x2160',
-        tags: tags.length ? tags : ['Wallpaper'],
-        image_path: path,
-        created_at: new Date().toISOString()
+        resolution: resolution,
+        tags: finalTags.length ? finalTags : ['Wallpaper'],
+        image_path: path
       });
-      await ghSave(list, sha, 'Add wallpaper: ' + name);
 
       // 3) show it locally right away
       wallpapers.unshift({
-        name, img: imageUrl(path), _ref:{site:'supabase', path},
+        name, img: imageUrl(path), _ref:{site:'r2', path},
         tab: elTab.value, cat: elCat.value,
-        res: elRes.value.trim() || '3840x2160',
-        tags: tags.length ? tags : ['Wallpaper'], _new:true
+        res: resolution,
+        tags: finalTags.length ? finalTags : ['Wallpaper'],
+        created_at: (entry && entry.created_at) || new Date().toISOString(), _new:true
       });
       _seenPaths.add(path);  // already on screen — keep the live refresh from adding a duplicate
       setMsg('Published! "'+name+'" is now live for everyone.', 'ok');
@@ -1614,13 +2262,582 @@ document.getElementById('homeLogo').onclick=goHome;
       setTimeout(()=>{ closeAdmin(); resetForm(); }, 1000);
     } catch(err){
       console.error(err);
-      setMsg('Publish failed: ' + (err.message || 'unknown error') + ' (check your Supabase sign-in and your GitHub token).', 'err');
+      setMsg('Publish failed: ' + (err.message || 'unknown error'), 'err');
     } finally {
       submitBtn.disabled = false;
     }
   }
 
-  // ---- load published wallpapers from Supabase ----
+  // ============ Bulk add: many wallpapers in one go ============
+  const bulkOverlay = document.getElementById('bulkOverlay');
+  const bkFiles = document.getElementById('bkFiles');
+  const bkUploadBtn = document.getElementById('bkUploadBtn');
+  const bkUploadLabel = document.getElementById('bkUploadLabel');
+  const bkCat = document.getElementById('bkCat');
+  const bkTab = document.getElementById('bkTab');
+  const bkTags = document.getElementById('bkTags');
+  const bkQueueEl = document.getElementById('bkQueue');
+  const bkProgress = document.getElementById('bkProgress');
+  const bkSubmit = document.getElementById('bkSubmit');
+  const bkMsg = document.getElementById('bkMsg');
+  let bulkItems = [];        // { file, name, w, h, objUrl, row, nameInput, stateEl, done }
+  let bulkBusy = false;
+
+  const bkAutoOpt = document.createElement('option');
+  bkAutoOpt.value = '__auto__'; bkAutoOpt.textContent = 'Auto-detect (per image)';
+  bkCat.appendChild(bkAutoOpt);
+  categories.slice().sort().forEach(c=>{
+    const o=document.createElement('option'); o.value=c; o.textContent=c; bkCat.appendChild(o);
+  });
+  bkCat.value = '__auto__';
+
+  function setBkMsg(text, kind){ bkMsg.textContent = text; bkMsg.className = 'admin-msg ' + (kind||''); }
+  function titleFromFile(fn){ return fn.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase()).trim(); }
+
+  function addBulkFiles(fileList){
+    const files = Array.prototype.slice.call(fileList || []);
+    let skipped = 0;
+    files.forEach(file=>{
+      if(!file.type.startsWith('image/')){ skipped++; return; }
+      const objUrl = URL.createObjectURL(file);
+      const item = { file, name: titleFromFile(file.name), w: 0, h: 0, objUrl, done: false };
+
+      const row = document.createElement('div'); row.className = 'bulk-item';
+      const thumb = document.createElement('img'); thumb.className = 'bulk-thumb'; thumb.alt = '';
+      const mid = document.createElement('div'); mid.className = 'bulk-mid';
+      const nameInput = document.createElement('input'); nameInput.className = 'bulk-name'; nameInput.value = item.name;
+      nameInput.oninput = ()=>{ item.name = nameInput.value; };
+      const sub = document.createElement('div'); sub.className = 'bulk-sub';
+      const oversize = file.size > 15 * 1024 * 1024;
+      item.autoTags = null;   // null = still analyzing, [] = nothing found
+      item.autoCat = null;    // detected category (used when the batch is on Auto-detect)
+      function refreshSub(){
+        const parts = [file.name];
+        parts.push(item.w ? (item.w + '×' + item.h) : (Math.round(file.size/1024) + ' KB'));
+        if(item.autoTags === null) parts.push('finding tags…');
+        else {
+          if(item.autoCat) parts.push('→ ' + item.autoCat);
+          if(item.autoTags.length) parts.push(item.autoTags.join(', '));
+        }
+        if(oversize) parts.push('too large (max 15 MB)');
+        sub.textContent = parts.join(' • ');
+      }
+      refreshSub();
+      const stateEl = document.createElement('div'); stateEl.className = 'bulk-state' + (oversize ? ' err' : '');
+      stateEl.textContent = oversize ? '!' : '';
+      const del = document.createElement('button'); del.className = 'bulk-del'; del.title = 'Remove'; del.innerHTML = '&times;';
+      del.onclick = ()=>{ if(bulkBusy) return; removeBulkItem(item); };
+
+      thumb.onload = ()=>{ item.w = thumb.naturalWidth; item.h = thumb.naturalHeight; refreshSub(); };
+      thumb.src = objUrl;
+
+      // analyze the image on-device; its tags publish alongside the shared
+      // ones, and its category is used when the batch is on Auto-detect
+      autoTags(file)
+        .then(res=>{ item.autoTags = res.tags; item.autoCat = res.category; if(!item.done) refreshSub(); })
+        .catch(()=>{ item.autoTags = []; if(!item.done) refreshSub(); });
+
+      mid.appendChild(nameInput); mid.appendChild(sub);
+      row.appendChild(thumb); row.appendChild(mid); row.appendChild(stateEl); row.appendChild(del);
+      bkQueueEl.appendChild(row);
+
+      item.row = row; item.nameInput = nameInput; item.stateEl = stateEl; item.subEl = sub; item.oversize = oversize;
+      bulkItems.push(item);
+    });
+    bkFiles.value = '';   // allow re-picking the same files later
+    updateBulkChrome(skipped);
+  }
+  function removeBulkItem(item){
+    const i = bulkItems.indexOf(item);
+    if(i > -1) bulkItems.splice(i, 1);
+    if(item.objUrl) URL.revokeObjectURL(item.objUrl);
+    if(item.row && item.row.parentNode) item.row.parentNode.removeChild(item.row);
+    updateBulkChrome(0);
+  }
+  function updateBulkChrome(skipped){
+    const n = bulkItems.length;
+    bkUploadLabel.textContent = n ? (n + ' image' + (n===1?'':'s') + ' selected — add more…') : 'Select multiple images…';
+    bkUploadBtn.classList.toggle('has-file', n > 0);
+    bkSubmit.textContent = n > 1 ? ('Publish all ' + n) : 'Publish';
+    if(skipped) setBkMsg(skipped + ' non-image file' + (skipped===1?'':'s') + ' skipped.', 'err');
+    else if(n) setBkMsg('');
+  }
+
+  async function publishOne(item){
+    const name = (item.name || '').trim() || titleFromFile(item.file.name);
+    // 1) upload the original
+    const path = await apiUpload(item.file, item.file.name);
+    // 1.5) grid thumbnail (best-effort)
+    try { const tb = await makeThumbBlob(item.file); if(tb) await apiUploadThumb(tb, path); }
+    catch(e){ console.warn('Thumbnail skipped:', e); }
+    // 2) record it — shared tags for the batch + this image's own auto-tags;
+    //    on Auto-detect each image publishes under its detected category
+    const shared = bkTags.value.split(',').map(t=>t.trim()).filter(Boolean);
+    const seen = {};
+    let tags = shared.concat(item.autoTags || [])
+      .filter(t=>{ const k = t.toLowerCase(); if(seen[k]) return false; seen[k] = 1; return true; });
+    // Imagga cloud tags (when connected) join the batch + auto tags
+    try { const iTags = await imaggaTagsFor(path); if(iTags.length) tags = mergeTags(tags, iTags); }
+    catch(e){ /* not configured — local tags stand */ }
+    const category = (bkCat.value === '__auto__') ? (item.autoCat || 'Abstract') : bkCat.value;
+    const resolution = (item.w && item.h) ? (item.w + 'x' + item.h) : '3840x2160';
+    const entry = await apiAdd({
+      name, category: category, tab: bkTab.value,
+      resolution, tags: tags.length ? tags : ['Wallpaper'], image_path: path
+    });
+    // 3) show locally right away
+    wallpapers.unshift({
+      name, img: imageUrl(path), _ref:{site:'r2', path},
+      tab: bkTab.value, cat: category, res: resolution,
+      tags: tags.length ? tags : ['Wallpaper'],
+      created_at: (entry && entry.created_at) || new Date().toISOString(), _new:true
+    });
+    _seenPaths.add(path);
+  }
+
+  async function publishBulk(){
+    const pending = bulkItems.filter(it => !it.done && !it.oversize);
+    if(!pending.length){ setBkMsg('Add some images first (oversize files can’t be published).', 'err'); return; }
+    bulkBusy = true; bkSubmit.disabled = true; bkUploadBtn.disabled = true;
+    bkProgress.classList.add('show'); const bar = bkProgress.querySelector('i');
+    let done = 0, ok = 0, failed = 0;
+    for(const item of pending){
+      item.stateEl.className = 'bulk-state'; item.stateEl.textContent = '⏳';
+      item.nameInput.disabled = true;
+      try {
+        await publishOne(item);
+        item.done = true; ok++;
+        item.stateEl.className = 'bulk-state ok'; item.stateEl.textContent = '✓';
+      } catch(err){
+        console.error(err); failed++;
+        item.stateEl.className = 'bulk-state err'; item.stateEl.textContent = '✕';
+        item.subEl.textContent = 'Failed: ' + (err.message || 'error');
+        item.nameInput.disabled = false;
+      }
+      done++; bar.style.width = Math.round(done / pending.length * 100) + '%';
+      setBkMsg('Published ' + ok + ' of ' + pending.length + (failed ? (' — ' + failed + ' failed') : '') + '…', failed ? 'err' : 'ok');
+    }
+    render(); goHome();
+    bulkBusy = false; bkSubmit.disabled = false; bkUploadBtn.disabled = false;
+    if(!failed){
+      setBkMsg('Published all ' + ok + ' wallpaper' + (ok===1?'':'s') + '! They’re live for everyone.', 'ok');
+      setTimeout(()=>{ closeBulk(); resetBulk(); }, 1200);
+    } else {
+      setBkMsg('Published ' + ok + ', ' + failed + ' failed. Fix the names/files and press Publish again to retry the failed ones.', 'err');
+      bkProgress.classList.remove('show'); bar.style.width = '0';
+    }
+  }
+
+  function resetBulk(){
+    bulkItems.forEach(it=>{ if(it.objUrl) URL.revokeObjectURL(it.objUrl); });
+    bulkItems = []; bkQueueEl.innerHTML = ''; bkTags.value = '';
+    bkCat.value = '__auto__'; bkTab.value = 'RECENT';
+    bkProgress.classList.remove('show'); bkProgress.querySelector('i').style.width = '0';
+    setBkMsg(''); updateBulkChrome(0);
+  }
+  function openBulk(){ bulkOverlay.classList.add('open'); getClassifier().catch(()=>{}); }
+  function closeBulk(){ if(bulkBusy) return; bulkOverlay.classList.remove('open'); }
+
+  bkUploadBtn.onclick = ()=> bkFiles.click();
+  bkFiles.addEventListener('change', ()=> addBulkFiles(bkFiles.files));
+  bkSubmit.onclick = publishBulk;
+  bkCancel_wire();
+  function bkCancel_wire(){
+    document.getElementById('bkCancel').onclick = ()=>{ if(bulkBusy) return; closeBulk(); resetBulk(); };
+    document.getElementById('bulkClose').onclick = closeBulk;
+    document.getElementById('bulkBtn').onclick = openBulk;
+    bulkOverlay.addEventListener('click', e=>{ if(e.target===bulkOverlay) closeBulk(); });
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape' && bulkOverlay.classList.contains('open')) closeBulk(); });
+  }
+
+  // ============ Retag pass: fix category + tags across the whole library ============
+  // Most wallpapers were published before the CLIP tagger existed, so they sit in
+  // "Abstract" with a placeholder "Wallpaper" tag. Those two fields feed each
+  // wallpaper's SEO page (title, description, alt text), so fixing them lifts the
+  // whole site. Runs on-device; saves in batches to stay inside KV's write limit.
+  const RETAG_KEY = 'retag_done_v1';
+  const RETAG_BATCH = 100;
+  let retagDone = (()=>{ try { return new Set(JSON.parse(localStorage.getItem(RETAG_KEY) || '[]')); } catch(e){ return new Set(); } })();
+  let retagRunning = false, retagStopReq = false, retagSaved = 0;
+
+  const rtOverlay = document.getElementById('retagOverlay');
+  const rtDoneEl = document.getElementById('rtDone');
+  const rtTotalEl = document.getElementById('rtTotal');
+  const rtSavedEl = document.getElementById('rtSaved');
+  const rtProgress = document.getElementById('rtProgress');
+  const rtLog = document.getElementById('rtLog');
+  const rtStart = document.getElementById('rtStart');
+  const rtStopBtn = document.getElementById('rtStop');
+  const rtMsg = document.getElementById('rtMsg');
+  function setRtMsg(t, kind){ rtMsg.textContent = t; rtMsg.className = 'admin-msg ' + (kind||''); }
+
+  // words that make poor tags (generic filler, or already covered elsewhere)
+  const NAME_STOP = /^(the|a|an|and|or|of|in|on|at|to|for|with|from|by|is|are|it|its|wallpaper|wallpapers|background|backgrounds|hd|uhd|image|images|photo|photos|pic|pics|new|best|free|top|cool|nice|desktop|screen)$/i;
+  function titleWord(s){ return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase(); }
+  // The wallpaper's NAME usually holds the most valuable search term — the
+  // franchise or subject ("Gohan", "Batman", "Porsche"). Mine it for tags.
+  function keywordsFromName(name){
+    const out = [];
+    String(name || '').split(/[^A-Za-z0-9]+/).forEach(tok=>{
+      if(!tok) return;
+      if(/^\d+k$/i.test(tok)){ const t = tok.toUpperCase(); if(out.indexOf(t) === -1) out.push(t); return; }
+      if(tok.length < 2 || NAME_STOP.test(tok) || /^\d+$/.test(tok)) return;
+      const t = titleWord(tok);
+      if(out.indexOf(t) === -1) out.push(t);
+    });
+    return out.slice(0, 4);
+  }
+  function tierOfRes(res){
+    const m = String(res || '').match(/(\d+)\s*[x×]\s*(\d+)/i);
+    if(!m) return null;
+    const w = +m[1], h = +m[2];
+    if(w >= 7680 || h >= 4320) return '8K';
+    if(w >= 5120 || h >= 2880) return '5K';
+    if(w >= 3840 || h >= 2160) return '4K';
+    return null;
+  }
+  function mergeTags(){
+    const seen = {}, out = [];
+    [].concat.apply([], Array.prototype.slice.call(arguments)).forEach(t=>{
+      if(!t) return;
+      const k = String(t).toLowerCase();
+      if(seen[k]) return;
+      seen[k] = 1; out.push(String(t));
+    });
+    return out.slice(0, 10);
+  }
+  function logRetag(name, category, tags){
+    const row = document.createElement('div'); row.className = 'retag-row';
+    row.innerHTML = "<span class='rn'></span><span class='rc'></span><span class='rt'></span>";
+    row.children[0].textContent = name;
+    row.children[1].textContent = '→ ' + category;
+    row.children[2].textContent = tags.join(', ');
+    rtLog.insertBefore(row, rtLog.firstChild);
+    while(rtLog.children.length > 60) rtLog.removeChild(rtLog.lastChild);
+  }
+
+  async function runRetag(){
+    if(retagRunning) return;
+    retagRunning = true; retagStopReq = false;
+    rtStart.disabled = true; rtStart.textContent = 'Retagging…';
+    rtProgress.classList.add('show');
+    const bar = rtProgress.querySelector('i');
+    try {
+      setRtMsg('Loading the tagging AI…', 'ok');
+      await getClassifier();   // fail loudly rather than writing color-only tags
+
+      const list = await apiList();
+      const todo = list.filter(r => r && r.image_path && !retagDone.has(r.image_path));
+      const total = list.length;
+      rtTotalEl.textContent = total;
+      rtDoneEl.textContent = total - todo.length;
+      if(!todo.length){ setRtMsg('Everything is already retagged. Use Reset to run it again.', 'ok'); return; }
+      setRtMsg('Retagging ' + todo.length + ' wallpaper(s)… keep this tab visible.', 'ok');
+
+      let pending = [];
+      const flush = async ()=>{
+        if(!pending.length) return;
+        const res = await apiBulk(pending);
+        pending.forEach(u => retagDone.add(u.image_path));
+        try { localStorage.setItem(RETAG_KEY, JSON.stringify([...retagDone])); } catch(e){}
+        retagSaved += (res && res.updated) || 0;
+        rtSavedEl.textContent = retagSaved;
+        pending = [];
+      };
+
+      // Imagga joins in when configured; the first "not configured" reply
+      // turns it off for the whole run instead of failing 1000 more times
+      let useImagga = true;
+
+      for(let i = 0; i < todo.length; i++){
+        if(retagStopReq) break;
+        const row = todo[i];
+        // the small thumbnail is enough for the classifier and far quicker to fetch
+        let res = { tags: [], category: null };
+        try { res = await autoTags(API_BASE + '/images/thumbs/' + encodeURI(row.image_path)); } catch(e){}
+        if(!res.category && !res.tags.length){
+          try { res = await autoTags(API_BASE + '/images/' + encodeURI(row.image_path)); } catch(e){}
+        }
+        let iTags = [];
+        if(useImagga){
+          try { iTags = await imaggaTagsFor(row.image_path); }
+          catch(e){ useImagga = false; }
+        }
+        // order = priority, because mergeTags caps the total: name keywords
+        // (the franchise/subject) first, then the resolution tier so it can't
+        // be crowded out, then the classifiers.
+        const tags = mergeTags(keywordsFromName(row.name), [tierOfRes(row.resolution)], res.tags, iTags.slice(0, 3));
+        const category = res.category || row.category || 'Abstract';
+        pending.push({ image_path: row.image_path, category: category, tags: tags });
+        logRetag(row.name || '(untitled)', category, tags);
+
+        const done = (total - todo.length) + i + 1;
+        rtDoneEl.textContent = done;
+        bar.style.width = Math.round(done / total * 100) + '%';
+        if(pending.length >= RETAG_BATCH){ await flush(); }
+      }
+      await flush();
+
+      if(retagStopReq) setRtMsg('Stopped. ' + retagSaved + ' saved — press Start to resume where it left off.', 'ok');
+      else setRtMsg('Done! Retagged and saved ' + retagSaved + ' wallpaper(s). Their pages update automatically.', 'ok');
+      loadAdded();
+    } catch(err){
+      console.error(err);
+      setRtMsg('Retag failed: ' + (err.message || err), 'err');
+    } finally {
+      retagRunning = false;
+      rtStart.disabled = false; rtStart.textContent = 'Start retagging';
+    }
+  }
+
+  document.getElementById('retagBtn').onclick = ()=>{
+    rtOverlay.classList.add('open');
+    retagSaved = 0; rtSavedEl.textContent = '0';
+    const known = wallpapers.filter(w => w._ref && w._ref.site === 'r2').length;
+    rtTotalEl.textContent = known || 0;
+    rtDoneEl.textContent = retagDone.size;
+    setRtMsg(retagDone.size ? (retagDone.size + ' already done — Start resumes from there.') : '');
+    getClassifier().catch(()=>{});
+  };
+  document.getElementById('retagClose').onclick = ()=>{ if(!retagRunning) rtOverlay.classList.remove('open'); };
+  rtStart.onclick = runRetag;
+  rtStopBtn.onclick = ()=>{
+    if(retagRunning){ retagStopReq = true; setRtMsg('Stopping after the current wallpaper…', ''); return; }
+    // not running: this doubles as "reset progress" so the pass can be redone
+    if(confirm('Clear retag progress so the whole library is processed again?')){
+      retagDone = new Set();
+      try { localStorage.removeItem(RETAG_KEY); } catch(e){}
+      rtDoneEl.textContent = '0'; rtProgress.querySelector('i').style.width = '0';
+      rtLog.innerHTML = ''; setRtMsg('Progress cleared.', 'ok');
+    }
+  };
+  rtOverlay.addEventListener('click', e=>{ if(e.target === rtOverlay && !retagRunning) rtOverlay.classList.remove('open'); });
+
+  // ============ Purge: bulk-remove wallpapers ============
+  // Built because removing ~1300 imported wallpapers one at a time is both
+  // painful and impossible inside KV's 1000-writes-a-day allowance: each
+  // single delete rewrites the whole list document.
+  const pgOverlay = document.getElementById('purgeOverlay');
+  const pgMsgEl = document.getElementById('pgMsg');
+  const pgLog = document.getElementById('pgLog');
+  const pgProgress = document.getElementById('pgProgress');
+  let pgAll = [], pgSelected = new Set(), pgBusy = false;
+  function setPgMsg(t, k){ pgMsgEl.textContent = t || ''; pgMsgEl.className = 'admin-msg ' + (k || ''); }
+
+  // A stored filename still carrying "3840x2160" (or a truncated "3840x") is
+  // another site's download name, not one this admin generated.
+  function looksCopied(path){
+    return /\d{3,5}x\d{3,5}/.test(path) || /\d{3,5}x-\d{10,}\./.test(path);
+  }
+  function pgPaint(){
+    const copied = pgAll.filter(r => looksCopied(r.image_path)).length;
+    document.getElementById('pgCopied').textContent = copied;
+    document.getElementById('pgOther').textContent = pgAll.length - copied;
+    document.getElementById('pgSel').textContent = pgSelected.size;
+  }
+  async function pgLoad(){
+    setPgMsg('Loading the library…', '');
+    try {
+      pgAll = await apiList();
+      pgSelected = new Set();
+      pgLog.innerHTML = '';
+      pgPaint();
+      setPgMsg(pgAll.length + ' wallpapers in the library.', '');
+    } catch(e){ setPgMsg('Could not load: ' + (e.message || e), 'err'); }
+  }
+
+  document.getElementById('pgSelCopied').onclick = ()=>{
+    pgSelected = new Set(pgAll.filter(r => looksCopied(r.image_path)).map(r => r.image_path));
+    pgPaint(); setPgMsg(pgSelected.size + ' selected — these look copied.', '');
+  };
+  document.getElementById('pgSelAll').onclick = ()=>{
+    pgSelected = new Set(pgAll.map(r => r.image_path));
+    pgPaint(); setPgMsg('Everything selected (' + pgSelected.size + ').', 'err');
+  };
+  document.getElementById('pgSelNone').onclick = ()=>{ pgSelected = new Set(); pgPaint(); setPgMsg(''); };
+
+  document.getElementById('pgGo').onclick = async ()=>{
+    if(pgBusy) return;
+    const paths = [...pgSelected];
+    if(!paths.length){ setPgMsg('Nothing selected.', 'err'); return; }
+    const purgeFiles = document.getElementById('pgPurgeFiles').checked;
+    if(!confirm('Permanently remove ' + paths.length + ' wallpaper(s) from the site?\n\n'
+      + (purgeFiles ? 'Stored image files will also be deleted where the daily limit allows.\n\n' : '')
+      + 'This cannot be undone.')) return;
+
+    pgBusy = true;
+    const go = document.getElementById('pgGo');
+    go.disabled = true; go.textContent = 'Deleting…';
+    pgProgress.classList.add('show');
+    const bar = pgProgress.querySelector('i');
+    let done = 0, removed = 0, filesGone = 0, filesLeft = 0;
+    try {
+      const BATCH = 400;
+      for(let i = 0; i < paths.length; i += BATCH){
+        const slice = paths.slice(i, i + BATCH);
+        const res = await apiBulkDelete(slice, purgeFiles);
+        removed += (res && res.removed) || 0;
+        filesGone += (res && res.filesDeleted) || 0;
+        filesLeft += (res && res.filesPending) || 0;
+        done += slice.length;
+        bar.style.width = Math.round(done / paths.length * 100) + '%';
+        const row = document.createElement('div'); row.className = 'retag-row';
+        row.textContent = 'Removed ' + removed + ' so far — ' + ((res && res.remaining) || 0) + ' left in the library';
+        pgLog.insertBefore(row, pgLog.firstChild);
+        setPgMsg('Removed ' + removed + ' of ' + paths.length + '…', 'ok');
+      }
+      setPgMsg('Done — ' + removed + ' removed from the site.'
+        + (purgeFiles ? ' ' + filesGone + ' image files deleted' + (filesLeft ? ', ' + filesLeft + ' still stored (retry tomorrow to reclaim the rest).' : '.') : ''), 'ok');
+      await pgLoad();
+      loadAdded();
+    } catch(err){
+      console.error(err);
+      setPgMsg('Stopped: ' + (err.message || err) + ' — reopen to see what remains.', 'err');
+    } finally {
+      pgBusy = false; go.disabled = false; go.textContent = 'Delete selected';
+    }
+  };
+
+  document.getElementById('purgeBtn').onclick = ()=>{ pgOverlay.classList.add('open'); pgLoad(); };
+  document.getElementById('purgeClose').onclick = ()=>{ if(!pgBusy) pgOverlay.classList.remove('open'); };
+  document.getElementById('pgCancel').onclick = ()=>{ if(!pgBusy) pgOverlay.classList.remove('open'); };
+  pgOverlay.addEventListener('click', e=>{ if(e.target === pgOverlay && !pgBusy) pgOverlay.classList.remove('open'); });
+
+  // ============ Submission queue: review what visitors sent in ============
+  const subsOverlay = document.getElementById('subsOverlay');
+  const subListEl = document.getElementById('subList');
+  const subsMsgEl = document.getElementById('subsMsg');
+  const subCountEl = document.getElementById('subCount');
+  let subsPending = 0;
+  function setSubsMsg(t, kind){ subsMsgEl.textContent = t || ''; subsMsgEl.className = 'admin-msg ' + (kind || ''); }
+  function setSubCount(n){
+    subsPending = Math.max(0, n);
+    subCountEl.textContent = subsPending;
+    subCountEl.classList.toggle('show', subsPending > 0);
+  }
+
+  function subRow(s){
+    const row = document.createElement('div'); row.className = 'sub-item';
+    const url = API_BASE + '/images/' + encodeURI(s.image_path);
+
+    const img = document.createElement('img');
+    img.className = 'sub-thumb'; img.src = url; img.alt = s.name || '';
+    img.title = 'Open full size';
+    img.onclick = ()=> window.open(url, '_blank', 'noopener');
+
+    const mid = document.createElement('div'); mid.className = 'sub-mid';
+    const nameIn = document.createElement('input'); nameIn.value = s.name || ''; nameIn.placeholder = 'Name';
+    const two = document.createElement('div'); two.className = 'sub-row2';
+    const catSel = document.createElement('select');
+    categories.slice().sort().forEach(c=>{
+      const o = document.createElement('option'); o.value = c; o.textContent = c; catSel.appendChild(o);
+    });
+    catSel.value = categories.indexOf(s.category) > -1 ? s.category : 'Abstract';
+    const tagsIn = document.createElement('input'); tagsIn.value = s.tags || ''; tagsIn.placeholder = 'tags, comma separated';
+    two.appendChild(catSel); two.appendChild(tagsIn);
+
+    const meta = document.createElement('div'); meta.className = 'sub-meta';
+    const bits = [];
+    // a signed-in submitter is a real identity; anonymous ones only have an IP hash
+    if(s.user_email) bits.push('👤 ' + s.user_email + (s.user_blocked ? ' (BLOCKED)' : ''));
+    else if(s.uploader) bits.push('by ' + s.uploader + ' (not signed in)');
+    else bits.push('anonymous');
+    if(s.resolution) bits.push(s.resolution);
+    if(s.created_at) bits.push(s.created_at + ' UTC');
+    if(s.ip_hash) bits.push('ip ' + String(s.ip_hash).slice(0, 8));
+    meta.textContent = bits.join(' · ');
+    if(s.source_url){
+      const a = document.createElement('a');
+      a.href = s.source_url; a.target = '_blank'; a.rel = 'noopener nofollow';
+      a.textContent = ' source';
+      meta.appendChild(document.createTextNode(' · ')); meta.appendChild(a);
+    }
+    mid.appendChild(nameIn); mid.appendChild(two); mid.appendChild(meta);
+
+    const btns = document.createElement('div'); btns.className = 'sub-btns';
+    const ok = document.createElement('button'); ok.className = 'sub-ok'; ok.textContent = '✓ Approve';
+    const no = document.createElement('button'); no.className = 'sub-no'; no.textContent = '✕ Reject';
+    btns.appendChild(ok); btns.appendChild(no);
+    // repeat-infringer enforcement, only possible for signed-in submitters
+    if(s.user_id){
+      const blk = document.createElement('button');
+      blk.className = 'sub-no'; blk.style.background = 'rgba(120,120,130,0.85)';
+      blk.textContent = s.user_blocked ? '↺ Unblock' : '⃠ Block user';
+      blk.onclick = async ()=>{
+        const blocking = !s.user_blocked;
+        if(blocking && !confirm('Block ' + (s.user_email || 'this account') + ' from submitting?')) return;
+        blk.disabled = true;
+        try {
+          await apiReview({ action: blocking ? 'block' : 'unblock', user_id: s.user_id });
+          s.user_blocked = blocking ? 1 : 0;
+          blk.textContent = blocking ? '↺ Unblock' : '⃠ Block user';
+          setSubsMsg(blocking ? 'Account blocked from submitting.' : 'Account restored.', 'ok');
+        } catch(err){ setSubsMsg('Could not update: ' + (err.message || err), 'err'); }
+        finally { blk.disabled = false; }
+      };
+      btns.appendChild(blk);
+    }
+
+    function busy(v){ ok.disabled = v; no.disabled = v; }
+    ok.onclick = async ()=>{
+      busy(true); setSubsMsg('Approving "' + (nameIn.value || s.name) + '"…', 'ok');
+      try {
+        // trust the pixels over whatever the submitter typed — the resolution
+        // drives the 4K/5K/8K badge and the orientation filters
+        const real = (img.naturalWidth && img.naturalHeight)
+          ? img.naturalWidth + 'x' + img.naturalHeight : (s.resolution || '');
+        const res = await apiReview({
+          id: s.id, action: 'approve',
+          name: nameIn.value.trim() || s.name,
+          category: catSel.value,
+          resolution: real,
+          tags: tagsIn.value.split(',').map(t=>t.trim()).filter(Boolean)
+        });
+        // build the grid thumbnail for the now-live image (best effort)
+        const path = res && res.entry && res.entry.image_path;
+        if(path){
+          try {
+            const tb = await makeThumbBlob(API_BASE + '/images/' + encodeURI(path));
+            if(tb) await apiUploadThumb(tb, path);
+          } catch(e){ console.warn('Thumbnail skipped:', e); }
+        }
+        row.remove(); setSubCount(subsPending - 1);
+        setSubsMsg('Approved — it is live now.', 'ok');
+        loadAdded();
+      } catch(err){ console.error(err); setSubsMsg('Could not approve: ' + (err.message || err), 'err'); busy(false); }
+    };
+    no.onclick = async ()=>{
+      if(!confirm('Reject "' + (s.name || 'this submission') + '"? The uploaded file is deleted.')) return;
+      busy(true);
+      try {
+        await apiReview({ id: s.id, action: 'reject' });
+        row.remove(); setSubCount(subsPending - 1);
+        setSubsMsg('Rejected and deleted.', 'ok');
+      } catch(err){ console.error(err); setSubsMsg('Could not reject: ' + (err.message || err), 'err'); busy(false); }
+    };
+
+    row.appendChild(img); row.appendChild(mid); row.appendChild(btns);
+    return row;
+  }
+
+  async function loadSubs(quiet){
+    if(!adminKey()) return;
+    try {
+      const items = await apiSubmissions('pending');
+      setSubCount(items.length);
+      if(quiet) return;                     // badge-only refresh
+      subListEl.innerHTML = '';
+      items.forEach(s => subListEl.appendChild(subRow(s)));
+      setSubsMsg(items.length ? (items.length + ' waiting for review.') : '', items.length ? '' : 'ok');
+    } catch(e){ if(!quiet) setSubsMsg('Could not load: ' + (e.message || e), 'err'); }
+  }
+
+  document.getElementById('subsBtn').onclick = ()=>{ subsOverlay.classList.add('open'); loadSubs(); };
+  document.getElementById('subsClose').onclick = ()=> subsOverlay.classList.remove('open');
+  document.getElementById('subsRefresh').onclick = ()=> loadSubs();
+  subsOverlay.addEventListener('click', e=>{ if(e.target === subsOverlay) subsOverlay.classList.remove('open'); });
+
+  // ---- load published wallpapers from the site's API ----
   function serialize(){
     // for the Export button: dump the backend wallpapers currently loaded
     return wallpapers.filter(w=>w._new).map(w=>({
@@ -1651,9 +2868,9 @@ document.getElementById('homeLogo').onclick=goHome;
   // new posts appear, deleted ones disappear. Same logic the public site uses, so the
   // two never drift apart. Keyed by image_path (not name) so duplicate names can't hide a post.
   async function loadAdded(){
-    if(!ghToken()){ setStatus('Paste your GitHub token (sign in again) to load and publish wallpapers.', 'err'); return; }
+    if(!adminKey()){ setStatus('Sign in with the admin key to load and publish wallpapers.', 'err'); return; }
     try {
-      const { list } = await ghLoad();
+      const list = await apiList();
       // newest-first by created_at (fall back to original order if absent)
       const data = list.slice().sort((a,b)=>{ const av=a.created_at||'', bv=b.created_at||''; return av<bv?1:(av>bv?-1:0); });
 
@@ -1663,7 +2880,7 @@ document.getElementById('homeLogo').onclick=goHome;
       // 1) drop any backend wallpaper that no longer exists in wallpapers.json
       for(let i = wallpapers.length - 1; i >= 0; i--){
         const w = wallpapers[i];
-        if(w._ref && w._ref.site === 'supabase' && w._ref.path && !serverPaths.has(w._ref.path)){
+        if(w._ref && w._ref.site === 'r2' && w._ref.path && !serverPaths.has(w._ref.path)){
           _seenPaths.delete(w._ref.path);
           wallpapers.splice(i, 1);
           changed++;
@@ -1676,16 +2893,30 @@ document.getElementById('homeLogo').onclick=goHome;
         _seenPaths.add(row.image_path);
         wallpapers.unshift({
           name: row.name, img: imageUrl(row.image_path),
-          _ref: { site:'supabase', path: row.image_path },
+          _ref: { site:'r2', path: row.image_path },
           tab: row.tab, cat: row.category, res: row.resolution,
-          tags: row.tags || [], _new: true
+          tags: row.tags || [], created_at: row.created_at, _new: true
         });
         changed++;
       });
       if(changed) render();   // only repaint when something actually changed
-      const backendCount = wallpapers.filter(function(w){ return w._ref && w._ref.site==='supabase'; }).length;
-      setStatus('v4 • Connected ✓  ' + data.length + ' wallpaper(s) on GitHub, ' + backendCount + ' shown here', 'ok');
-    } catch(e){ console.warn('Could not load wallpapers.json:', e); setStatus('Could not load the list: ' + (e && e.message ? e.message : e), 'err'); }
+      const backendCount = wallpapers.filter(function(w){ return w._ref && w._ref.site==='r2'; }).length;
+      setStatus('Connected ✓  ' + data.length + ' wallpaper(s) published, ' + backendCount + ' shown here', 'ok');
+    } catch(e){
+      console.warn('Could not load the wallpaper list:', e);
+      setStatus('Could not load the list: ' + (e && e.message ? e.message : e), 'err');
+      // A rejected key can never recover on its own, and the lock screen only
+      // shows when NO key is saved — so drop the bad key and reopen the
+      // sign-in gate with an explanation instead of looping on 401s.
+      if(/\b401\b/.test(String(e && e.message))){
+        setAdminKey('');
+        const keyField = document.getElementById('lockKey');
+        if(keyField) keyField.value = '';
+        const err = document.getElementById('lockErr');
+        if(err) err.textContent = 'The saved admin key was rejected — it may have been rotated. Paste the site’s current ADMIN_KEY and sign in again.';
+        showLogin();
+      }
+    }
   }
 
   // Keep the admin grid current by re-reading wallpapers.json from GitHub on a timer
@@ -1696,10 +2927,11 @@ document.getElementById('homeLogo').onclick=goHome;
     _pollTimer = setInterval(loadAdded, ms);
   }
   function startSync(){
-    if(!ghToken() || _syncStarted) return;   // nothing to sync until a token is set
+    if(!adminKey() || _syncStarted) return;   // nothing to sync until the admin key is set
     _syncStarted = true;
     loadAdded();
-    _setPolling(20000);   // re-read the list from GitHub every 20s
+    _setPolling(20000);   // re-read the wallpaper list every 20s
+    setInterval(function(){ loadSubs(true); }, 60000);   // keep the submissions badge current
     document.addEventListener('visibilitychange', function(){ if(!document.hidden) loadAdded(); });
     window.addEventListener('focus', loadAdded);
   }
@@ -1712,63 +2944,52 @@ document.getElementById('homeLogo').onclick=goHome;
   overlay.addEventListener('click', e=>{ if(e.target===overlay) closeAdmin(); });
   document.addEventListener('keydown', e=>{ if(e.key==='Escape' && overlay.classList.contains('open')) closeAdmin(); });
 
-  // The Supabase JS library is still needed to UPLOAD image files to Storage, so keep
-  // it loaded (with the same CDN fallback). The wallpaper LIST now comes from GitHub and
-  // is synced by startSync(), which runs once a GitHub token is present (set at sign-in).
-  if(!initSupabase()){
-    var _fbLib = document.createElement('script');
-    _fbLib.src = 'https://unpkg.com/@supabase/supabase-js@2';
-    _fbLib.onload = function(){ initSupabase(); };
-    _fbLib.onerror = function(){ console.warn('Supabase library blocked on this browser — image uploads will not work here.'); };
-    (document.head || document.documentElement).appendChild(_fbLib);
-  }
-  startSync();   // no-op until a GitHub token exists; doLogin() calls it again after sign-in
+  startSync();   // no-op until an admin key exists; doLogin() calls it again after sign-in
 
-  // ============ Admin login (Supabase Auth) ============
+  // ============ Admin login (site admin key) ============
   const lock = document.getElementById('lockScreen');
-  const lockEmail = document.getElementById('lockEmail');
-  const lockInput = document.getElementById('lockInput');
-  const lockToken = document.getElementById('lockToken');
+  const lockKey = document.getElementById('lockKey');
   const lockErr = document.getElementById('lockErr');
   const lockBtn = document.getElementById('lockBtn');
 
-  // Prefill the token field from this browser so a returning admin doesn't re-paste it.
-  if(ghToken()) lockToken.value = ghToken();
-
-  function showApp(){ lock.classList.add('hidden'); startSync(); }
-  function showLogin(){ lock.classList.remove('hidden'); lockEmail.focus(); }
+  // re-entering after a key swap must reload immediately, not wait for the 20s poll
+  function showApp(){
+    lock.classList.add('hidden');
+    if(_syncStarted) loadAdded(); else startSync();
+    loadSubs(true);   // badge only — shows how many visitors are waiting on you
+  }
+  function showLogin(){ lock.classList.remove('hidden'); lockKey.focus(); }
 
   async function doLogin(){
-    const email = lockEmail.value.trim();
-    const password = lockInput.value;
-    const token = lockToken.value.trim();
-    if(!email || !password){ lockErr.textContent = 'Enter your email and password.'; return; }
-    if(!token){ lockErr.textContent = 'Paste a GitHub token with Contents: Read & write on your wallpapers repo.'; return; }
-    lockBtn.disabled = true; lockBtn.textContent = 'Signing in…'; lockErr.textContent = '';
+    const key = lockKey.value.trim();
+    if(!key){ lockErr.textContent = 'Paste the site’s admin key (ADMIN_KEY).'; return; }
+    lockBtn.disabled = true; lockBtn.textContent = 'Checking…'; lockErr.textContent = '';
     try {
-      // The Supabase email/password sign-in authorizes image uploads to Storage.
-      const { error } = await sb.auth.signInWithPassword({ email, password });
-      if(error){ lockErr.textContent = error.message || 'Sign-in failed.'; lockInput.value=''; }
-      else { ghSetToken(token); showApp(); }   // remember the GitHub token, then enter
+      // Verify the key actually works BEFORE entering — a bad key must be
+      // rejected at the door, not saved and looped on.
+      setAdminKey(key);
+      await apiVerify();
+      showApp();
     } catch(e){
-      lockErr.textContent = 'Could not reach the server. Check your connection.';
+      setAdminKey('');
+      lockErr.textContent = (e && e.message) ? e.message : 'Could not reach the server. Check your connection.';
     } finally {
       lockBtn.disabled = false; lockBtn.textContent = 'Sign in';
     }
   }
   lockBtn.onclick = doLogin;
-  lockToken.addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
-  lockInput.addEventListener('keydown', e=>{ if(e.key==='Enter') (lockToken.value.trim() ? doLogin() : lockToken.focus()); });
-  lockEmail.addEventListener('keydown', e=>{ if(e.key==='Enter') lockInput.focus(); });
+  lockKey.addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 
-  // if already signed in (Supabase remembers the session) AND a token is saved, skip login
-  (async ()=>{
-    if(!sb){ showLogin(); return; }   // Supabase couldn't load (e.g. very old browser)
-    try {
-      const { data } = await sb.auth.getSession();
-      if(data && data.session && ghToken()) showApp(); else showLogin();
-    } catch(e){ showLogin(); }
-  })();
+  // a returning admin with a saved key skips the gate (a stale key is caught
+  // by the first API call, which drops it and reopens this screen)
+  if(adminKey()) showApp(); else showLogin();
+
+  // ============ Sign out: clear the saved token/session to swap credentials ============
+  document.getElementById('signoutBtn').onclick = ()=>{
+    if(!confirm('Sign out and clear the saved admin key from this browser?')) return;
+    setAdminKey('');
+    location.reload();   // boots back to the lock screen with a clean slate
+  };
 
   // ============ Export: copy wallpaper data for the public site ============
   document.getElementById('exportBtn').onclick = ()=>{

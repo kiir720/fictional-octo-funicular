@@ -1,0 +1,10 @@
+# 8K Wallpapers — crawler rules
+# If you attach a custom domain later, update the Sitemap line to match.
+
+User-agent: *
+Allow: /
+# the admin panel must never be indexed (it is not deployed publicly at all)
+Disallow: /admin
+Disallow: /admin.html
+
+Sitemap: https://8k-wallpapers.pages.dev/sitemap.xml

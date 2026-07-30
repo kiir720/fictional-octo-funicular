@@ -1,0 +1,3406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Tell browsers to revalidate this page instead of serving a stale cached copy,
+     so every browser runs the current sync code rather than an old version. -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>8K Wallpapers — Free 4K, 5K &amp; 8K Ultra HD Backgrounds</title>
+<meta name="description" content="Download stunning free wallpapers in 4K, 5K and 8K Ultra HD. Hand-picked backgrounds for desktop, iPhone, Android and tablet — nature, space, abstract, cars, anime and more.">
+<meta name="keywords" content="8k wallpapers, 4k wallpapers, 5k wallpapers, ultra hd backgrounds, free wallpapers, desktop backgrounds, phone wallpapers">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#0f1116">
+<!-- warm up the image CDN connection before the first thumbnail request -->
+<link rel="preconnect" href="https://images.unsplash.com">
+<link rel="dns-prefetch" href="https://images.unsplash.com">
+<!-- Open Graph (Facebook, Pinterest, WhatsApp link previews) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="8K Wallpapers">
+<meta property="og:title" content="8K Wallpapers — Free 4K, 5K &amp; 8K Ultra HD Backgrounds">
+<meta property="og:description" content="Download stunning free wallpapers in 4K, 5K and 8K Ultra HD for desktop, mobile and tablet.">
+<meta property="og:image" content="https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1200&q=80">
+<!-- Twitter / X link previews -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="8K Wallpapers — Free 4K, 5K &amp; 8K Ultra HD Backgrounds">
+<meta name="twitter:description" content="Download stunning free wallpapers in 4K, 5K and 8K Ultra HD for desktop, mobile and tablet.">
+<meta name="twitter:image" content="https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1200&q=80">
+<!-- Google Analytics 4 — paste your Measurement ID (G-XXXXXXXXXX) on both lines and uncomment:
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-XXXXXXXXXX');</script>
+-->
+<script>
+  // ===== Wallpaper data: Cloudflare (Pages Functions + R2) =====
+  // Everything lives on the same Cloudflare Pages project as this page: the
+  // LIST at /api/wallpapers and the image FILES at /images/<path>, both backed
+  // by an R2 bucket. No Supabase, no GitHub tokens, no CDN cache lag. When
+  // this page is opened anywhere else (a local file, a dev server), it talks
+  // to the live site instead.
+  const API_BASE = /\.pages\.dev$/.test(location.hostname) ? '' : 'https://8k-wallpapers.pages.dev';
+
+  function imageUrl(path){ return API_BASE + '/images/' + encodeURI(path); }
+  function metadataUrl(){ return API_BASE + '/api/wallpapers'; }
+  // Small version of an image for grid cards — the detail/lightbox views load
+  // bigger ones. Published wallpapers get a real thumbnail generated at publish
+  // time; Unsplash-hosted images just ask their CDN for a smaller width.
+  function thumbUrl(w){
+    if(w._ref && w._ref.site === 'r2' && w._ref.path) return API_BASE + '/images/thumbs/' + encodeURI(w._ref.path);
+    if(/[?&]w=\d+/.test(w.img || '')) return w.img.replace(/([?&])w=\d+/, '$1w=480').replace(/q=8\d/, 'q=70');
+    return w.img;
+  }
+
+  // ----- SEO: canonical URL, og:url and Schema.org structured data -----
+  // These need the live URL, so they are injected at runtime — correct on any
+  // domain the site is deployed to (Cloudflare Pages, custom domain, …).
+  (function(){
+    if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
+    var url = location.origin + location.pathname;
+    var link = document.createElement('link'); link.rel = 'canonical'; link.href = url;
+    document.head.appendChild(link);
+    var og = document.createElement('meta'); og.setAttribute('property','og:url'); og.content = url;
+    document.head.appendChild(og);
+    var ld = document.createElement('script'); ld.type = 'application/ld+json';
+    ld.textContent = JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: '8K Wallpapers',
+      url: url,
+      description: 'Free 4K, 5K and 8K Ultra HD wallpapers for desktop, mobile and tablet.',
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: url + '#q={search_term_string}',
+        'query-input': 'required name=search_term_string'
+      }
+    });
+    document.head.appendChild(ld);
+  })();
+
+  // Flag browsers without CSS custom properties (e.g. IE11) so the stylesheet can
+  // supply literal color fallbacks and keep text readable.
+  (function(){
+    var ok = window.CSS && CSS.supports && CSS.supports('color', 'var(--probe, #000)');
+    var d = document.documentElement;
+    if (!ok) { d.className = (d.className ? d.className + ' ' : '') + 'legacy'; }
+  })();
+</script>
+<style>
+  :root {
+    /* liquid-glass tokens — black / grey / white */
+    --glass: rgba(255,255,255,0.07);
+    --glass-strong: rgba(255,255,255,0.13);
+    --glass-border: rgba(255,255,255,0.2);
+    --glass-shine: rgba(255,255,255,0.45);
+    --accent: #6366f1;
+    --accent-glow: #818cf8;
+    --text: rgba(255,255,255,0.95);
+    --muted: rgba(255,255,255,0.58);
+    --blur: 20px;
+    /* legacy aliases kept so any leftover references still resolve */
+    --bg: transparent;
+    --bg-2: rgba(255,255,255,0.06);
+    --panel: rgba(255,255,255,0.08);
+    --panel-2: rgba(255,255,255,0.14);
+    --border: rgba(255,255,255,0.2);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+    background: #0c0c0c;
+  }
+  /* flat solid background — no glass, no animation */
+  .backdrop {
+    position: fixed; inset: 0; z-index: -2;
+    background: #1a1a1a;
+  }
+  @keyframes drift {
+    0%   { transform: scale(1) translate(0,0); }
+    50%  { transform: scale(1.15) translate(-3%,2%); }
+    100% { transform: scale(1.08) translate(2%,-2%); }
+  }
+  .grain { display: none; }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 28px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04));
+    backdrop-filter: blur(24px) brightness(1.15);
+    -webkit-backdrop-filter: blur(24px) brightness(1.15);
+    border-bottom: 1px solid rgba(255,255,255,0.22);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 6px rgba(255,255,255,0.06), 0 10px 36px rgba(0,0,0,0.3);
+    position: -webkit-sticky; position: sticky; top: 0; z-index: 60;
+  }
+  /* sheen layer is clipped to the header bar without clipping the dropdown */
+  .header-sheen {
+    position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; border-bottom-left-radius: 0;
+  }
+  .header-sheen::after {
+    content: ''; position: absolute; top: -50%; left: -60%; width: 60%; height: 200%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,0.18), transparent);
+    transform: skewX(-18deg); animation: sheen 7s ease-in-out infinite;
+  }
+  header > .logo, header > .top-right { position: relative; z-index: 1; }
+  @keyframes sheen {
+    0%, 100% { left: -60%; }
+    50% { left: 120%; }
+  }
+  .logo { font-size: 26px; font-weight: 800; letter-spacing: 0.5px; color: var(--text); }
+  .logo b { color: var(--accent); font-weight: 800; }
+  .top-right { display: flex; align-items: center; gap: 14px; }
+  .categories-btn {
+    background: var(--glass); border: 1px solid var(--glass-border); color: var(--text);
+    padding: 9px 18px; border-radius: 100px; font-size: 14px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 0 var(--glass-shine); transition: background 0.2s;
+  }
+  .categories-btn:hover { background: var(--glass-strong); }
+
+  /* ---- Admin: add-wallpaper button + modal ---- */
+  .admin-btn {
+    background: linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.05));
+    border: 1px solid rgba(255,255,255,0.22); color: var(--text);
+    width: 38px; height: 38px; border-radius: 100px; cursor: pointer; font-size: 20px; font-weight: 400;
+    display: flex; align-items: center; justify-content: center; line-height: 1;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.45); transition: transform 0.18s, box-shadow 0.18s;
+  }
+  .admin-btn:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 6px 16px rgba(0,0,0,0.35); }
+  .admin-overlay {
+    position: fixed; inset: 0; z-index: 200; display: none;
+    align-items: flex-start; justify-content: center; padding: 60px 20px;
+    background: rgba(6,4,12,0.62); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    overflow-y: auto;
+  }
+  .admin-overlay.open { display: flex; }
+  .admin-modal {
+    width: 100%; max-width: 560px; border-radius: 20px; overflow: hidden;
+    background: rgba(26,22,34,0.78);
+    backdrop-filter: blur(30px) saturate(1.3); -webkit-backdrop-filter: blur(30px) saturate(1.3);
+    border: 1px solid rgba(255,255,255,0.18);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.4);
+    animation: amodal 0.28s cubic-bezier(.22,1,.36,1);
+  }
+  @keyframes amodal { from { opacity:0; transform: translateY(-14px) scale(0.97); } to { opacity:1; transform:none; } }
+  .admin-mhead {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px; border-bottom: 1px solid rgba(255,255,255,0.12);
+    background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+  }
+  .admin-mhead h3 { font-size: 17px; font-weight: 700; color: var(--text); }
+  .admin-close { background: none; border: none; color: var(--muted); font-size: 24px; cursor: pointer; line-height: 1; padding: 0 4px; transition: color 0.15s; }
+  .admin-close:hover { color: var(--text); }
+  .admin-body { padding: 20px 22px 24px; }
+  .admin-field { margin-bottom: 15px; }
+  .admin-field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+  .admin-field input, .admin-field select {
+    width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 9px; color: var(--text); padding: 11px 13px; font-size: 14px; font-family: inherit;
+    outline: none; transition: border-color 0.18s, background 0.18s;
+  }
+  .admin-field input:focus, .admin-field select:focus { border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.09); }
+  .admin-field input::placeholder { color: rgba(255,255,255,0.32); }
+  .admin-field select option { background: #1e1a26; color: var(--text); }
+  .admin-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .admin-hint { font-size: 11.5px; color: rgba(255,255,255,0.4); margin-top: 5px; line-height: 1.5; }
+  .admin-preview {
+    margin: 4px 0 16px; border-radius: 12px; overflow: hidden; aspect-ratio: 16/10;
+    background: rgba(255,255,255,0.04) center/cover no-repeat; border: 1px dashed rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.35); font-size: 13px;
+  }
+  .admin-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .admin-upload {
+    width: 100%; display: flex; align-items: center; gap: 10px; cursor: pointer;
+    background: rgba(255,255,255,0.06); border: 1px dashed rgba(255,255,255,0.28);
+    border-radius: 9px; color: var(--text); padding: 13px 14px; font-size: 14px; font-family: inherit;
+    transition: background 0.18s, border-color 0.18s;
+  }
+  .admin-upload:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.45); }
+  .admin-upload svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.8; }
+  .admin-upload span { color: rgba(255,255,255,0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .admin-upload.has-file { border-style: solid; border-color: rgba(126,226,154,0.5); }
+  .admin-upload.has-file span { color: var(--text); }
+  .admin-or {
+    display: flex; align-items: center; text-align: center; margin: 4px 0 14px;
+    color: rgba(255,255,255,0.35); font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .admin-or::before, .admin-or::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.12); }
+  .admin-or span { padding: 0 12px; }
+  .admin-actions { display: flex; gap: 10px; margin-top: 6px; }
+  .admin-submit {
+    flex: 1; padding: 13px; border-radius: 10px; cursor: pointer; font-size: 14.5px; font-weight: 700; color: #0a0612;
+    background: rgba(255,255,255,0.92); border: none; transition: transform 0.18s, box-shadow 0.18s;
+  }
+  .admin-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(255,255,255,0.25); }
+  .admin-cancel {
+    padding: 13px 20px; border-radius: 10px; cursor: pointer; font-size: 14.5px; font-weight: 600; color: var(--text);
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); transition: background 0.18s;
+  }
+  .admin-cancel:hover { background: rgba(255,255,255,0.14); }
+  .admin-msg { font-size: 13px; margin-top: 12px; min-height: 18px; }
+  .admin-msg.err { color: #ff8080; }
+  .admin-msg.ok { color: #7ee29a; }
+  .admin-badge {
+    position: absolute; top: 10px; left: 10px; z-index: 5; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+    background: rgba(126,226,154,0.9); color: #0a0612; padding: 4px 9px; border-radius: 6px;
+  }
+  .cat-wrap { position: relative; }
+  .caret { display: inline-block; font-size: 11px; transition: transform 0.25s; }
+  .cat-wrap.open .caret { transform: rotate(180deg); }
+  .cat-panel {
+    position: absolute; top: calc(100% + 12px); left: 50%;
+    transform: translateX(-50%) translateY(-8px) scale(0.98);
+    width: 380px; max-width: 92vw;
+    background: rgba(20,16,30,0.55);
+    backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+    border: 1px solid var(--glass-border); border-radius: 18px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45), inset 0 1px 0 var(--glass-shine);
+    padding: 12px; opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity 0.22s ease, transform 0.22s ease; z-index: 50;
+  }
+  .cat-wrap.open .cat-panel {
+    opacity: 1; visibility: visible; pointer-events: auto;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  .cat-panel::before {
+    content: ''; position: absolute; top: -7px; left: 50%;
+    transform: translateX(-50%) rotate(45deg); width: 14px; height: 14px;
+    background: rgba(20,16,30,0.55); border-left: 1px solid var(--glass-border); border-top: 1px solid var(--glass-border);
+  }
+  .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; }
+  .cat-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px; border-radius: 9px; cursor: pointer;
+    font-size: 15px; font-weight: 600; color: var(--text);
+    transition: background 0.15s; position: relative;
+  }
+  .cat-item .chev { color: var(--text); font-size: 14px; opacity: 0.85; transition: transform 0.15s; }
+  .cat-item:hover { background: rgba(255,255,255,0.07); }
+  .cat-item:hover .chev { transform: translateX(3px); }
+  .cat-item .tip {
+    position: absolute; top: 100%; left: 8px; margin-top: 2px;
+    background: rgba(10,8,18,0.7); color: var(--text); font-size: 12px; font-weight: 500;
+    padding: 5px 10px; border-radius: 6px; white-space: nowrap; border: 1px solid var(--glass-border);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    opacity: 0; pointer-events: none; transition: opacity 0.15s; z-index: 5;
+  }
+  .cat-item:hover .tip { opacity: 1; }
+  .search {
+    display: flex; align-items: center; background: var(--glass);
+    border: 1px solid var(--glass-border); border-radius: 100px; overflow: hidden;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 0 var(--glass-shine);
+  }
+  .search input {
+    background: transparent; border: none; outline: none; color: var(--text);
+    padding: 9px 16px; font-size: 14px; width: 150px;
+  }
+  .search input::placeholder { color: var(--muted); }
+  .search button { background: transparent; border: none; color: var(--muted); padding: 9px 14px; cursor: pointer; }
+  .search button:hover { color: var(--text); }
+  .tags { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; padding: 22px 28px 6px; }
+  .tag {
+    background: linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05)); color: var(--text); padding: 8px 16px;
+    border: 1px solid rgba(255,255,255,0.22); border-radius: 100px; font-size: 13px; font-weight: 600; cursor: pointer;
+    backdrop-filter: blur(16px) brightness(1.1); -webkit-backdrop-filter: blur(16px) brightness(1.1);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), 0 4px 14px rgba(0,0,0,0.22);
+    position: relative; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .tag::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit;
+    background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.25) 50%, transparent 70%);
+    transform: translateX(-120%); transition: transform 0.7s cubic-bezier(.22,1,.36,1);
+  }
+  .tag:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 8px 22px rgba(0,0,0,0.3); }
+  .tag:hover::after { transform: translateX(120%); }
+  .tabs { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; padding: 18px 28px 8px; }
+  .tab {
+    background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.04)); border: 1px solid rgba(255,255,255,0.22); color: var(--text);
+    padding: 11px 22px; border-radius: 100px; font-size: 14px; font-weight: 700;
+    letter-spacing: 0.4px; cursor: pointer; display: flex; align-items: center; gap: 9px; transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    backdrop-filter: blur(16px) brightness(1.1); -webkit-backdrop-filter: blur(16px) brightness(1.1);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 4px 14px rgba(0,0,0,0.22);
+    position: relative; overflow: hidden;
+  }
+  .tab::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit;
+    background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.22) 50%, transparent 70%);
+    transform: translateX(-120%); transition: transform 0.7s cubic-bezier(.22,1,.36,1);
+  }
+  .tab:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 8px 22px rgba(0,0,0,0.3); }
+  .tab:hover::after { transform: translateX(120%); }
+  .tab .ico { font-size: 15px; }
+  .tab.active {
+    background: linear-gradient(135deg, rgba(255,255,255,0.32), rgba(255,255,255,0.12)); border-color: rgba(255,255,255,0.6); color: #fff;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 0 20px rgba(255,255,255,0.18), 0 4px 14px rgba(0,0,0,0.25);
+  }
+  .section-head {
+    display: flex; align-items: center; gap: 12px; max-width: 1680px;
+    margin: 28px auto 16px; padding: 0 40px;
+  }
+  .section-head .bar { width: 5px; height: 26px; background: var(--accent); border-radius: 3px; box-shadow: 0 0 12px var(--accent); }
+  .section-head h2 { font-size: 24px; font-weight: 700; letter-spacing: 0.2px; }
+  .grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px;
+    max-width: 1680px; margin: 0 auto; padding: 0 40px 70px;
+  }
+  .card {
+    border-radius: 14px; overflow: hidden; cursor: pointer;
+    background: #2a2a2a;
+    border: 1px solid #383838;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    transition: transform 0.25s, box-shadow 0.25s;
+    position: relative;
+  }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(0,0,0,0.5); }
+  .thumb { position: relative; aspect-ratio: 16/10; overflow: hidden; margin: 6px 6px 0; border-radius: 9px; background: #1c1c1c; }
+  /* the full-bleed rule is for a placeholder svg sitting directly in the
+     thumb — it must not catch the action icons inside the hover overlay */
+  .thumb > svg { width: 100%; height: 100%; display: block; }
+  .thumb img { width: 100%; height: 100%; display: block; object-fit: cover; }
+  .thumb .hover {
+    position: absolute; inset: 0; background: rgba(10,10,10,0.55);
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    opacity: 0; transition: opacity 0.22s; z-index: 4;
+  }
+  .thumb:hover .hover { opacity: 1; }
+  .act {
+    background: #f0f0f0; color: #1a1a1a; border: none; border-radius: 8px;
+    padding: 10px 18px; font-size: 13px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; gap: 7px; transition: transform 0.2s;
+  }
+  .act:hover { transform: scale(1.05); }
+  .act.ghost {
+    background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.25);
+  }
+  .caption {
+    padding: 13px 14px; font-size: 13.5px; color: var(--muted); text-align: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; z-index: 4;
+  }
+  .tabs-policy { padding-top: 26px; }
+  .policy-view { padding-bottom: 50px; }
+  .policy {
+    max-width: 1180px; margin: 24px auto 0; padding: 0 40px;
+  }
+  .policy h1 {
+    font-size: 30px; font-weight: 700; letter-spacing: 0.2px; color: var(--text);
+    border-left: 5px solid var(--accent); padding-left: 14px; line-height: 1.1; margin-bottom: 22px;
+  }
+  .policy h3 {
+    font-size: 19px; font-weight: 700; color: var(--text); margin: 30px 0 6px;
+  }
+  .policy p {
+    font-size: 15px; line-height: 1.6; color: #c4c8cf; margin: 14px 0;
+  }
+  .policy p.lead { color: #d6dae0; }
+  .policy p.emph { font-size: 18px; color: var(--text); font-weight: 600; margin-top: 26px; }
+  .policy ul { margin: 12px 0 12px 22px; }
+  .policy li { font-size: 15px; line-height: 1.6; color: #c4c8cf; margin: 8px 0; font-weight: 600; }
+  .policy a { color: var(--accent); text-decoration: underline; }
+  .policy .contact-card {
+    background: var(--glass); border: 1px solid var(--glass-border); border-radius: 16px;
+    padding: 22px 24px; margin-top: 18px;
+    backdrop-filter: blur(var(--blur)); -webkit-backdrop-filter: blur(var(--blur));
+    box-shadow: inset 0 1px 0 var(--glass-shine), 0 8px 32px rgba(0,0,0,0.2);
+  }
+  .policy .contact-card .row { display: flex; gap: 10px; margin: 10px 0; font-size: 15px; color: #c4c8cf; }
+  .policy .contact-card .row b { color: var(--text); min-width: 80px; }
+  .policy-back-wrap { max-width: 1180px; margin: 34px auto 0; padding: 0 40px; }
+  .policy-back {
+    background: var(--glass); border: 1px solid var(--glass-border); color: var(--text);
+    padding: 11px 22px; border-radius: 100px; font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: background 0.2s; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 0 var(--glass-shine);
+  }
+  .policy-back:hover { background: var(--glass-strong); }
+
+  /* ---- Wallpaper detail view ---- */
+  .detail { max-width: 1340px; margin: 8px auto 0; padding: 0 40px 60px; }
+  .detail-back {
+    background: var(--glass); border: 1px solid var(--glass-border); color: var(--text);
+    padding: 9px 18px; border-radius: 100px; font-size: 13px; font-weight: 600; cursor: pointer;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 0 var(--glass-shine); transition: background 0.2s; margin-bottom: 20px;
+  }
+  .detail-back:hover { background: var(--glass-strong); }
+  .detail-title {
+    font-size: 22px; font-weight: 700; letter-spacing: 0.2px; color: var(--muted);
+    border-left: 4px solid var(--accent); padding-left: 12px; line-height: 1.2; margin-bottom: 8px;
+  }
+  .detail-title .dt-name { color: var(--accent); }
+  .detail-desc { font-size: 14px; line-height: 1.6; color: #c4c8cf; margin-bottom: 22px; max-width: 90ch; }
+  .detail-stage {
+    border-radius: 14px; overflow: hidden; max-width: 1180px; margin: 0 auto;
+    border: 1px solid rgba(255,255,255,0.16);
+    box-shadow: 0 18px 50px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);
+    background: #1c1c1c; line-height: 0;
+  }
+  .detail-stage img { width: 100%; display: block; }
+  .detail-report { max-width: 1180px; margin: 8px auto 0; }
+  .detail-report a { color: var(--muted); font-size: 12.5px; text-decoration: none; }
+  .detail-report a:hover { color: var(--text); }
+  .detail-download {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; max-width: 1180px; margin: 22px auto 0;
+    padding: 16px; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 700; color: #fff;
+    background: linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05));
+    border: 1px solid rgba(255,255,255,0.22);
+    backdrop-filter: blur(16px) brightness(1.1); -webkit-backdrop-filter: blur(16px) brightness(1.1);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 6px 20px rgba(0,0,0,0.3);
+    position: relative; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .detail-download::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(100deg, transparent 35%, rgba(255,255,255,0.22) 50%, transparent 65%);
+    transform: translateX(-120%); transition: transform 0.8s cubic-bezier(.22,1,.36,1);
+  }
+  .detail-download:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 10px 28px rgba(0,0,0,0.4); }
+  .detail-download:hover::after { transform: translateX(120%); }
+  .detail-meta { max-width: 1180px; margin: 22px auto 0; display: flex; flex-direction: column; gap: 12px; }
+  .meta-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .meta-lbl { font-size: 13px; font-weight: 700; color: var(--muted); min-width: 76px; }
+  .meta-chip, .tag-chip {
+    display: inline-block; background: var(--glass); border: 1px solid var(--glass-border);
+    color: var(--text); font-size: 12.5px; font-weight: 600; padding: 6px 13px; border-radius: 7px;
+    cursor: pointer; transition: background 0.18s; margin: 3px 5px 3px 0;
+  }
+  .meta-chip:hover, .tag-chip:hover { background: var(--glass-strong); }
+  .detail-share { max-width: 1180px; margin: 26px auto 0; display: flex; gap: 12px; justify-content: center; }
+  .share {
+    width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 800; font-size: 17px; cursor: pointer; text-decoration: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35); transition: transform 0.18s;
+  }
+  .share:hover { transform: translateY(-3px) scale(1.05); }
+  .share svg { width: 20px; height: 20px; }
+  .share.pin { background: #e60023; } .share.fb { background: #1877f2; }
+  .share.tw { background: #1da1f2; } .share.rd { background: #ff4500; }
+  .detail-res {
+    max-width: 1180px; margin: 30px auto 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+    border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; overflow: hidden;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);
+  }
+  .res-bar {
+    padding: 18px 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center;
+  }
+  .res-lbl { font-size: 13px; font-weight: 700; color: var(--accent); }
+  .res-dev {
+    background: var(--glass); border: 1px solid var(--glass-border); color: var(--text);
+    padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 7px; transition: background 0.18s, transform 0.18s, border-color 0.18s;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+  .res-dev:hover { background: var(--glass-strong); transform: translateY(-2px); }
+  .res-dev .res-caret { font-size: 10px; opacity: 0.7; transition: transform 0.2s; }
+  .res-dev.active { background: rgba(126,226,154,0.16); border-color: rgba(126,226,154,0.5); color: var(--accent-glow); }
+  .res-dev.active .res-caret { transform: rotate(180deg); }
+  .dev-ico { width: 17px; height: 17px; flex-shrink: 0; }
+  .res-list { display: none; border-top: 1px solid rgba(255,255,255,0.1); }
+  .res-list.open { display: block; }
+  .res-item {
+    display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center;
+    padding: 13px 16px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.06);
+    transition: background 0.15s;
+  }
+  .res-item:last-child { border-bottom: none; }
+  .res-item:hover { background: rgba(255,255,255,0.05); }
+  .res-item .res-dim { font-size: 14px; font-weight: 700; color: var(--accent); }
+  .res-item:hover .res-dim { color: var(--accent-glow); text-shadow: 0 0 10px rgba(126,226,154,0.4); }
+  .res-item .res-name { font-size: 12px; color: var(--muted); }
+  .res-item.busy { opacity: 0.6; pointer-events: none; }
+
+  /* ---- Related wallpapers ---- */
+  .related-panel {
+    max-width: 1340px; margin: 34px auto 0; padding: 20px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 14px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
+  }
+  .related-head { text-align: center; font-size: 14px; font-weight: 700; color: var(--accent); margin-bottom: 18px; }
+  .related-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .rel-card {
+    border-radius: 12px; overflow: hidden; cursor: pointer; background: #2a2a2a;
+    border: 1px solid #383838; box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    transition: transform 0.25s, box-shadow 0.25s;
+  }
+  .rel-card:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(0,0,0,0.5); }
+  .rel-thumb { aspect-ratio: 16/10; overflow: hidden; background: #1c1c1c; }
+  .rel-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .rel-cap { padding: 10px 12px; font-size: 12.5px; color: var(--muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ---- Popular tags ---- */
+  .poptags-panel {
+    max-width: 1340px; margin: 34px auto 0; padding: 22px 26px 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 14px 14px 0 0;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.25); overflow: hidden;
+  }
+  .poptags-head { font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--muted); margin-bottom: 16px; }
+  .poptags-wrap {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px;
+    justify-content: center; padding-bottom: 22px;
+  }
+  .poptag { cursor: pointer; font-weight: 600; line-height: 1.5; transition: opacity 0.15s, text-shadow 0.15s; text-decoration: none; }
+  .poptag:hover { opacity: 1 !important; text-shadow: 0 0 12px currentColor; }
+  .poptags-line { height: 3px; margin: 0 -26px; background: linear-gradient(90deg, #00d4ff, #7c4dff, #ff2d9b, #00d4ff); background-size: 300% 100%; animation: tagflow 8s linear infinite; }
+  @keyframes tagflow { 0% { background-position: 0% 0; } 100% { background-position: 300% 0; } }
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 26px; border-top: 1px solid rgba(255,255,255,0.22); background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03)); backdrop-filter: blur(24px) brightness(1.12); -webkit-backdrop-filter: blur(24px) brightness(1.12); box-shadow: inset 0 1px 0 rgba(255,255,255,0.45); position: relative; overflow: hidden; }
+  footer::after {
+    content: ''; position: absolute; top: -50%; left: -60%; width: 60%; height: 200%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,0.14), transparent);
+    transform: skewX(-18deg); animation: sheen 7s ease-in-out infinite 1.5s; pointer-events: none;
+  }
+  footer .foot-nav, footer .foot-copy { position: relative; z-index: 1; }
+  .foot-nav { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .foot-nav a { color: var(--text); text-decoration: underline; font-weight: 600; font-size: 14px; transition: color 0.15s; }
+  .foot-nav a:hover { color: var(--accent); }
+  .foot-nav span { color: var(--muted); }
+  .foot-copy { color: var(--muted); font-size: 12.5px; }
+  @media (max-width: 1200px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 820px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    header { flex-wrap: wrap; gap: 12px; }
+    .search input { width: 110px; }
+  }
+  @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) {
+    .header-sheen::after, footer::after, .poptags-line { animation: none; }
+    .tag::after, .tab::after, .card { transition: none; }
+  }
+
+  /* ============================================================
+     Cross-browser compatibility layer
+     ============================================================ */
+
+  /* 1) aspect-ratio fallback — keep 16:10 thumbnails from collapsing to zero
+        height on browsers without `aspect-ratio` (Safari < 15, Firefox < 89,
+        Chrome < 88, IE11). A padding spacer reserves the height; the image is
+        absolutely positioned to fill it. */
+  .thumb, .rel-thumb, .admin-preview { position: relative; }
+  .thumb::before, .rel-thumb::before, .admin-preview::before {
+    content: ''; display: block; padding-top: 62.5%;  /* 16 : 10 */
+  }
+  .thumb > img, .rel-thumb > img, .admin-preview > img {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  }
+  /* Modern browsers use the native aspect-ratio box, so drop the spacer to
+     avoid doubling the height. */
+  @supports (aspect-ratio: 1 / 1) {
+    .thumb::before, .rel-thumb::before, .admin-preview::before { display: none; }
+    .thumb > img, .rel-thumb > img, .admin-preview > img { position: static; }
+  }
+
+  /* 2) Legacy browsers without CSS custom properties (IE11, very old Safari):
+        `color: var(--text)` is dropped as invalid, which would leave dark text on
+        the dark background — invisible. Supply literal colors so content stays
+        readable even though the glass effects won't render. */
+  html.legacy body { color: #f2f2f2; background: #0c0c0c; }
+  html.legacy header, html.legacy footer { background: #1a1a1a; }
+  html.legacy .logo, html.legacy .logo b,
+  html.legacy .caption, html.legacy .tab, html.legacy .tag,
+  html.legacy .categories-btn, html.legacy .section-title,
+  html.legacy .cat-item, html.legacy .policy, html.legacy .detail-meta,
+  html.legacy .rel-cap, html.legacy .search input { color: #f2f2f2; }
+  html.legacy .section-sub, html.legacy .muted, html.legacy footer { color: #9aa0a8; }
+  /* Stand-in panel backgrounds where translucent glass + blur won't paint. */
+  html.legacy .categories-btn, html.legacy .tab, html.legacy .tag,
+  html.legacy .cat-dropdown, html.legacy .admin-modal, html.legacy .search {
+    background: #222; border-color: #444;
+  }
+
+  /* ============================================================
+     v4 upgrade — hero, favorites, lightbox, filter chips, skeletons
+     ============================================================ */
+  .hero { max-width: 1680px; margin: 14px auto 0; padding: 40px 40px 26px; text-align: center; position: relative; }
+  .hero h1 {
+    font-size: clamp(30px, 5vw, 54px); font-weight: 800; letter-spacing: -0.5px; line-height: 1.05;
+    background: linear-gradient(100deg, #ffffff 10%, #9aa0ff 42%, #ff6ad5 68%, #ffffff 95%);
+    background-size: 220% auto; -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: #fff; animation: heroShine 9s linear infinite;
+  }
+  @keyframes heroShine { to { background-position: 220% center; } }
+  .hero p { color: var(--muted); font-size: 15.5px; margin-top: 12px; }
+  .hero-search {
+    margin: 22px auto 4px; max-width: 640px; display: flex; align-items: center; gap: 8px;
+    background: var(--glass-strong); border: 1px solid var(--glass-border); border-radius: 100px;
+    padding: 6px 6px 6px 20px; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    box-shadow: inset 0 1px 0 var(--glass-shine), 0 12px 34px rgba(0,0,0,0.32);
+  }
+  .hero-search svg { width: 20px; height: 20px; color: var(--muted); flex-shrink: 0; }
+  .hero-search input { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-size: 16px; padding: 12px 4px; min-width: 0; }
+  .hero-search input::placeholder { color: var(--muted); }
+  .hero-search button {
+    background: #fff; color: #111; border: none; border-radius: 100px; padding: 12px 24px;
+    font-size: 14px; font-weight: 700; cursor: pointer; transition: transform .18s, box-shadow .18s; white-space: nowrap;
+  }
+  .hero-search button:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(255,255,255,0.25); }
+  .hero-stats { margin-top: 18px; color: var(--muted); font-size: 13px; display: flex; gap: 26px; justify-content: center; flex-wrap: wrap; }
+  .hero-stats b { color: var(--text); font-size: 15px; }
+
+  .section-head { justify-content: flex-start; }
+  .section-sub { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .result-count { color: var(--muted); font-size: 13.5px; font-weight: 600; white-space: nowrap; }
+  .filter-chip {
+    display: none; align-items: center; gap: 8px; background: var(--glass-strong);
+    border: 1px solid var(--glass-border); color: var(--text); border-radius: 100px;
+    padding: 7px 8px 7px 15px; font-size: 13px; font-weight: 600;
+  }
+  .filter-chip.show { display: inline-flex; }
+  .filter-chip .x {
+    width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,0.16); border: none;
+    color: #fff; cursor: pointer; font-size: 15px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  }
+  .filter-chip .x:hover { background: rgba(255,80,80,0.85); }
+
+  /* image skeleton shimmer + fade-in */
+  .thumb .shimmer {
+    position: absolute; inset: 0; z-index: 2;
+    background: linear-gradient(100deg, #232323 30%, #313131 50%, #232323 70%);
+    background-size: 200% 100%; animation: shimmer 1.3s linear infinite;
+  }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  .thumb img { opacity: 0; transition: opacity .5s ease; }
+  .thumb img.loaded { opacity: 1; }
+  .thumb.loaded .shimmer { display: none; }
+
+  /* favorite heart on cards */
+  .fav-btn {
+    position: absolute; top: 10px; right: 10px; z-index: 6; width: 34px; height: 34px; border-radius: 50%;
+    cursor: pointer; padding: 0; background: rgba(10,10,10,0.5); border: 1px solid rgba(255,255,255,0.25); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    transition: transform .15s, background .15s; opacity: 0;
+  }
+  .card:hover .fav-btn { opacity: 1; }
+  .fav-btn.is-fav { opacity: 1; background: rgba(255,40,90,0.92); border-color: rgba(255,255,255,0.45); }
+  .fav-btn:hover { transform: scale(1.12); }
+  .fav-btn svg { width: 17px; height: 17px; }
+  .act.exp { background: rgba(255,255,255,0.16); color: #fff; border: 1px solid rgba(255,255,255,0.28); }
+
+  /* fullscreen lightbox */
+  .lightbox { position: fixed; inset: 0; z-index: 400; display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.92); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .lightbox.open { display: flex; animation: lbfade .25s ease; }
+  @keyframes lbfade { from { opacity: 0; } to { opacity: 1; } }
+  .lightbox img { max-width: 94vw; max-height: 86vh; border-radius: 10px; box-shadow: 0 30px 90px rgba(0,0,0,0.7); }
+  .lb-close { position: absolute; top: 20px; right: 24px; width: 46px; height: 46px; border-radius: 50%;
+    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: #fff; font-size: 24px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .lb-close:hover { background: rgba(255,255,255,0.22); }
+  .lb-cap { position: absolute; bottom: 18px; left: 0; right: 0; text-align: center; color: #fff; font-size: 14px; font-weight: 600; }
+  .lb-dl { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); background: #fff; color: #111;
+    border: none; border-radius: 100px; padding: 11px 24px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .lb-dl:hover { box-shadow: 0 8px 22px rgba(255,255,255,0.3); }
+
+  /* detail stage fullscreen affordance */
+  .detail-stage { position: relative; }
+  .stage-expand { position: absolute; top: 14px; right: 14px; z-index: 3; width: 42px; height: 42px; border-radius: 10px;
+    background: rgba(10,10,10,0.55); border: 1px solid rgba(255,255,255,0.25); color: #fff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .stage-expand:hover { background: rgba(10,10,10,0.82); }
+  .stage-expand svg { width: 20px; height: 20px; }
+
+  /* back-to-top */
+  .scrolltop { position: fixed; right: 22px; bottom: 22px; z-index: 120; width: 46px; height: 46px; border-radius: 50%;
+    background: var(--glass-strong); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); transition: opacity .25s, transform .25s;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  .scrolltop.show { opacity: 1; pointer-events: auto; }
+  .scrolltop:hover { transform: translateY(-3px); }
+  .scrolltop svg { width: 20px; height: 20px; }
+
+  @media (max-width: 560px) {
+    .hero { padding: 24px 16px 16px; }
+    .hero-search { padding: 5px 5px 5px 16px; }
+    .hero-search button { padding: 11px 16px; }
+    .section-head { flex-wrap: wrap; }
+    .section-sub { margin-left: 0; width: 100%; justify-content: space-between; }
+    .scrolltop { right: 14px; bottom: 14px; }
+  }
+
+  /* ---- theme toggle ---- */
+  .theme-btn {
+    background: var(--glass); border: 1px solid var(--glass-border); color: var(--text);
+    width: 38px; height: 38px; border-radius: 100px; cursor: pointer; font-size: 17px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 0 var(--glass-shine); transition: background 0.2s, transform 0.18s;
+  }
+  .theme-btn:hover { background: var(--glass-strong); transform: translateY(-2px); }
+
+  /* ---- resolution / orientation filter bar ---- */
+  .resbar { display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; padding: 12px 28px 0; }
+  .resbar-lbl { color: var(--muted); font-size: 12.5px; font-weight: 700; letter-spacing: 0.6px; margin-right: 2px; }
+  .res-chip {
+    background: var(--glass); border: 1px solid var(--glass-border); color: var(--text);
+    padding: 7px 15px; border-radius: 100px; font-size: 12.5px; font-weight: 700; cursor: pointer;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 0 var(--glass-shine); transition: background 0.18s, transform 0.18s;
+  }
+  .res-chip:hover { background: var(--glass-strong); transform: translateY(-2px); }
+  .res-chip.active { background: rgba(255,255,255,0.9); color: #111; border-color: rgba(255,255,255,0.9); }
+
+  /* ---- detail info line (views / downloads / date / size) ---- */
+  .meta-info { color: var(--muted); font-size: 13px; font-weight: 600; letter-spacing: 0.2px; }
+
+  /* ---- extra share buttons ---- */
+  .share.cp { background: #52565e; }
+  .share.sh { background: #0aa574; }
+
+  /* ============================================================
+     Light mode — html.light overrides (toggle in the header)
+     ============================================================ */
+  html.light {
+    --glass: rgba(0,0,0,0.05);
+    --glass-strong: rgba(0,0,0,0.1);
+    --glass-border: rgba(0,0,0,0.16);
+    --glass-shine: rgba(255,255,255,0.8);
+    --accent: #4f46e5;
+    --accent-glow: #6366f1;
+    --text: rgba(22,22,26,0.94);
+    --muted: rgba(22,22,26,0.56);
+  }
+  html.light body { background: #f2f2f5; color: var(--text); }
+  html.light .backdrop { background: #e9e9ee; }
+  html.light header, html.light footer {
+    background: rgba(255,255,255,0.78); border-color: rgba(0,0,0,0.12);
+    box-shadow: 0 10px 36px rgba(0,0,0,0.08);
+  }
+  html.light .header-sheen::after, html.light footer::after { display: none; }
+  html.light .hero h1 {
+    background: linear-gradient(100deg, #16161a 10%, #3d3dd8 42%, #c2288f 68%, #16161a 95%);
+    background-size: 220% auto; -webkit-background-clip: text; background-clip: text;
+  }
+  html.light .hero-search { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.14); box-shadow: 0 12px 34px rgba(0,0,0,0.1); }
+  html.light .hero-search button { background: #16161a; color: #fff; }
+  html.light .hero-search button:hover { box-shadow: 0 8px 22px rgba(0,0,0,0.3); }
+  html.light .tag, html.light .tab, html.light .categories-btn, html.light .search,
+  html.light .theme-btn, html.light .res-chip, html.light .policy-back, html.light .detail-back {
+    background: rgba(255,255,255,0.85); border-color: rgba(0,0,0,0.14); color: var(--text); box-shadow: 0 3px 10px rgba(0,0,0,0.07);
+  }
+  html.light .tab.active, html.light .res-chip.active { background: #16161a; border-color: #16161a; color: #fff; }
+  html.light .cat-panel { background: rgba(255,255,255,0.96); }
+  html.light .cat-panel::before { background: rgba(255,255,255,0.96); border-color: rgba(0,0,0,0.16); }
+  html.light .cat-item:hover { background: rgba(0,0,0,0.05); }
+  html.light .cat-item .tip { background: rgba(255,255,255,0.97); color: var(--text); border-color: rgba(0,0,0,0.14); }
+  html.light .card, html.light .rel-card { background: #ffffff; border-color: #dcdce2; box-shadow: 0 4px 14px rgba(0,0,0,0.1); }
+  html.light .card:hover, html.light .rel-card:hover { box-shadow: 0 14px 30px rgba(0,0,0,0.16); }
+  html.light .thumb, html.light .rel-thumb, html.light .detail-stage { background: #e2e2e8; }
+  html.light .thumb .shimmer { background: linear-gradient(100deg, #e4e4ea 30%, #f4f4f8 50%, #e4e4ea 70%); background-size: 200% 100%; }
+  html.light .detail-stage { border-color: rgba(0,0,0,0.14); box-shadow: 0 18px 50px rgba(0,0,0,0.16); }
+  html.light .detail-download { color: var(--text); background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.16); box-shadow: 0 6px 20px rgba(0,0,0,0.09); }
+  html.light .detail-desc, html.light .policy p, html.light .policy li { color: #45484f; }
+  html.light .policy p.lead { color: #33363c; }
+  html.light .detail-res, html.light .related-panel, html.light .poptags-panel {
+    background: rgba(255,255,255,0.75); border-color: rgba(0,0,0,0.1); box-shadow: none;
+  }
+  html.light .res-list { border-color: rgba(0,0,0,0.08); }
+  html.light .res-item { border-color: rgba(0,0,0,0.05); }
+  html.light .res-item:hover { background: rgba(0,0,0,0.04); }
+  html.light .res-dev { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.14); }
+  html.light .scrolltop { background: rgba(255,255,255,0.92); border-color: rgba(0,0,0,0.16); box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
+  html.light .filter-chip { background: rgba(0,0,0,0.07); }
+  html.light .filter-chip .x { background: rgba(0,0,0,0.25); }
+  html.light .section-head .bar { box-shadow: none; }
+  html.light .meta-chip, html.light .tag-chip { background: rgba(0,0,0,0.05); }
+  html.light .policy .contact-card { background: rgba(255,255,255,0.85); border-color: rgba(0,0,0,0.12); box-shadow: none; }
+  html.light .policy .contact-card .row { color: #45484f; }
+  /* the tag cloud uses fixed bright colors tuned for a dark panel; invert the
+     lightness (keeping roughly the same hue) so white/pale tags stay visible */
+  html.light .poptag { filter: invert(1) hue-rotate(180deg); }
+
+  /* ============================================================
+     v6 — simple flat theme: one accent color, solid surfaces,
+     no glass blur, no sheen animations. Rules are written as
+     "html .x, html.light .x" pairs so they out-rank both the
+     original glass styles and the earlier light-mode overrides.
+     ============================================================ */
+  :root {
+    --bg-0: #000000;        /* page background */
+    --surface: #0c0c0e;     /* header, footer, panels, cards — lifted off pure black */
+    --surface-2: #17171b;   /* chips, inputs, buttons */
+    --line: #26262c;        /* borders */
+  }
+  html.light {
+    --bg-0: #f5f6f8;
+    --surface: #ffffff;
+    --surface-2: #eef0f4;
+    --line: #dcdfe6;
+  }
+
+  html body, html.light body { background: var(--bg-0); }
+  html .backdrop, html.light .backdrop { background: var(--bg-0); }
+
+  /* no moving shine anywhere */
+  html .header-sheen::after, html footer::after { display: none; }
+  html .tag::after, html .tab::after, html .detail-download::after { display: none; }
+
+  html header, html footer, html.light header, html.light footer {
+    background: var(--surface); border-color: var(--line);
+    backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
+  }
+  html .categories-btn, html .theme-btn, html .search, html .policy-back, html .detail-back,
+  html.light .categories-btn, html.light .theme-btn, html.light .search, html.light .policy-back, html.light .detail-back {
+    background: var(--surface-2); border-color: var(--line); color: var(--text);
+    backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
+  }
+  html .cat-panel, html.light .cat-panel {
+    background: var(--surface); border-color: var(--line);
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    box-shadow: 0 18px 44px rgba(0,0,0,0.3);
+  }
+  html .cat-panel::before, html.light .cat-panel::before { background: var(--surface); border-color: var(--line); }
+
+  /* hero: plain heading, accent search button */
+  html .hero h1, html.light .hero h1 {
+    background: none; -webkit-background-clip: initial; background-clip: initial;
+    -webkit-text-fill-color: currentColor; color: var(--text); animation: none;
+  }
+  html .hero-search, html.light .hero-search {
+    background: var(--surface); border-color: var(--line);
+    backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
+  }
+  html .hero-search button, html.light .hero-search button { background: var(--accent); color: #fff; }
+  html .hero-search button:hover, html.light .hero-search button:hover { box-shadow: 0 8px 20px rgba(99,102,241,0.35); }
+
+  html .tag, html .tab, html .res-chip,
+  html.light .tag, html.light .tab, html.light .res-chip {
+    background: var(--surface-2); border-color: var(--line); color: var(--text);
+    backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
+  }
+  html .tab.active, html .res-chip.active,
+  html.light .tab.active, html.light .res-chip.active {
+    background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: none;
+  }
+  html .filter-chip, html.light .filter-chip { background: var(--surface-2); border-color: var(--line); }
+
+  html .section-head .bar, html.light .section-head .bar { background: var(--accent); box-shadow: none; }
+
+  html .card, html .rel-card, html.light .card, html.light .rel-card {
+    background: var(--surface); border-color: var(--line); box-shadow: none;
+  }
+  html .card:hover, html .rel-card:hover, html.light .card:hover, html.light .rel-card:hover {
+    border-color: var(--accent); box-shadow: 0 10px 26px rgba(0,0,0,0.22);
+  }
+  html .thumb, html .rel-thumb, html.light .thumb, html.light .rel-thumb { background: var(--surface-2); }
+
+  html .detail-download, html.light .detail-download {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+    backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
+  }
+  html .detail-download:hover, html.light .detail-download:hover { box-shadow: 0 10px 24px rgba(99,102,241,0.4); }
+  html .detail-stage, html.light .detail-stage { background: var(--surface-2); border-color: var(--line); box-shadow: none; }
+  html .detail-res, html .related-panel, html .poptags-panel,
+  html.light .detail-res, html.light .related-panel, html.light .poptags-panel {
+    background: var(--surface); border-color: var(--line);
+    backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
+  }
+  html .res-dev, html.light .res-dev {
+    background: var(--surface-2); border-color: var(--line); color: var(--text);
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+  }
+  html .res-dev.active, html.light .res-dev.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  html .res-item:hover .res-dim, html.light .res-item:hover .res-dim { color: var(--accent-glow); text-shadow: none; }
+  html .meta-chip, html .tag-chip, html.light .meta-chip, html.light .tag-chip { background: var(--surface-2); border-color: var(--line); }
+
+  /* tag cloud: one simple color, accent on hover (beats the inline colors) */
+  html .poptags-line, html.light .poptags-line { background: var(--accent); animation: none; }
+  html .poptag, html.light .poptag { color: var(--muted) !important; opacity: 1 !important; filter: none; }
+  html .poptag:hover, html.light .poptag:hover { color: var(--accent) !important; text-shadow: none; }
+
+  html .scrolltop, html.light .scrolltop {
+    background: var(--surface-2); border-color: var(--line);
+    backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  }
+  html .policy .contact-card, html.light .policy .contact-card {
+    background: var(--surface); border-color: var(--line);
+    backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
+  }
+  /* photographer credit links on Unsplash photos */
+  html .detail-desc a, html.light .detail-desc a { color: var(--accent); text-decoration: underline; }
+
+  /* ============================================================
+     v7 cards — image, then title / tags / views / action bar
+     ============================================================ */
+  html .card, html.light .card { text-align: left; }
+  /* the image sits flush with the card's top edge */
+  html .thumb, html.light .thumb { margin: 0; border-radius: 0; }
+  .card-badge {
+    position: absolute; top: 10px; z-index: 6;
+    font-size: 10.5px; font-weight: 800; letter-spacing: 0.4px;
+    padding: 5px 9px; border-radius: 7px;
+    background: rgba(10,12,16,0.72); color: #fff; border: 1px solid rgba(255,255,255,0.16);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .card-badge.is-new { left: 10px; }
+  .card-badge.is-res { right: 10px; }
+  .card-body { padding: 13px 14px 11px; }
+  .card-title {
+    font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; min-height: 24px; }
+  .card-tag {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: 6px; padding: 4px 8px; cursor: pointer; white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .card-tag:hover { color: var(--text); border-color: var(--accent); }
+  .card-views { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .card-views .i { width: 14px; height: 14px; opacity: 0.85; }
+  .card-actions {
+    display: flex; align-items: center; gap: 4px;
+    margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line);
+  }
+  .cact {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px 4px; border-radius: 8px; background: transparent; border: none;
+    color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 700;
+    font-family: inherit; transition: background 0.15s, color 0.15s;
+  }
+  .cact .i { width: 15px; height: 15px; }
+  .cact:hover { background: var(--surface-2); color: var(--text); }
+  .cact.on { color: var(--accent); }
+  .cact.on .i { fill: currentColor; fill-opacity: 0.18; }
+  .cact.fav.on { color: #ff2f5e; }
+  /* the hover overlay keeps only the fullscreen affordance now */
+  html .thumb .hover, html.light .thumb .hover { background: rgba(8,10,14,0.42); }
+  @media (max-width: 560px) { .card-tags { display: none; } }
+
+  /* ============================================================
+     v9 detail page — image first, then title, then a resolution
+     picker. Layout follows the reference; colours stay on the
+     site's own indigo theme.
+     ============================================================ */
+  html .detail-title, html.light .detail-title { margin-top: 22px; }
+  /* the download button now carries a live resolution pill */
+  html .detail-download, html.light .detail-download { gap: 12px; flex-wrap: wrap; }
+  .dl-pill {
+    font-size: 12.5px; font-weight: 800; letter-spacing: 0.2px;
+    background: rgba(255,255,255,0.18); color: #fff;
+    padding: 4px 12px; border-radius: 100px; font-variant-numeric: tabular-nums;
+  }
+  .rhead { display: flex; align-items: baseline; gap: 10px; max-width: 1180px; margin: 26px auto 12px; flex-wrap: wrap; }
+  .rhead h3 { font-size: 15px; font-weight: 800; color: var(--text); }
+  .rhead span { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+  .rescards {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 9px;
+    max-width: 1180px; margin: 0 auto 14px;
+  }
+  .rescard {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 13px 8px; cursor: pointer; text-align: center; font-family: inherit;
+    transition: transform 0.15s, border-color 0.15s, background 0.15s;
+  }
+  .rescard .nm { font-size: 12.5px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+  .rescard .dim { font-size: 13px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; margin-bottom: 4px; }
+  .rescard .asp { font-size: 10px; font-weight: 700; color: var(--muted); opacity: 0.75; letter-spacing: 0.3px; }
+  .rescard:hover { border-color: var(--accent); background: var(--surface-2); transform: translateY(-3px); }
+  .rescard.on { background: var(--accent); border-color: var(--accent); }
+  .rescard.on .nm { color: #fff; }
+  .rescard.on .dim { color: rgba(255,255,255,0.85); }
+  .rescard.on .asp { color: rgba(255,255,255,0.7); opacity: 1; }
+  .aspnote {
+    max-width: 1180px; margin: 0 auto 26px; text-align: center;
+    font-size: 12.5px; font-weight: 800; letter-spacing: 1.5px; color: var(--muted);
+    padding: 9px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  }
+  @media (max-width: 760px) { .rescards { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 430px) { .rescards { grid-template-columns: 1fr; } }
+
+  /* ============================================================
+     v10 categories panel — sidebar style: resolution checkboxes
+     over a plain vertical category list, active one in the accent.
+     ============================================================ */
+  /* the gallery is a sidebar + grid layout */
+  .gallery-body {
+    display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 24px;
+    max-width: 1680px; margin: 0 auto; padding: 0 40px; align-items: start;
+  }
+  .gallery-main { min-width: 0; }
+  .side-panel {
+    position: sticky; top: 78px; max-height: calc(100vh - 98px); overflow-y: auto;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px 12px;
+  }
+  .side-panel::-webkit-scrollbar { width: 8px; }
+  .side-panel::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+  /* inside the layout the grid no longer carries its own page gutters */
+  html .gallery-main .grid, html.light .gallery-main .grid { max-width: none; margin: 0; padding: 0 0 70px; }
+  html .gallery-main .section-head, html.light .gallery-main .section-head { max-width: none; margin: 0 0 16px; padding: 0; }
+  html .gallery-main .section-desc, html.light .gallery-main .section-desc { max-width: none; margin: -6px 0 14px; padding: 0; }
+  /* the header's Filters button is a mobile-only drawer toggle */
+  /* .categories-btn sets display later in the sheet, so match its specificity */
+  .categories-btn.burger { display: none; }
+  .side-scrim { position: fixed; inset: 0; z-index: 119; background: rgba(0,0,0,0.6); opacity: 0; visibility: hidden; transition: 0.2s; }
+  .side-scrim.on { opacity: 1; visibility: visible; }
+  @media (max-width: 1050px) {
+    .gallery-body { grid-template-columns: 1fr; padding: 0 20px; }
+    .categories-btn.burger { display: inline-flex; }
+    .side-panel {
+      position: fixed; top: 0; left: 0; bottom: 0; width: 258px; z-index: 120;
+      max-height: none; border-radius: 0; border-width: 0 1px 0 0;
+      transform: translateX(-100%); transition: transform 0.25s cubic-bezier(.2,.9,.25,1);
+    }
+    .side-panel.open { transform: none; }
+  }
+  .filt-head {
+    font-size: 10.5px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase;
+    color: var(--muted); padding: 0 6px 8px;
+  }
+  .filt-sec + .filt-sec { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .res-checks { display: flex; flex-direction: column; }
+  .res-check {
+    display: flex; align-items: center; gap: 10px; padding: 6px; border-radius: 7px;
+    cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .res-check:hover { background: var(--surface-2); }
+  .res-check input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+  .res-check .n { margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 700; }
+  .res-check.hidden-row { display: none; }
+  .show-all {
+    margin: 8px 6px 0; padding: 7px 12px; border-radius: 6px; cursor: pointer;
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
+    font-family: inherit; font-size: 10.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .show-all:hover { border-color: var(--accent); }
+  /* categories become a plain single-column list with counts */
+  html .cat-grid, html.light .cat-grid { display: flex; flex-direction: column; gap: 0; }
+  html .cat-item, html.light .cat-item {
+    display: flex; align-items: center; padding: 7px 8px; border-radius: 6px;
+    font-size: 13px; font-weight: 600; color: var(--muted);
+  }
+  html .cat-item:hover, html.light .cat-item:hover { background: var(--surface-2); color: var(--text); }
+  html .cat-item.on, html.light .cat-item.on { background: var(--accent); color: #fff; font-weight: 800; }
+  .cat-item .n { margin-left: auto; font-size: 10.5px; font-weight: 700; color: var(--muted); }
+  .cat-item.on .n { color: rgba(255,255,255,0.72); }
+  .cat-item .chev, .cat-item .tip { display: none; }
+  /* signed-in account chip sits at the far right of the header */
+  .auth-me .initial {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    background: var(--accent); color: #fff; display: grid; place-items: center;
+    font-size: 12px; font-weight: 800;
+  }
+
+  /* ---- ad slots (invisible until a publisher ID is configured) ---- */
+  .ad-slot { display: none; }
+  .ad-slot.on {
+    display: block; grid-column: 1 / -1; min-height: 100px; overflow: hidden;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  }
+  .ad-slot.on::before {
+    content: 'Advertisement'; display: block; text-align: center;
+    font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase;
+    color: var(--muted); opacity: 0.6; padding: 6px 0 2px;
+  }
+  .ad-detail { max-width: 1180px; margin: 0 auto 26px; }
+  /* ---- cookie / ads consent ---- */
+  .consent {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+    z-index: 300; width: min(680px, calc(100vw - 28px));
+    display: none; gap: 14px; align-items: center; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 15px 18px; box-shadow: 0 18px 50px rgba(0,0,0,0.55);
+  }
+  .consent.show { display: flex; }
+  .consent p { flex: 1; min-width: 240px; font-size: 12.5px; line-height: 1.55; color: var(--muted); }
+  .consent p a { color: var(--accent-glow); text-decoration: underline; }
+  .consent .btns { display: flex; gap: 8px; margin-left: auto; }
+  .consent button {
+    padding: 9px 16px; border-radius: 8px; cursor: pointer; font-family: inherit;
+    font-size: 12.5px; font-weight: 700; border: 1px solid var(--line);
+    background: var(--surface-2); color: var(--text);
+  }
+  .consent button.yes { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .consent button:hover { border-color: var(--accent-glow); }
+
+  /* ---- header: Submit link + Google sign-in ---- */
+  .submit-link { text-decoration: none; }
+  .auth-wrap { position: relative; display: flex; align-items: center; }
+  .auth-me {
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
+    padding: 5px 12px 5px 5px; border-radius: 100px; font-size: 13px; font-weight: 600;
+  }
+  .auth-me:hover { border-color: var(--accent); }
+  .auth-me img { width: 26px; height: 26px; border-radius: 50%; display: block; }
+  .auth-me span { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .auth-panel {
+    position: absolute; top: calc(100% + 10px); right: 0; z-index: 70; display: none;
+    min-width: 268px; padding: 15px; border-radius: 14px;
+    background: var(--surface); border: 1px solid var(--line);
+    box-shadow: 0 18px 44px rgba(0,0,0,0.42);
+  }
+  .auth-panel.open { display: block; }
+  .auth-panel p { font-size: 12.5px; color: var(--muted); line-height: 1.55; margin-bottom: 12px; }
+  .auth-signout {
+    width: 100%; margin-top: 4px; padding: 9px; border-radius: 9px; cursor: pointer;
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
+    font-size: 13px; font-weight: 600; font-family: inherit;
+  }
+  .auth-signout:hover { border-color: var(--accent); }
+  @media (max-width: 820px) {
+    .submit-link span, .submit-link { font-size: 13px; }
+    .auth-panel { right: -60px; }
+  }
+  @media (max-width: 560px) { .submit-link { display: none; } }
+
+  /* ============================================================
+     v8 phone view — tall portrait cards for phone wallpapers.
+     Used when the visitor picks the iPhone tag or the Portrait
+     filter, and by default on phones, where a 16:10 card wastes
+     most of the screen.
+     ============================================================ */
+  .section-desc {
+    max-width: 1680px; margin: -6px auto 14px; padding: 0 40px;
+    color: var(--muted); font-size: 14px; line-height: 1.6;
+  }
+  html .grid.phone-view, html.light .grid.phone-view { grid-template-columns: repeat(5, 1fr); gap: 18px; }
+  /* image-only cards: the title and action bar move into the overlay */
+  .grid.phone-view .card-body { display: none; }
+  .grid.phone-view .thumb { aspect-ratio: 9 / 16; }
+  .grid.phone-view .thumb::before { padding-top: 177.8%; }   /* pre-aspect-ratio fallback */
+  .grid.phone-view .card-badge.is-new { top: 8px; left: 8px; }
+  .grid.phone-view .card-badge.is-res { top: 8px; right: 8px; }
+  /* overlay: name along the top, actions along the bottom */
+  .grid.phone-view .thumb .hover {
+    flex-direction: column; justify-content: space-between; align-items: stretch;
+    gap: 8px; padding: 10px;
+    background: linear-gradient(180deg, rgba(8,10,14,0.72) 0%, rgba(8,10,14,0.12) 34%, rgba(8,10,14,0.12) 58%, rgba(8,10,14,0.82) 100%);
+  }
+  .hv-title { display: none; }
+  .grid.phone-view .hv-title {
+    display: block; color: #fff; font-size: 12.5px; font-weight: 700; line-height: 1.35;
+    text-align: center; text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .hv-actions { display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .grid.phone-view .hv-actions { gap: 8px; }
+  /* the overlay download only exists in phone view (the card body has one otherwise) */
+  .act.dl2 { display: none; }
+  .grid.phone-view .act.dl2 { display: inline-flex; }
+  .grid.phone-view .act {
+    background: rgba(18,20,26,0.82); color: #fff; border: 1px solid rgba(255,255,255,0.18);
+    padding: 8px 12px; font-size: 12px; border-radius: 9px;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .grid.phone-view .act.exp { padding: 8px 10px; }
+  /* the preview button is an expand icon in the normal grid, an eye in phone view */
+  .act.exp .i-views { display: none; }
+  .grid.phone-view .act.exp .i-views { display: inline-block; }
+  .grid.phone-view .act.exp .i-fullscreen, .grid.phone-view .act.exp .lbl { display: none; }
+  .grid.phone-view .act .i { color: #7ee29a; }        /* download tick, as in the reference */
+  .grid.phone-view .act.exp .i { color: #fff; }
+  /* Touch devices can't hover, so the actions must stay visible. Keyed on both
+     hover capability and width — an emulated narrow viewport still reports
+     hover, and a phone-width screen should behave like a phone either way. */
+  @media (hover: none) { .grid.phone-view .thumb .hover { opacity: 1; } }
+  @media (max-width: 700px) { .grid.phone-view .thumb .hover { opacity: 1; } }
+  @media (max-width: 1200px) { html .grid.phone-view, html.light .grid.phone-view { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 820px)  { html .grid.phone-view, html.light .grid.phone-view { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 560px)  {
+    html .grid.phone-view, html.light .grid.phone-view { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .section-desc { padding: 0 16px; font-size: 13px; }
+    .grid.phone-view .hv-title { font-size: 11px; }
+    .grid.phone-view .act { padding: 7px 9px; font-size: 11px; }
+  }
+
+  /* ============================================================
+     Icon set — one 24 grid, 1.75 stroke, round caps. Every icon
+     inherits currentColor, so it picks up whatever color its
+     button already uses in either theme.
+     ============================================================ */
+  .i { width: 18px; height: 18px; flex-shrink: 0; stroke: currentColor; stroke-width: 1.75;
+       stroke-linecap: round; stroke-linejoin: round; fill: none; }
+  .i-sm { width: 14px; height: 14px; }
+  .i-lg { width: 20px; height: 20px; }
+  /* the pills hold icon + label side by side */
+  .tag, .categories-btn { display: inline-flex; align-items: center; gap: 8px; }
+  .tag .i { opacity: 0.75; transition: opacity 0.2s, transform 0.3s cubic-bezier(.2,.9,.25,1); }
+  .tag:hover .i { opacity: 1; transform: scale(1.1); }
+  .tab .i { transition: transform 0.3s cubic-bezier(.2,.9,.25,1); }
+  /* the icon language's signature hover micro-motions */
+  .tab:hover .i-recent .hand { transform-origin: 12px 12px; animation: tick 2s steps(8) infinite; }
+  @keyframes tick { to { transform: rotate(360deg); } }
+  .tab:hover .i-popular { animation: flick .6s cubic-bezier(.2,.9,.25,1) infinite alternate; }
+  @keyframes flick { to { transform: translateY(-1px) scaleY(1.06); } }
+  .tab:hover .i-featured { animation: spark .5s cubic-bezier(.2,.9,.25,1); }
+  @keyframes spark { 0%{transform:rotate(0) scale(1)} 50%{transform:rotate(-18deg) scale(1.12)} 100%{transform:rotate(0) scale(1)} }
+  .tab:hover .i-random { animation: sh .45s cubic-bezier(.2,.9,.25,1); }
+  @keyframes sh { 50% { transform: translateX(1.5px); } }
+  .tab:hover .i-collections { animation: lay .4s cubic-bezier(.2,.9,.25,1); }
+  @keyframes lay { 50% { transform: translateY(-1.5px); } }
+  /* the caret is an icon now, so drop the old glyph sizing */
+  .caret, .res-caret { display: inline-flex; align-items: center; }
+  .caret .i, .res-caret .i { width: 11px; height: 11px; stroke-width: 2.2; }
+  /* stats line: icons sit inline with the numbers */
+  .meta-info { display: inline-flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .meta-info .i { opacity: 0.8; }
+  .meta-info .sep { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: 0.45; margin: 0 4px; }
+  /* the # that leads a tag chip, in the icon set's style */
+  .tag-chip .hash { color: var(--accent); font-weight: 700; margin-right: 1px; }
+  .meta-chip { display: inline-flex; align-items: center; gap: 7px; }
+  /* buttons that weren't flex containers before they held an icon */
+  .search button, .lb-dl, .detail-report a { display: inline-flex; align-items: center; gap: 8px; }
+  .lb-dl { justify-content: center; }
+  @media (prefers-reduced-motion: reduce) { .tab:hover .i, .tab:hover .i * { animation: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="backdrop"></div>
+<div class="grain"></div>
+
+<header>
+  <div class="header-sheen"></div>
+  <div class="logo" id="homeLogo" style="cursor:pointer"><b>8K</b> WALLPAPERS</div>
+  <div class="top-right">
+    <div class="cat-wrap">
+      <button class="categories-btn burger" id="catBtn" aria-label="Show filters"><svg class="i i-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>Filters</button>
+    </div>
+    <div class="search">
+      <input type="text" placeholder="Search" id="searchInput">
+      <button aria-label="Search"><svg class="i i-sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+    </div>
+    <a class="categories-btn submit-link" href="/upload" title="Submit your own wallpaper">
+      <svg class="i i-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V9M7 13l5-5 5 5M5 4h14"/></svg>Submit</a>
+    <button class="theme-btn" id="themeBtn" title="Toggle light / dark mode" aria-label="Toggle light or dark mode"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg></button>
+    <div class="auth-wrap" id="authWrap" hidden>
+      <button class="categories-btn" id="authBtn">Sign in</button>
+      <div class="auth-panel" id="authPanel">
+        <p id="authPanelText">Sign in with Google to submit your own wallpapers and be credited for them.</p>
+        <div id="gbtnMain"></div>
+        <button class="auth-signout" id="authSignout" hidden>Sign out</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="admin-overlay" id="adminOverlay">
+  <div class="admin-modal">
+    <div class="admin-mhead">
+      <h3>&#10133; Add a Wallpaper</h3>
+      <button class="admin-close" id="adminClose">&times;</button>
+    </div>
+    <div class="admin-body">
+      <div class="admin-field">
+        <label>Upload from your computer</label>
+        <button type="button" class="admin-upload" id="afUploadBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+          <span id="afUploadLabel">Choose an image file…</span>
+        </button>
+        <input type="file" id="afFile" accept="image/*" hidden>
+        <div class="admin-hint">Pick a JPG, PNG, or WebP from your device. Use images you own or have the rights to.</div>
+      </div>
+
+      <div class="admin-or"><span>or</span></div>
+
+      <div class="admin-field">
+        <label>Paste an image link (Unsplash or Pexels)</label>
+        <input type="text" id="afUrl" placeholder="Paste an Unsplash or Pexels photo link...">
+        <div class="admin-hint">Paste a photo link from <b>Unsplash</b> or <b>Pexels</b> (the page URL or the direct image address). The ID and source are detected automatically.</div>
+      </div>
+      <div class="admin-preview" id="afPreview">Image preview appears here</div>
+      <div class="admin-field">
+        <label>Name / Caption</label>
+        <input type="text" id="afName" placeholder="e.g. Crimson Nebula, Deep Space">
+      </div>
+      <div class="admin-row2">
+        <div class="admin-field">
+          <label>Category</label>
+          <select id="afCat"></select>
+        </div>
+        <div class="admin-field">
+          <label>Tab</label>
+          <select id="afTab">
+            <option value="RECENT">Recent</option>
+            <option value="POPULAR">Popular</option>
+            <option value="FEATURED">Featured</option>
+          </select>
+        </div>
+      </div>
+      <div class="admin-field">
+        <label>Resolution label</label>
+        <input type="text" id="afRes" placeholder="3840x2160" value="3840x2160">
+      </div>
+      <div class="admin-field">
+        <label>Tags (comma-separated)</label>
+        <input type="text" id="afTags" placeholder="Space, Stars, Dark, 4K">
+      </div>
+      <div class="admin-actions">
+        <button class="admin-submit" id="afSubmit">Add Wallpaper</button>
+        <button class="admin-cancel" id="afCancel">Cancel</button>
+      </div>
+      <div class="admin-msg" id="afMsg"></div>
+    </div>
+  </div>
+</div>
+
+<div id="galleryView">
+  <section class="hero">
+    <h1>Stunning 8K Wallpapers</h1>
+    <p>Hand-picked ultra-HD backgrounds for desktop, mobile &amp; tablet — free to download.</p>
+    <div class="hero-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="heroSearch" placeholder="Search wallpapers — space, neon, minimal…">
+      <button id="heroSearchBtn">Search</button>
+    </div>
+    <div class="hero-stats" id="heroStats"></div>
+  </section>
+  <div class="tags" id="tags"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div class="resbar" id="resBar"></div>
+
+  <div class="gallery-body">
+    <aside class="side-panel" id="sidePanel">
+      <div class="filt-sec">
+        <div class="filt-head">Resolutions</div>
+        <div class="res-checks" id="resChecks"></div>
+        <button class="show-all" id="resShowAll" hidden></button>
+      </div>
+      <div class="filt-sec">
+        <div class="filt-head">Categories</div>
+        <div class="cat-grid" id="catGrid"></div>
+      </div>
+    </aside>
+
+    <div class="gallery-main">
+      <div class="section-head">
+        <div class="bar"></div>
+        <h2 id="sectionTitle">Recent Wallpapers</h2>
+        <div class="section-sub">
+          <span class="filter-chip" id="filterChip"></span>
+          <span class="result-count" id="resultCount"></span>
+        </div>
+      </div>
+      <p class="section-desc" id="sectionDesc" style="display:none"></p>
+
+      <main class="grid" id="grid"></main>
+      <div id="gridSentinel" aria-hidden="true" style="height:1px"></div>
+    </div>
+  </div>
+</div>
+
+<div id="policyView" class="policy-view" style="display:none">
+  <nav class="tabs tabs-policy" id="tabsPolicy"></nav>
+  <article class="policy" id="policyBody"></article>
+  <div class="policy-back-wrap">
+    <button class="policy-back" id="policyBack">&#8592; Back to wallpapers</button>
+  </div>
+</div>
+
+<div id="detailView" class="detail-view" style="display:none">
+  <nav class="tabs tabs-detail" id="tabsDetail"></nav>
+  <div class="detail">
+    <button class="detail-back" id="detailBack">&#8592; Back to wallpapers</button>
+    <div class="detail-stage">
+      <img id="dtImg" src="" alt="">
+    </div>
+    <div class="detail-report"><a href="#" id="dtReport"><svg class="i i-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-1.5 3.5L16 11H5"/></svg> Report Image</a></div>
+    <h2 class="detail-title"><span class="dt-cat" id="dtCat"></span> / <span class="dt-name" id="dtName"></span> Wallpaper</h2>
+    <p class="detail-desc" id="dtDesc"></p>
+    <button class="detail-download" id="dtDownload"><svg class="i i-lg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11M7 10l5 5 5-5M5 20h14"/></svg> <span class="dl-label">Download Original</span> <span class="dl-pill" id="dtRes"></span></button>
+    <div class="rhead">
+      <h3>Choose a resolution</h3>
+      <span>Click to set your download size</span>
+    </div>
+    <div class="ad-slot ad-detail" data-ad="detail"></div>
+    <div class="rescards" id="dtResCards"></div>
+    <div class="aspnote" id="dtAspNote"></div>
+    <div class="detail-meta">
+      <div class="meta-row"><span class="meta-lbl">Categories</span><span class="meta-chip" id="dtCatChip"></span></div>
+      <div class="meta-row"><span class="meta-lbl">Tags</span><span id="dtTags"></span></div>
+      <div class="meta-row"><span class="meta-lbl">Details</span><span class="meta-info" id="dtInfo"></span></div>
+    </div>
+    <div class="detail-share">
+      <a class="share pin" title="Pinterest"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.137.893 2.739a.36.36 0 0 1 .083.345c-.091.378-.293 1.193-.333 1.36-.052.22-.174.266-.401.16-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.608 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.003 2.349-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z"/></svg></a>
+      <a class="share fb" title="Facebook"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
+      <a class="share tw" title="Twitter"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.953 4.57a10 10 0 0 1-2.825.775 4.958 4.958 0 0 0 2.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 0 0-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 0 0-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 0 1-2.228-.616v.06a4.923 4.923 0 0 0 3.946 4.827 4.996 4.996 0 0 1-2.212.085 4.936 4.936 0 0 0 4.604 3.417 9.867 9.867 0 0 1-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 0 0 7.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0 0 24 4.59z"/></svg></a>
+      <a class="share rd" title="Reddit"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.231-.095z"/></svg></a>
+      <a class="share cp" title="Copy link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a>
+      <a class="share sh" title="Share&hellip;" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></a>
+    </div>
+    <div class="detail-res">
+      <div class="res-bar">
+        <span class="res-lbl">More Resolutions:</span>
+        <button class="res-dev" data-dev="desktop"><svg class="i dev-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg> Desktop <span class="res-caret"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></button>
+        <button class="res-dev" data-dev="mobiles"><svg class="i dev-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg> Mobiles <span class="res-caret"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></button>
+        <button class="res-dev" data-dev="tablets"><svg class="i dev-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M11 18h2"/></svg> Tablets <span class="res-caret"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></button>
+        <button class="res-dev" data-dev="iphone"><svg class="i dev-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2" width="11" height="20" rx="3"/><path d="M9.5 4.5h5"/><path d="M11 19.5h2"/></svg> iPhone <span class="res-caret"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></button>
+        <button class="res-dev" data-dev="ipad"><svg class="i dev-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="2.5" width="15" height="19" rx="2.5"/><circle cx="12" cy="18.7" r=".9"/></svg> iPad <span class="res-caret"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></button>
+      </div>
+      <div class="res-list" id="resList"></div>
+    </div>
+
+    <div class="related-panel">
+      <div class="related-head">&#128444;&#65039; Related Wallpapers</div>
+      <div class="related-grid" id="dtRelated"></div>
+    </div>
+
+    <div class="poptags-panel">
+      <div class="poptags-head">POPULAR TAGS</div>
+      <div class="poptags-wrap" id="dtPopTags"></div>
+      <div class="poptags-line"></div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <nav class="foot-nav">
+    <a href="/upload">Submit a wallpaper</a><span>|</span>
+    <a href="#" data-policy="about">About</a><span>|</span>
+    <a href="#" data-policy="privacy">Privacy</a><span>|</span>
+    <a href="#" data-policy="tos">TOS</a><span>|</span>
+    <a href="#" data-policy="copyright">Copyright</a><span>|</span>
+    <a href="#" data-policy="contact">Contact Us</a>
+  </nav>
+  <div class="foot-copy">&copy; 2026 8K Wallpapers &mdash; original generated artwork, free for personal use</div>
+</footer>
+
+<script>
+// Cross-browser smooth scroll: fall back to an instant jump where the smooth
+// `behavior` option isn't supported (Safari < 15.4, IE, older Android browsers).
+function safeScrollTop(){
+  try {
+    if ('scrollBehavior' in document.documentElement.style) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo(0, 0);
+    }
+  } catch (e) { try { window.scrollTo(0, 0); } catch (e2) {} }
+}
+// Save a Blob as a file across browsers. Uses the IE/old-Edge API when present,
+// otherwise the standard object-URL + <a download> route. Returns false if the
+// browser supports neither (caller can then fall back to opening in a new tab).
+function saveBlob(blob, filename){
+  if (navigator.msSaveOrOpenBlob) { navigator.msSaveOrOpenBlob(blob, filename); return true; }
+  var a = document.createElement('a');
+  if (!('download' in a)) { return false; }
+  var url = URL.createObjectURL(blob);
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+  return true;
+}
+const categories = ['Abstract','Lifestyle','Animals','Love','Anime','Military','Architecture','Minimal','Bikes','Movies','Black/Dark','Music','Cars','Nature','Celebrations','People','Cute','Photography','Fantasy','Quotes','Flowers','Sci-Fi','Food','Space','Games','Sports','Gradients','Technology','CGI','World'];
+
+// ============================================================
+// Icon set (from the project's icon library): one 24 grid,
+// 1.75 stroke, round caps. Drawn with `icon(name)`; they inherit
+// currentColor so each one takes its button's color in either theme.
+// ============================================================
+const ICONS = {
+  // --- tab bar ---
+  recent:      '<circle cx="12" cy="12" r="8.5"/><path class="hand" d="M12 7.5V12l3 2"/>',
+  popular:     '<path d="M12 3.5c.6 2.7-1.3 3.8-2.6 5.3-1.2 1.4-2 2.9-2 4.7a4.6 4.6 0 0 0 9.2 0c0-1.6-.6-2.8-1.4-3.9-.5.7-1 1-1.7 1.1.9-2.6-.2-5.3-1.5-7.3Z"/><path d="M12 19a2.2 2.2 0 0 0 2.2-2.2c0-1.3-1.2-2.1-2.2-3.3-1 1.2-2.2 2-2.2 3.3A2.2 2.2 0 0 0 12 19Z"/>',
+  featured:    '<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 17l-5.2 2.6 1-5.9-4.3-4.1 5.9-.8Z"/>',
+  random:      '<path d="M3 7h3.5c1.4 0 2.3.9 3 2l4 6c.7 1.1 1.6 2 3 2H21"/><path d="M3 17h3.5c1.4 0 2.3-.9 3-2l.7-1M14.3 8l.7-1c.7-1.1 1.6-2 3-2H21"/><path d="M18.5 2.5L21 5l-2.5 2.5M18.5 14.5L21 17l-2.5 2.5"/>',
+  collections: '<path d="M12 3.5l8 4.2-8 4.2-8-4.2Z"/><path d="M4 12l8 4.2 8-4.2"/><path d="M4 16l8 4.2 8-4.2"/>',
+  saved:       '<path d="M12 20C7 17 3.5 13.4 3.5 9.4A4.4 4.4 0 0 1 12 6.8 4.4 4.4 0 0 1 20.5 9.4c0 4-3.5 7.6-8.5 10.6Z"/>',
+  // --- actions ---
+  download:   '<path d="M12 3v11M7 10l5 5 5-5M5 20h14"/>',
+  fullscreen: '<path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"/>',
+  search:     '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  report:     '<path d="M5 21V4M5 4h11l-1.5 3.5L16 11H5"/>',
+  link:       '<path d="M9 15l6-6M10.5 6l1-1a4 4 0 0 1 5.6 5.6l-1 1M13.5 18l-1 1a4 4 0 0 1-5.6-5.6l1-1"/>',
+  share:      '<circle cx="6" cy="12" r="2.4"/><circle cx="17" cy="6" r="2.4"/><circle cx="17" cy="18" r="2.4"/><path d="M8 11l7-4M8 13l7 4"/>',
+  caret:      '<path d="M6 9l6 6 6-6"/>',
+  // --- theme ---
+  moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>',
+  sun:  '<circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M22 12h-2.5M4.5 12H2M19 5l-1.8 1.8M6.8 17.2 5 19M19 19l-1.8-1.8M6.8 6.8 5 5"/>',
+  // --- stats ---
+  like:      '<path d="M7 11v9H4a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1Z"/><path d="M7 11l4-7c1.3 0 2 .9 2 2.2V9h4.8a2 2 0 0 1 2 2.4l-1.2 6a2 2 0 0 1-2 1.6H7"/>',
+  dislike:   '<path d="M7 13V4H4a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1Z"/><path d="M7 13l4 7c1.3 0 2-.9 2-2.2V15h4.8a2 2 0 0 0 2-2.4l-1.2-6a2 2 0 0 0-2-1.6H7"/>',
+  heart:     '<path d="M12 20C7 17 3.5 13.4 3.5 9.4A4.4 4.4 0 0 1 12 6.8 4.4 4.4 0 0 1 20.5 9.4c0 4-3.5 7.6-8.5 10.6Z"/>',
+  views:     '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+  downloads: '<path d="M12 3v12M7 11l5 5 5-5M4 20h16"/>',
+  calendar:  '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/>',
+  filesize:  '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.6"/><path d="M3 16l5-4 4 3 3-2.5 6 5"/>',
+  // --- devices (resolution menus) ---
+  desktop: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  mobiles: '<rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/>',
+  tablets: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M11 18h2"/>',
+  iphone:  '<rect x="6.5" y="2" width="11" height="20" rx="3"/><path d="M9.5 4.5h5"/><path d="M11 19.5h2"/>',
+  ipad:    '<rect x="4.5" y="2.5" width="15" height="19" rx="2.5"/><circle cx="12" cy="18.7" r=".9"/>',
+  // --- the 12 style pills ---
+  'iPhone Wallpapers':     '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10 5h4"/><path d="M11 19h2"/>',
+  'Cute kawaii':           '<path d="M12 20c-4-2.5-8-5.3-8-9.7a4.4 4.4 0 0 1 8-2.6 4.4 4.4 0 0 1 8 2.6c0 4.4-4 7.2-8 9.7Z"/><path d="M9.5 10.5h.01M14.5 10.5h.01"/><path d="M10.8 13c.7.6 1.7.6 2.4 0"/>',
+  'UltraWide HD Monitor':  '<rect x="2.5" y="6" width="19" height="9" rx="1.5"/><path d="M8 19h8M12 15v4"/><path d="M5 10.5h1.5M17.5 10.5H19"/>',
+  'Cool 4K':               '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M7 15V9l-2 3.5h3.5"/><path d="M14 15V9M14 12l3-3M14.5 11.5L17 15"/>',
+  'Black':                 '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17Z"/>',
+  'Aesthetic backgrounds': '<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="8.5" cy="9" r="1.8"/><path d="M3 16.5l5-4 3.5 2.5L16 10l5 4.5"/>',
+  'Space':                 '<circle cx="12" cy="12" r="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-25 12 12)"/><path d="M18.5 5.5h.01M5.5 18h.01"/>',
+  'Abstract':              '<circle cx="8" cy="8" r="4"/><rect x="12.5" y="4" width="7.5" height="7.5" rx="1.5"/><path d="M6 14.5l4 5.5 4-5.5z"/>',
+  'Minimal':               '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12h7"/>',
+  'Neon':                  '<path d="M13 3l-8 10h6l-1 8 8-10h-6z"/>',
+  'Nature':                '<path d="M12 21v-5"/><path d="M12 16c-3.4 0-6-2-6-5.4S8.6 3 12 3s6 3.9 6 7.6S15.4 16 12 16Z"/><path d="M12 4v11M8.7 7.8 12 9.3l3.3-1.5M8.2 11.5 12 13l3.8-1.5"/>',
+  'Gradient':              '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M4 13.5l16-7M4 18l16-7" opacity=".55"/>'
+};
+// Categories whose name differs from the icon it shares with a style pill.
+// Categories the set has no icon for simply render as text.
+const ICON_ALIAS = {
+  'Cute': 'Cute kawaii',
+  'Gradients': 'Gradient',
+  'Black/Dark': 'Black',
+  'Photography': 'Aesthetic backgrounds'
+};
+function icon(name, cls){
+  name = ICON_ALIAS[name] || name;
+  const d = ICONS[name];
+  if(!d) return '';
+  return "<svg class='i i-" + String(name).replace(/[^a-z0-9]+/gi,'-').toLowerCase()
+    + (cls ? ' ' + cls : '') + "' viewBox='0 0 24 24' aria-hidden='true'>" + d + "</svg>";
+}
+
+const tagList = ['iPhone Wallpapers','Cute kawaii','UltraWide HD Monitor','Cool 4K','Black','Aesthetic backgrounds','Space','Abstract','Minimal','Neon','Nature','Gradient'];
+const tabs = [
+  {label:'RECENT', ico:'recent'},
+  {label:'POPULAR', ico:'popular'},
+  {label:'FEATURED', ico:'featured'},
+  {label:'RANDOM', ico:'random'},
+  {label:'COLLECTIONS', ico:'collections'},
+];
+
+// colorful popular tags: [label, color, sizePx, opacity]
+const popTags = [
+  ['Stock','#7c8cff',19,1],['Black background','#5fd17a',13.5,0.85],['Green background','#3ad07a',15,1],
+  ['8K','#3aa0ff',18,1],['PlayStation','#aab0bb',13,0.8],['2026','#6a6f78',12.5,0.7],
+  ['Gradient background','#ff8a3c',18,1],['Red aesthetic','#cfd3da',13,0.85],['5K','#ff3db5',18,1],
+  ['Illustration','#b07cff',17,1],['Abstract background','#6a6f78',12.5,0.6],['Neon','#e8ebf0',15,1],
+  ['White background','#f0f2f5',18,1],['Dark aesthetic','#aab0bb',13,0.85],['Green','#3ad07a',14,1],
+  ['Geometric','#cfd3da',17,1],['Minimalist','#9aa0a8',13.5,0.9],['Hello','#9cff5a',18,1],
+  ['Vibrant','#ff3db5',13,0.7],['Futuristic','#cfd3da',14,0.95],['Dark background','#2cc8e0',18,1],
+  ['3D Render','#aab0bb',12.5,0.85],['Apple','#e8ebf0',13.5,1],['Blue background','#5aa0ff',16,1],
+];
+
+function gradient(c){return "<defs><linearGradient id='%ID%' x1='0' y1='0' x2='1' y2='1'>"+c.map((x,i)=>"<stop offset='"+(i/(c.length-1))+"' stop-color='"+x+"'/>").join('')+"</linearGradient></defs><rect width='800' height='500' fill='url(#%ID%)'/>";}
+function glow(c){return "<rect width='800' height='500' fill='"+c[0]+"'/><defs><radialGradient id='%ID%' cx='50%' cy='60%' r='70%'><stop offset='0' stop-color='"+c[1]+"' stop-opacity='0.9'/><stop offset='1' stop-color='"+c[0]+"' stop-opacity='0'/></radialGradient></defs><ellipse cx='400' cy='300' rx='420' ry='160' fill='url(#%ID%)'/>";}
+function aurora(c){return gradient([c[0],c[0]])+c.map((x,i)=>"<ellipse cx='"+(180+i*180)+"' cy='"+(160+i*120)+"' rx='300' ry='190' fill='"+x+"' opacity='0.5' style='mix-blend-mode:screen'/>").join('');}
+function mesh(c){return "<rect width='800' height='500' fill='"+c[0]+"'/>"+c.map((x,i)=>"<circle cx='"+(140+i*230)+"' cy='"+(120+(i%2)*240)+"' r='300' fill='"+x+"' opacity='0.6'/>").join('');}
+function neon(c){let r="<rect width='800' height='500' fill='"+c[0]+"'/>";for(let i=0;i<24;i++){const x=Math.random()*800,y=Math.random()*500,s=Math.random()*60+20;r+="<rect x='"+x+"' y='"+y+"' width='"+s+"' height='"+s+"' fill='"+c[1+i%2]+"' opacity='"+(0.3+Math.random()*0.5)+"' transform='rotate(45 "+x+" "+y+")'/>";}return r;}
+function waves(c){let r=gradient(c);for(let i=0;i<5;i++){const y=120+i*70;r+="<path d='M0 "+y+" Q200 "+(y-50)+" 400 "+y+" T800 "+y+"' stroke='#ffffff' stroke-opacity='0.08' fill='none' stroke-width='2'/>";}return r;}
+function space(){let r=gradient(['#0b0d1a','#1a1f3a','#2d1b4e']);for(let i=0;i<120;i++){r+="<circle cx='"+(Math.random()*800)+"' cy='"+(Math.random()*500)+"' r='"+(Math.random()*1.6)+"' fill='#fff' opacity='"+Math.random()+"'/>";}r+="<defs><radialGradient id='moon' cx='40%' cy='35%'><stop offset='0' stop-color='#aab4d4'/><stop offset='1' stop-color='#1a2348'/></radialGradient></defs><circle cx='600' cy='150' r='70' fill='url(#moon)'/>";return r;}
+
+let uid=0;
+function bake(fn){ uid++; return fn.replace(/%ID%/g,'grad'+uid); }
+
+const U = id => "https://images.unsplash.com/photo-"+id+"?auto=format&fit=crop&w=800&q=80";
+const wallpapers = [
+  {name:'WWDC 2026, Glow All Out', img:U('1635776062127-d379bfcba9f8'), tab:'RECENT', cat:'Abstract', res:'3840x2160', tags:['Glow','Dark','Minimal','Apple']},
+  {name:'Neon Cityscape, Stock', img:U('1545972154-9bb223aac798'), tab:'RECENT', cat:'Technology', res:'3840x2160', tags:['Stock','3D Render','PlayStation','Neon','Vibrant']},
+  {name:'Liquid Black Surface, Stock', img:U('1550859492-d5da9d8e45f3'), tab:'RECENT', cat:'Abstract', res:'3840x2160', tags:['Stock','Black','Minimal','Surface']},
+  {name:'Skybound Horizon, 8K', img:U('1419242902214-272b3f66ee7a'), tab:'RECENT', cat:'Nature', res:'7680x4320', tags:['Sky','Clouds','Blue','8K']},
+  {name:'Midnight Machine, 5K', img:U('1492144534655-ae79c964c9d7'), tab:'RECENT', cat:'Technology', res:'5120x2880', tags:['Dark','Gold','Machine','5K']},
+  {name:'Cosmic Spill, Abstract', img:U('1462331940025-496dfbfc7564'), tab:'RECENT', cat:'Space', res:'3840x2160', tags:['Space','Stars','Galaxy','Cosmic']},
+  {name:'Desert Drift, Wide', img:U('1473580044384-7ba9967e16a0'), tab:'RECENT', cat:'Nature', res:'5120x2160', tags:['Desert','Warm','UltraWide','Landscape']},
+  {name:'Twilight Bloom, Soft', img:U('1490750967868-88aa4486c946'), tab:'RECENT', cat:'Flowers', res:'3840x2160', tags:['Flowers','Soft','Purple','Bloom']},
+  {name:'Hero Skyline, Brand New', img:U('1480714378408-67cf0d13bc1b'), tab:'RECENT', cat:'World', res:'3840x2160', tags:['City','Skyline','Sunset','Urban']},
+  {name:'Painted Hands, Mosaic', img:U('1541701494587-cb58502866ab'), tab:'RECENT', cat:'CGI', res:'3840x2160', tags:['Mosaic','Color','Abstract','Art']},
+  {name:'Velocity Yellow, Studio', img:U('1503376780353-7e6692767b70'), tab:'RECENT', cat:'Cars', res:'3840x2160', tags:['Car','Yellow','Studio','Sport']},
+  {name:'Frostfall Forest, Mono', img:U('1418985991508-e47386d96a71'), tab:'RECENT', cat:'Nature', res:'3840x2160', tags:['Forest','Mono','Winter','Fog']},
+  {name:'Deep Space Field, 4K', img:U('1462331940025-496dfbfc7564'), tab:'POPULAR', cat:'Space', res:'3840x2160', tags:['Space','Stars','Nebula','Deep']},
+  {name:'Ocean Aurora, Wide', img:U('1505228395891-9a51e7e86bf6'), tab:'POPULAR', cat:'Nature', res:'5120x2160', tags:['Ocean','Aurora','Teal','UltraWide']},
+  {name:'Citrus Mesh, Vibrant', img:U('1557672172-298e090bd0f1'), tab:'POPULAR', cat:'Gradients', res:'3840x2160', tags:['Gradient','Citrus','Vibrant','Mesh']},
+  {name:'Velvet Gradient, Smooth', img:U('1557682250-33bd709cbe85'), tab:'POPULAR', cat:'Gradients', res:'3840x2160', tags:['Gradient','Velvet','Smooth','Purple']},
+  {name:'Orchid Haze, Dark', img:U('1558591710-4b4a1ae0f04d'), tab:'FEATURED', cat:'Gradients', res:'3840x2160', tags:['Gradient','Orchid','Dark','Haze']},
+  {name:'Borealis Night, 8K', img:U('1483347756197-71ef80e95f73'), tab:'FEATURED', cat:'Nature', res:'7680x4320', tags:['Aurora','Night','Borealis','8K']},
+  {name:'Carbon Waves, Mono', img:U('1530973428-5bf2db2e4d71'), tab:'FEATURED', cat:'Abstract', res:'3840x2160', tags:['Carbon','Mono','Waves','Dark']},
+  {name:'Sunset Drift, Warm', img:U('1495616811223-4d98c6e9c869'), tab:'FEATURED', cat:'Nature', res:'3840x2160', tags:['Sunset','Warm','Sky','Drift']},
+];
+
+let activeTab = 'RECENT';
+let query = '';
+let activeCat = null;    // active category filter (null = none)
+let activeTag = null;    // active tag filter
+let showFavs = false;    // showing the Saved view
+let activeRes = null;    // resolution filter: '4K' | '5K' | '8K'
+let activeOrient = null; // orientation filter: 'Portrait' | 'Landscape'
+
+// escape text before inserting it into innerHTML
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ---- Favorites (saved wallpapers), persisted in this browser ----
+const FAV_KEY = '8kw_favs';
+let favs = (()=>{ try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); } catch(e){ return []; } })();
+function favId(w){ return (w._ref && w._ref.path) || w.img || w.name; }
+function isFav(w){ return favs.indexOf(favId(w)) > -1; }
+function toggleFav(w){
+  const id = favId(w), i = favs.indexOf(id);
+  if(i > -1) favs.splice(i,1); else favs.push(id);
+  try { localStorage.setItem(FAV_KEY, JSON.stringify(favs)); } catch(e){}
+  // Unsplash results are ephemeral (fetched per view), so hearted ones are
+  // stored whole — otherwise they'd vanish from Saved after a reload.
+  if(w._unsplash){
+    const j = usFavs.findIndex(x => favId(x) === id);
+    if(i > -1 && j > -1) usFavs.splice(j, 1);
+    else if(i === -1 && j === -1) usFavs.push({ name:w.name, img:w.img, tab:w.tab, cat:w.cat, res:w.res, tags:w.tags, _ref:w._ref, _unsplash:w._unsplash });
+    try { localStorage.setItem(USFAV_KEY, JSON.stringify(usFavs)); } catch(e){}
+  }
+}
+const USFAV_KEY = '8kw_us_favs';
+let usFavs = (()=>{ try { return JSON.parse(localStorage.getItem(USFAV_KEY) || '[]'); } catch(e){ return []; } })();
+
+// ---- View / download counters, persisted in this browser. They become global
+// counts once a backend (e.g. a Cloudflare Worker + KV) is added later. ----
+const STATS_KEY = '8kw_stats';
+let stats = (()=>{ try { return JSON.parse(localStorage.getItem(STATS_KEY) || '{}'); } catch(e){ return {}; } })();
+function statOf(w){ return stats[favId(w)] || {v:0, d:0}; }
+function bumpStat(w, key){
+  const id = favId(w), s = stats[id] || (stats[id] = {v:0, d:0});
+  s[key] = (s[key]||0) + 1;
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(e){}
+}
+
+// ---- Global counters: views / likes / dislikes, shared by every visitor ----
+// Served by /api/stats (D1). The browser remembers what it has already viewed
+// or voted on, so each person counts once per wallpaper.
+let gStats = {};
+const VIEWED_KEY = '8kw_viewed', VOTES_KEY = '8kw_votes';
+let viewedSet = (()=>{ try { return new Set(JSON.parse(localStorage.getItem(VIEWED_KEY) || '[]')); } catch(e){ return new Set(); } })();
+let votes = (()=>{ try { return JSON.parse(localStorage.getItem(VOTES_KEY) || '{}') || {}; } catch(e){ return {}; } })();
+
+// A stable id per wallpaper: the stored path for published ones, the photo id
+// for Unsplash, the slug for the built-in demos.
+function statKey(w){
+  if(w._ref && w._ref.site === 'r2' && w._ref.path) return w._ref.path;
+  if(w._ref && w._ref.site === 'unsplash' && w._ref.id) return 'u:' + w._ref.id;
+  return 'd:' + slugOf(w);
+}
+function gOf(w){ return gStats[statKey(w)] || { v:0, l:0, d:0 }; }
+function fmtCount(n){ return (+n || 0).toLocaleString(); }
+
+async function loadGlobalStats(){
+  try {
+    const res = await fetch(API_BASE + '/api/stats');
+    if(!res.ok) return;
+    const data = await res.json();
+    if(data && typeof data === 'object') gStats = data;
+    if(_list && _list.length) render(true);   // repaint with the real numbers
+  } catch(e){ /* counters are non-essential — the gallery works without them */ }
+}
+function postStat(key, action){
+  try {
+    fetch(API_BASE + '/api/stats', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: key, action: action })
+    }).catch(()=>{});
+  } catch(e){}
+}
+// counted once per browser, so the number tracks people rather than page loads
+function registerView(w){
+  const k = statKey(w);
+  const g = gStats[k] || (gStats[k] = { v:0, l:0, d:0 });
+  if(viewedSet.has(k)) return;
+  viewedSet.add(k);
+  try { localStorage.setItem(VIEWED_KEY, JSON.stringify([...viewedSet])); } catch(e){}
+  g.v++;
+  postStat(k, 'view');
+}
+// dir: 1 = like, -1 = dislike. Clicking the active one clears the vote.
+function voteOn(w, dir){
+  const k = statKey(w);
+  const cur = votes[k] || 0;
+  const next = (cur === dir) ? 0 : dir;
+  const g = gStats[k] || (gStats[k] = { v:0, l:0, d:0 });
+  if(cur === 1){ g.l = Math.max(0, g.l - 1); postStat(k, 'unlike'); }
+  if(cur === -1){ g.d = Math.max(0, g.d - 1); postStat(k, 'undislike'); }
+  if(next === 1){ g.l++; postStat(k, 'like'); }
+  if(next === -1){ g.d++; postStat(k, 'dislike'); }
+  if(next) votes[k] = next; else delete votes[k];
+  try { localStorage.setItem(VOTES_KEY, JSON.stringify(votes)); } catch(e){}
+  return next;
+}
+
+// Unsplash asks apps to ping a photo's download endpoint when it's downloaded;
+// the proxy holds the key, so just forward the trigger (fire-and-forget).
+function trackUnsplash(w){
+  if(w && w._unsplash && w._unsplash.download){
+    try { fetch(API_BASE + '/api/unsplash?track=' + encodeURIComponent(w._unsplash.download)).catch(()=>{}); } catch(e){}
+  }
+}
+
+// ---- Resolution metadata: "3840x2160" -> tier (4K/5K/8K) and orientation ----
+function parseResDims(res){
+  const m = String(res||'').match(/(\d+)\s*[x×]\s*(\d+)/i);
+  return m ? {w:+m[1], h:+m[2]} : null;
+}
+function resTier(w){
+  const p = parseResDims(w.res); if(!p) return null;
+  if(p.w >= 7680 || p.h >= 4320) return '8K';
+  if(p.w >= 5120 || p.h >= 2880) return '5K';
+  if(p.w >= 3840 || p.h >= 2160) return '4K';
+  return 'HD';
+}
+function orientOf(w){
+  const p = parseResDims(w.res); if(!p) return null;
+  return p.h > p.w ? 'Portrait' : 'Landscape';
+}
+
+const tagsEl = document.getElementById('tags');
+tagList.forEach(t=>{
+  const b=document.createElement('button');
+  b.className='tag'; b.innerHTML=icon(t)+"<span>"+esc(t)+"</span>";
+  b.onclick=()=>{ filterByTag(t); };
+  tagsEl.appendChild(b);
+});
+
+const tabsEl = document.getElementById('tabs');
+tabs.forEach(t=>{
+  const b=document.createElement('button');
+  b.className='tab'+(t.label==='RECENT'?' active':'');
+  b.innerHTML=icon(t.ico)+t.label;
+  b.onclick=()=>{ selectTab(t.label, b); };
+  tabsEl.appendChild(b);
+});
+
+function setTitle(t){ document.getElementById('sectionTitle').textContent=t; }
+
+// ---- Categories dropdown ----
+const catGrid = document.getElementById('catGrid');
+// The full category list, each with how many wallpapers it holds. Rebuilt
+// whenever the library changes so the counts stay honest.
+function buildCatList(){
+  const counts = {};
+  wallpapers.forEach(w=>{ if(w.cat) counts[w.cat] = (counts[w.cat] || 0) + 1; });
+  catGrid.innerHTML = '';
+  const all = document.createElement('div');
+  all.className = 'cat-item'; all.dataset.cat = '';
+  all.innerHTML = "<span>All wallpapers</span><span class='n'>" + wallpapers.length + "</span>";
+  all.onclick = ()=>{ clearFilter(); closeSide(); };
+  catGrid.appendChild(all);
+  categories.forEach(name=>{
+    const item = document.createElement('div');
+    item.className = 'cat-item';
+    item.dataset.cat = name;
+    const n = counts[name] || 0;
+    item.innerHTML = "<span>" + esc(name) + "</span>" + (n ? "<span class='n'>" + n + "</span>" : "");
+    item.onclick = ()=>{ filterByCat(name); };
+    catGrid.appendChild(item);
+  });
+  paintActiveCat();
+}
+// keep the list showing which category is currently being browsed
+function paintActiveCat(){
+  catGrid.querySelectorAll('.cat-item').forEach(el=>{
+    const c = el.dataset.cat;
+    el.classList.toggle('on', c ? (c === activeCat) : !activeCat);
+  });
+}
+
+// ---- Resolution checkboxes, built from what's actually in the library ----
+// Exact sizes rather than a fixed list, so the options always match the
+// wallpapers on offer. Ten are shown; the rest sit behind "Show all".
+const activeExactRes = new Set();
+function normRes(r){
+  const p = parseResDims(r);
+  return p ? (p.w + 'x' + p.h) : null;
+}
+function buildResChecks(){
+  const host = document.getElementById('resChecks');
+  const more = document.getElementById('resShowAll');
+  if(!host) return;
+  const counts = {};
+  wallpapers.forEach(w=>{ const k = normRes(w.res); if(k) counts[k] = (counts[k] || 0) + 1; });
+  const all = Object.keys(counts).sort((a,b)=>{
+    if(counts[b] !== counts[a]) return counts[b] - counts[a];    // commonest first
+    return parseInt(b) - parseInt(a);
+  });
+  if(!all.length){ host.innerHTML = ''; more.hidden = true; return; }
+
+  host.innerHTML = '';
+  const SHOWN = 10;
+  all.forEach((key, i)=>{
+    const row = document.createElement('label');
+    row.className = 'res-check' + (i >= SHOWN ? ' hidden-row' : '');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = activeExactRes.has(key);
+    cb.onchange = ()=>{
+      if(cb.checked) activeExactRes.add(key); else activeExactRes.delete(key);
+      render();
+    };
+    const txt = document.createElement('span'); txt.textContent = key.replace('x', '×');
+    const n = document.createElement('span'); n.className = 'n'; n.textContent = counts[key];
+    row.appendChild(cb); row.appendChild(txt); row.appendChild(n);
+    host.appendChild(row);
+  });
+
+  if(all.length > SHOWN){
+    more.hidden = false;
+    let open = false;
+    more.textContent = 'Show all (' + all.length + ')';
+    more.onclick = (e)=>{
+      e.stopPropagation();
+      open = !open;
+      host.querySelectorAll('.res-check').forEach((el, i)=>{
+        el.classList.toggle('hidden-row', !open && i >= SHOWN);
+      });
+      more.textContent = open ? 'Show fewer' : 'Show all (' + all.length + ')';
+    };
+  } else { more.hidden = true; }
+}
+
+// The sidebar is permanent on desktop; on narrow screens the header's Filters
+// button slides it in over a scrim.
+const catWrap = document.querySelector('.cat-wrap');
+const catBtn = document.getElementById('catBtn');
+const sidePanel = document.getElementById('sidePanel');
+const sideScrim = document.createElement('div');
+sideScrim.className = 'side-scrim';
+document.body.appendChild(sideScrim);
+function closeSide(){ sidePanel.classList.remove('open'); sideScrim.classList.remove('on'); }
+catBtn.onclick=(e)=>{
+  e.stopPropagation();
+  const open = sidePanel.classList.toggle('open');
+  sideScrim.classList.toggle('on', open);
+};
+sideScrim.onclick = closeSide;
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeSide(); });
+
+document.getElementById('searchInput').addEventListener('input', e=>{ runSearch(e.target.value); });
+
+async function download(name, imgUrl, width){
+  // build a high-res URL of the same photo
+  const w = width || 2400;
+  const fullUrl = imgUrl.replace(/w=\d+/, 'w='+w).replace('&q=80','&q=90');
+  const filename = name.replace(/[^a-z0-9]+/gi,'-').toLowerCase()
+                   + (width ? '-'+width+'w' : '') + '.jpg';
+  try {
+    // fetch the image bytes, then save the blob — this forces a real download
+    const res = await fetch(fullUrl, {mode:'cors'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const blob = await res.blob();
+    // saveBlob returns false on browsers that can't trigger a download (e.g. old
+    // Safari without the `download` attribute) — fall back to opening in a new tab.
+    if(!saveBlob(blob, filename)){ window.open(fullUrl, '_blank', 'noopener'); }
+  } catch (err) {
+    // fallback: open the image in a new tab so the user can save manually
+    console.warn('Direct download failed, opening in new tab:', err);
+    window.open(fullUrl, '_blank', 'noopener');
+  }
+}
+
+// Download the image resized/cropped to an exact WxH using a canvas (cover-fit, center crop).
+async function downloadSized(name, imgUrl, tw, th){
+  // request the largest source we can so upscaling is minimal
+  const srcBig = imgUrl.startsWith('data:')
+    ? imgUrl
+    : imgUrl.replace(/w=\d+/, 'w='+Math.max(tw, 2400)).replace('&q=80','&q=90');
+  const filename = name.replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'-'+tw+'x'+th+'.jpg';
+  try {
+    // load the source image (crossOrigin so the canvas isn't tainted for stock photos)
+    const img = await new Promise((resolve, reject)=>{
+      const im = new Image();
+      if(!imgUrl.startsWith('data:')) im.crossOrigin = 'anonymous';
+      im.onload = ()=>resolve(im);
+      im.onerror = reject;
+      im.src = srcBig;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = tw; canvas.height = th;
+    const ctx = canvas.getContext('2d');
+    // cover-fit: scale so the image fills the target, then center-crop the overflow
+    const scale = Math.max(tw / img.width, th / img.height);
+    const dw = img.width * scale, dh = img.height * scale;
+    const dx = (tw - dw) / 2, dy = (th - dh) / 2;
+    ctx.drawImage(img, dx, dy, dw, dh);
+    // export as a blob and save
+    // canvas.toBlob isn't in some older browsers; fall back to the plain download then.
+    if(!canvas.toBlob) throw new Error('canvas.toBlob unsupported');
+    const blob = await new Promise(res=> canvas.toBlob(res, 'image/jpeg', 0.92));
+    if(!blob) throw new Error('canvas export failed');
+    if(!saveBlob(blob, filename)) throw new Error('download unsupported');
+  } catch (err) {
+    // fallback to the plain (unsized) download if the canvas route fails (e.g. CORS)
+    console.warn('Resize failed, falling back to direct download:', err);
+    return download(name, imgUrl, Math.max(tw, 1080));
+  }
+}
+
+// The NEW badge is about age, not origin: it shows for two days after a
+// wallpaper is published, then retires itself. (`_new` only marks "came from
+// the server", which is true of every published wallpaper forever.)
+const NEW_FOR_MS = 2 * 24 * 60 * 60 * 1000;
+function isFresh(w){
+  if(!w.created_at) return false;
+  const t = Date.parse(w.created_at);
+  return !isNaN(t) && (Date.now() - t) < NEW_FOR_MS;
+}
+
+function makeCard(w, idx){
+  const card=document.createElement('div'); card.className='card';
+  // the first row of cards paints immediately with high priority; the rest lazy-load
+  const eager = typeof idx === 'number' && idx < 8;
+  const tier = resTier(w);
+  const g = gOf(w);
+  const myVote = votes[statKey(w)] || 0;
+  const cardTags = (w.tags || []).slice(0, 3);
+
+  card.innerHTML =
+      (isFresh(w) ? "<span class='card-badge is-new'>NEW</span>" : "")
+    + (tier ? "<span class='card-badge is-res'>" + esc(tier) + "</span>" : "")
+    + "<div class='thumb'><div class='shimmer'></div>"
+      + "<img alt='" + esc(w.name) + " wallpaper' loading='" + (eager?'eager':'lazy') + "'"
+        + (eager ? " fetchpriority='high'" : "") + " decoding='async'>"
+      + "<div class='hover'>"
+        + "<div class='hv-title'>" + esc(w.name) + "</div>"
+        + "<div class='hv-actions'>"
+          + "<button class='act exp' title='Preview' aria-label='Preview'>"
+            + icon('fullscreen','i-sm') + icon('views','i-sm') + "<span class='lbl'>Full</span></button>"
+          + "<button class='act dl2' title='Download for phone' aria-label='Download'>"
+            + icon('download','i-sm') + "Download</button>"
+        + "</div>"
+      + "</div>"
+    + "</div>"
+    + "<div class='card-body'>"
+      + "<div class='card-title'>" + esc(w.name) + "</div>"
+      + "<div class='card-tags'>"
+        + cardTags.map(t => "<span class='card-tag'>" + esc(t) + "</span>").join('')
+      + "</div>"
+      + "<div class='card-views'>" + icon('views') + "<span class='vn'>" + fmtCount(g.v) + " views</span></div>"
+      + "<div class='card-actions'>"
+        + "<button class='cact dl' title='Download' aria-label='Download'>" + icon('download') + "</button>"
+        + "<button class='cact fav" + (isFav(w)?' on':'') + "' title='Save to favorites' aria-label='Save'>" + icon('heart') + "</button>"
+        + "<button class='cact up" + (myVote===1?' on':'') + "' title='Like' aria-label='Like'>"
+          + icon('like') + "<span class='n'>" + fmtCount(g.l) + "</span></button>"
+        + "<button class='cact down" + (myVote===-1?' on':'') + "' title='Dislike' aria-label='Dislike'>"
+          + icon('dislike') + "</button>"
+      + "</div>"
+    + "</div>";
+
+  const thumb=card.querySelector('.thumb'), img=card.querySelector('img');
+  img.onload=()=>{ img.classList.add('loaded'); thumb.classList.add('loaded'); };
+  let triedFull = false;
+  img.onerror=()=>{
+    // no stored thumbnail (older posts): fall back to the full image once
+    if(!triedFull && w.img){ triedFull = true; img.src = w.img; return; }
+    thumb.classList.add('loaded');
+  };
+  img.src = thumbUrl(w);
+  if(img.complete && img.naturalWidth){ img.classList.add('loaded'); thumb.classList.add('loaded'); }
+
+  card.querySelector('.exp').onclick=e=>{ e.stopPropagation(); openLightbox(w); };
+  // phone view's own download hands back a phone-shaped 1080x1920 crop
+  card.querySelector('.dl2').onclick=e=>{
+    e.stopPropagation(); bumpStat(w,'d'); trackUnsplash(w);
+    downloadSized(w.name, w.img, 1080, 1920);
+  };
+  card.querySelector('.dl').onclick=e=>{ e.stopPropagation(); bumpStat(w,'d'); trackUnsplash(w); download(w.name, w.img); };
+  // tag chips jump straight to that tag's view
+  card.querySelectorAll('.card-tag').forEach((el, i)=>{
+    el.onclick=e=>{ e.stopPropagation(); filterByTag(cardTags[i]); };
+  });
+  const fb=card.querySelector('.fav');
+  fb.onclick=e=>{ e.stopPropagation(); toggleFav(w); fb.classList.toggle('on', isFav(w)); updateHeroStats(); if(showFavs) render(); };
+  const up=card.querySelector('.up'), down=card.querySelector('.down');
+  function paintVotes(v){
+    const gg = gOf(w);
+    up.classList.toggle('on', v === 1);
+    down.classList.toggle('on', v === -1);
+    up.querySelector('.n').textContent = fmtCount(gg.l);
+  }
+  up.onclick=e=>{ e.stopPropagation(); paintVotes(voteOn(w, 1)); };
+  down.onclick=e=>{ e.stopPropagation(); paintVotes(voteOn(w, -1)); };
+
+  card.onclick=()=>showDetail(w);
+  return card;
+}
+
+// ---- Phone view: tall portrait cards ----
+// Turned on when the visitor asks for phone wallpapers (the iPhone tag or the
+// Portrait filter), and by default on phones, where a 16:10 card wastes most
+// of the screen.
+const _phoneMQ = window.matchMedia ? matchMedia('(max-width: 700px)') : null;
+function wantPhoneView(){
+  if(activeTag === 'iPhone Wallpapers' || activeOrient === 'Portrait') return true;
+  return !!(_phoneMQ && _phoneMQ.matches);
+}
+if(_phoneMQ && _phoneMQ.addEventListener){
+  // re-render only when the breakpoint actually flips, not on every resize tick
+  _phoneMQ.addEventListener('change', ()=>{ if(_list && _list.length) render(true); });
+}
+// "Explore beautiful wallpapers of A, B, C … from this X collection."
+function updateSectionDesc(){
+  const el = document.getElementById('sectionDesc');
+  if(!el) return;
+  const label = activeTag || activeCat || null;
+  const names = _list.slice(0, 6).map(w => w && w.name).filter(Boolean);
+  if(!label || names.length < 2){ el.style.display = 'none'; el.textContent = ''; return; }
+  const collection = (activeTag === 'iPhone Wallpapers') ? 'iPhone backgrounds' : label;
+  el.textContent = 'Explore beautiful wallpapers of ' + names.join(', ')
+    + ' from this ' + collection + ' collection.';
+  el.style.display = 'block';
+}
+
+// ============================================================
+// Ads. Everything here stays dormant until an ADS_CLIENT publisher ID is set
+// on the site, and — for visitors the law covers — until they have agreed.
+// Written network-agnostically around one config endpoint, so switching to a
+// different ad provider later only changes loadAdScript()/fillSlot().
+// ============================================================
+const AD_EVERY = 12;                 // one ad row per 12 wallpapers
+const AD_CONSENT_KEY = '8kw_ads_consent';
+const ADS = { configured:false, client:null, active:false };
+
+function makeAdSlot(){
+  const el = document.createElement('div');
+  el.className = 'ad-slot';
+  el.dataset.ad = 'grid';
+  if(ADS.active){ el.classList.add('on'); fillSlot(el); }
+  return el;
+}
+function fillSlot(el){
+  if(!ADS.active || el.dataset.filled) return;
+  el.dataset.filled = '1';
+  const ins = document.createElement('ins');
+  ins.className = 'adsbygoogle';
+  ins.style.display = 'block';
+  ins.setAttribute('data-ad-client', ADS.client);
+  ins.setAttribute('data-ad-format', 'auto');
+  ins.setAttribute('data-full-width-responsive', 'true');
+  el.appendChild(ins);
+  try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch(e){}
+}
+function loadAdScript(){
+  if(ADS.active) return;
+  ADS.active = true;
+  const s = document.createElement('script');
+  s.async = true; s.crossOrigin = 'anonymous';
+  s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(ADS.client);
+  document.head.appendChild(s);
+  document.querySelectorAll('.ad-slot').forEach(el=>{ el.classList.add('on'); fillSlot(el); });
+}
+function showConsent(){
+  const bar = document.createElement('div');
+  bar.className = 'consent show';
+  bar.innerHTML = "<p>We'd like to use cookies to show ads that help keep this site free. "
+    + "You can decline and still use everything here. See our "
+    + "<a href='#' data-policy-link='privacy'>Privacy policy</a>.</p>"
+    + "<div class='btns'><button class='no'>Decline</button><button class='yes'>Accept</button></div>";
+  document.body.appendChild(bar);
+  bar.querySelector('[data-policy-link]').onclick = e=>{ e.preventDefault(); showPolicy('privacy'); };
+  const close = (choice)=>{
+    try { localStorage.setItem(AD_CONSENT_KEY, choice); } catch(e){}
+    bar.remove();
+    if(choice === 'yes') loadAdScript();
+  };
+  bar.querySelector('.yes').onclick = ()=> close('yes');
+  bar.querySelector('.no').onclick  = ()=> close('no');
+}
+async function initAds(){
+  let cfg;
+  try { cfg = await (await fetch(API_BASE + '/api/ads')).json(); } catch(e){ return; }
+  if(!cfg || !cfg.configured) return;          // no publisher ID — nothing runs
+  ADS.configured = true; ADS.client = cfg.client;
+  let stored = null;
+  try { stored = localStorage.getItem(AD_CONSENT_KEY); } catch(e){}
+  if(!cfg.needsConsent){ loadAdScript(); return; }   // outside the consent regimes
+  if(stored === 'yes'){ loadAdScript(); return; }
+  if(stored === 'no') return;                        // previously declined
+  showConsent();
+}
+
+// ---- Infinite scroll: cards render in pages as the visitor scrolls down ----
+const PAGE_SIZE = 24;
+const HAS_IO = 'IntersectionObserver' in window;
+let _list = [];   // the currently filtered list
+let _shown = 0;   // how many of _list are on screen
+
+function render(preserveCount){
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  _list = applyFilters();
+  if(preserveCount){
+    // background refresh: keep the Unsplash photos already mixed into this view
+    _list = _list.concat(_extra);
+  } else {
+    _extra = []; _usPage = 0; _usDone = false; _usSeen.clear();
+  }
+  updateChrome(_list.length);
+  grid.classList.toggle('phone-view', wantPhoneView());
+  updateSectionDesc();
+  paintActiveCat();
+  if(!_list.length){
+    _shown = 0;
+    const msg = showFavs
+      ? 'No saved wallpapers yet — tap the &#9829; on any wallpaper to save it here.'
+      : 'No wallpapers match your search.';
+    grid.innerHTML="<p style='grid-column:1/-1;text-align:center;color:var(--muted);padding:60px 20px'>"+msg+"</p>";
+    scheduleAutoLoad();   // Unsplash can still fill an empty search view
+    return;
+  }
+  // On a background refresh (preserveCount) keep the visitor's scroll depth;
+  // without IntersectionObserver just render everything up front.
+  const target = !HAS_IO ? _list.length
+    : preserveCount ? Math.max(PAGE_SIZE, Math.min(_shown, _list.length))
+    : PAGE_SIZE;
+  _shown = 0;
+  appendCards(target);
+  scheduleAutoLoad();   // top up if the sentinel is already on screen
+}
+function appendCards(n){
+  const grid=document.getElementById('grid');
+  const end = Math.min(_list.length, _shown + n);
+  for(let i=_shown; i<end; i++){
+    grid.appendChild(makeCard(_list[i], i));
+    // a full-width ad row every so often — the element is invisible unless
+    // ads are actually configured and permitted
+    if((i + 1) % AD_EVERY === 0) grid.appendChild(makeAdSlot());
+  }
+  _shown = end;
+}
+
+// ---- "More wallpapers" from Unsplash, via the site's /api/unsplash proxy ----
+// When the visitor scrolls past the local wallpapers, matching Unsplash photos
+// are appended: search/tag/category views search Unsplash, the Recent tab pulls
+// the latest photos, everything else pulls popular ones. Saved view: never.
+// If the proxy isn't configured (no UNSPLASH_KEY), this degrades silently.
+let _extra = [];                       // Unsplash photos added to the current view
+let _usPage = 0, _usDone = false, _usLoading = false;
+const _usSeen = new Set();
+
+function usQuery(){
+  if(showFavs) return null;
+  // an exact-size filter can't be satisfied by arbitrary stock photos, so the
+  // endless feed stands down rather than showing results that don't match
+  if(activeExactRes.size) return null;
+  if(query) return { q: query };
+  if(activeTag) return { q: activeTag };
+  if(activeCat) return { q: activeCat + ' wallpaper' };
+  if(activeTab === 'RECENT') return { order: 'latest' };
+  return { order: 'popular' };
+}
+
+async function loadMoreUnsplash(){
+  const params = usQuery();
+  if(!params || _usLoading || _usDone) return;
+  const myKey = JSON.stringify(params);
+  _usLoading = true;
+  try {
+    // hop past pages whose photos all fall outside the active res/orientation filter
+    for(let hop = 0; hop < 3; hop++){
+      const page = _usPage + 1;
+      const qs = (params.q ? 'q=' + encodeURIComponent(params.q) : 'order=' + params.order) + '&page=' + page;
+      const res = await fetch(API_BASE + '/api/unsplash?' + qs);
+      if(!res.ok){ _usDone = true; return; }              // unconfigured / rate-limited
+      const data = await res.json();
+      if(myKey !== JSON.stringify(usQuery())) return;     // the view changed mid-flight
+      _usPage = page;
+      const raw = (data && data.photos) || [];
+      if(!raw.length){ _usDone = true; return; }          // no more results
+      const cap = s => String(s).replace(/\b\w/g, c => c.toUpperCase());
+      const mapped = raw.filter(p => !_usSeen.has(p.id)).map(p => {
+        _usSeen.add(p.id);
+        const w = {
+          name: p.name, img: p.img,
+          tab: activeTab, cat: activeCat || 'Photos',
+          res: (p.width && p.height) ? (p.width + 'x' + p.height) : '',
+          tags: [],
+          _ref: { site: 'unsplash', id: p.id },
+          _unsplash: { author: p.author, authorLink: p.authorLink, photoLink: p.photoLink, download: p.download }
+        };
+        // real Unsplash tags when the API ever sends them; otherwise build
+        // tags from the photo's description plus the browsing context
+        if(Array.isArray(p.tags) && p.tags.length){
+          w.tags = p.tags.map(cap);
+        } else {
+          const stop = /^(the|and|with|under|over|near|from|into|onto|during|photo|photography|image|picture|view|shot|close|closeup|background|wallpaper|untitled|there|this|that|some|between|behind|above|below|next|beside|front|during|while|against)$/i;
+          String(p.name || '').split(/[^a-zA-Z]+/).forEach(word=>{
+            if(word.length >= 3 && !stop.test(word) && w.tags.length < 4
+               && !w.tags.some(t => t.toLowerCase() === word.toLowerCase())) w.tags.push(cap(word));
+          });
+          if(params.q && !w.tags.some(t => t.toLowerCase() === params.q.toLowerCase())) w.tags.push(cap(params.q));
+          const t = resTier(w); if(t && t !== 'HD') w.tags.push(t);
+          const o = orientOf(w); if(o) w.tags.push(o);
+          w.tags.push('Unsplash');
+        }
+        return w;
+      }).filter(w => (!activeRes || resTier(w) === activeRes) && (!activeOrient || orientOf(w) === activeOrient));
+      if(!mapped.length) continue;                        // page filtered out — try the next one
+      if(_shown === 0) document.getElementById('grid').innerHTML = '';   // replace "no matches"
+      _extra = _extra.concat(mapped);
+      _list = _list.concat(mapped);
+      appendCards(mapped.length);
+      updateChrome(_list.length);
+      updateSectionDesc();   // the blurb names wallpapers, which may only arrive now
+      return;
+    }
+    // three pages in a row fell to the res/orientation filter — stop here so a
+    // background retry loop can't burn through the Unsplash rate limit
+    _usDone = true;
+  } catch(e){ /* network hiccup — the next scroll retries */ }
+  finally {
+    _usLoading = false;
+    // if the view changed while this request was in flight (fast typing), the
+    // response was discarded — check again for the view that's on screen now
+    scheduleAutoLoad();
+  }
+}
+
+// The IntersectionObserver only reports CHANGES — if a search shrinks the grid
+// while the sentinel is already on screen, no event fires and the view would
+// never fill. So after every render (debounced, so typing doesn't spam the
+// API) actively check whether the visible view needs more content.
+let _kickTimer = null;
+function scheduleAutoLoad(){
+  clearTimeout(_kickTimer);
+  _kickTimer = setTimeout(maybeLoadMore, 350);
+}
+function maybeLoadMore(){
+  if(!HAS_IO) return;   // legacy browsers render everything up front
+  const s = document.getElementById('gridSentinel');
+  if(!s || document.getElementById('galleryView').style.display === 'none') return;
+  const r = s.getBoundingClientRect();
+  if(r.top > innerHeight + 900) return;   // sentinel far below — wait for scroll
+  if(_shown < _list.length) appendCards(PAGE_SIZE);
+  else loadMoreUnsplash();
+}
+
+if(HAS_IO){
+  const io = new IntersectionObserver(entries=>{
+    entries.forEach(en=>{
+      if(!en.isIntersecting) return;
+      if(_shown < _list.length) appendCards(PAGE_SIZE);
+      else loadMoreUnsplash();
+    });
+  }, {rootMargin:'900px 0px'});
+  io.observe(document.getElementById('gridSentinel'));
+}
+render();
+buildResChecks();    // resolution options come from the library itself
+buildCatList();      // categories with live counts
+initAds();           // no-op until a publisher ID exists
+loadGlobalStats();   // fills in the real view / like counts, then repaints
+
+// ---- Header sign-in (Google). Hidden entirely until it's configured. ----
+(function(){
+  const wrap = document.getElementById('authWrap');
+  const btn = document.getElementById('authBtn');
+  const panel = document.getElementById('authPanel');
+  const panelText = document.getElementById('authPanelText');
+  const signout = document.getElementById('authSignout');
+  const gbtn = document.getElementById('gbtnMain');
+  if(!wrap) return;
+  let gsiLoaded = false;
+
+  function closePanel(){ panel.classList.remove('open'); }
+  document.addEventListener('click', e=>{ if(!wrap.contains(e.target)) closePanel(); });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closePanel(); });
+
+  function loadGsi(clientId){
+    if(gsiLoaded) return;
+    gsiLoaded = true;
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
+    s.onload = ()=>{
+      try {
+        google.accounts.id.initialize({ client_id: clientId, callback: (r)=>{
+          fetch(API_BASE + '/api/auth/google', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ credential: r.credential })
+          }).then(x=>x.json().then(d=>({ok:x.ok,d}))).then(res=>{
+            if(res.ok) refresh(); else panelText.textContent = (res.d && res.d.error) || 'Sign-in failed.';
+          }).catch(()=>{ panelText.textContent = 'Could not reach the server.'; });
+        }});
+        google.accounts.id.renderButton(gbtn, { theme:'filled_blue', size:'large', text:'signin_with', shape:'pill' });
+      } catch(e){ panelText.textContent = 'Google sign-in could not load.'; }
+    };
+    s.onerror = ()=>{ panelText.textContent = 'Google sign-in could not load (blocked?).'; };
+    document.head.appendChild(s);
+  }
+
+  function paint(me){
+    if(!me.configured){ wrap.hidden = true; return; }   // not set up yet — show nothing
+    wrap.hidden = false;
+    if(me.user){
+      // signed in: avatar + name, panel becomes the sign-out menu
+      btn.className = 'auth-me';
+      btn.innerHTML = '';
+      const who = me.user.name || me.user.email || 'Account';
+      if(me.user.picture){
+        const im = document.createElement('img'); im.src = me.user.picture; im.alt = ''; im.referrerPolicy = 'no-referrer';
+        // Google avatars occasionally fail to load — fall back to an initial
+        im.onerror = ()=>{
+          const ini = document.createElement('span');
+          ini.className = 'initial'; ini.textContent = who.trim().charAt(0).toUpperCase();
+          im.replaceWith(ini);
+        };
+        btn.appendChild(im);
+      } else {
+        const ini = document.createElement('span');
+        ini.className = 'initial'; ini.textContent = who.trim().charAt(0).toUpperCase();
+        btn.appendChild(ini);
+      }
+      const sp = document.createElement('span');
+      sp.textContent = me.user.name || me.user.email || 'Account';
+      btn.appendChild(sp);
+      panelText.textContent = me.user.email || '';
+      gbtn.hidden = true; signout.hidden = false;
+    } else {
+      btn.className = 'categories-btn'; btn.textContent = 'Sign in';
+      panelText.textContent = 'Sign in with Google to submit your own wallpapers and be credited for them.';
+      gbtn.hidden = false; signout.hidden = true;
+      loadGsi(me.client_id);
+    }
+  }
+  function refresh(){
+    fetch(API_BASE + '/api/auth/me', { cache:'no-store' })
+      .then(r=>r.json()).then(paint).catch(()=>{ wrap.hidden = true; });
+  }
+  btn.onclick = e=>{ e.stopPropagation(); panel.classList.toggle('open'); };
+  signout.onclick = ()=>{ fetch(API_BASE + '/api/auth/logout', { method:'POST' }).then(()=>location.reload()); };
+  refresh();
+})();
+
+// ============================================================
+// v4 upgrade: real filtering, favorites, lightbox, hero, chrome
+// ============================================================
+function applyFilters(){
+  let list = wallpapers.slice();
+  if(showFavs) list = list.filter(isFav).concat(usFavs.filter(isFav));
+  else if(query){
+    list = list.filter(w =>
+      w.name.toLowerCase().includes(query)
+      || (w.cat||'').toLowerCase().includes(query)
+      || (w.tags||[]).some(t => String(t).toLowerCase().includes(query))
+      || String(w.res||'').toLowerCase().includes(query)          // "3840", "2160"…
+      || String(resTier(w)||'').toLowerCase() === query);         // "4k", "8k"…
+  } else {
+    if(activeCat) list = list.filter(w => w.cat === activeCat);
+    if(activeTag) list = list.filter(w => (w.tags||[]).some(t => String(t).toLowerCase() === activeTag.toLowerCase()));
+    if(!activeCat && !activeTag){
+      if(activeTab === 'RANDOM') list = list.slice().sort(()=>Math.random()-0.5);
+      else if(activeTab === 'COLLECTIONS' || activeTab === 'ALL'){ /* show everything */ }
+      else list = list.filter(w => w.tab === activeTab);
+    }
+  }
+  // resolution / orientation chips refine every view (tabs, search, favorites…)
+  if(activeRes) list = list.filter(w => resTier(w) === activeRes);
+  if(activeOrient) list = list.filter(w => orientOf(w) === activeOrient);
+  // exact-size checkboxes from the categories panel
+  if(activeExactRes.size) list = list.filter(w => activeExactRes.has(normRes(w.res)));
+  return list;
+}
+
+// ---- Resolution / orientation filter chips under the tab bar ----
+(function(){
+  const bar = document.getElementById('resBar');
+  if(!bar) return;
+  const lbl = document.createElement('span');
+  lbl.className='resbar-lbl'; lbl.textContent='FILTER:';
+  bar.appendChild(lbl);
+  const groups = [
+    {items:['4K','5K','8K'],            get:()=>activeRes,    set:v=>{ activeRes=v; }},
+    {items:['Portrait','Landscape'],    get:()=>activeOrient, set:v=>{ activeOrient=v; }},
+  ];
+  groups.forEach(g=>{
+    g.items.forEach(item=>{
+      const b=document.createElement('button');
+      b.className='res-chip'; b.textContent=item; b.dataset.val=item;
+      b.onclick=()=>{
+        const wasActive = g.get() === item;
+        g.set(wasActive ? null : item);
+        // one active chip per group
+        g.items.forEach(v=>{
+          const el=bar.querySelector(".res-chip[data-val='"+v+"']");
+          if(el) el.classList.toggle('active', !wasActive && v===item);
+        });
+        render();
+      };
+      bar.appendChild(b);
+    });
+  });
+})();
+function clearResChips(){
+  activeRes=null; activeOrient=null;
+  document.querySelectorAll('#resBar .res-chip').forEach(x=>x.classList.remove('active'));
+  // also drop any exact-size checkboxes chosen in the categories panel
+  if(activeExactRes.size){
+    activeExactRes.clear();
+    document.querySelectorAll('#resChecks input').forEach(cb=>{ cb.checked = false; });
+  }
+}
+
+function resetActiveTabs(){ [...tabsEl.children].forEach(c=>c.classList.remove('active')); }
+function syncSearchInputs(v){ ['searchInput','heroSearch'].forEach(id=>{ const el=document.getElementById(id); if(el && el!==document.activeElement) el.value=v; }); }
+
+function selectTab(label, btn){
+  activeTab=label; query=''; activeCat=null; activeTag=null; showFavs=false;
+  syncSearchInputs(''); resetActiveTabs(); if(btn) btn.classList.add('active');
+  setTitle(label.charAt(0)+label.slice(1).toLowerCase()+' Wallpapers');
+  render(); safeScrollTop();
+}
+function filterByCat(name){
+  showGallery(); activeCat=name; activeTag=null; showFavs=false; query=''; activeTab='ALL';
+  syncSearchInputs(''); resetActiveTabs(); closeSide();
+  setTitle(name+' Wallpapers'); render(); safeScrollTop();
+}
+function filterByTag(tag){
+  showGallery(); activeTag=tag; activeCat=null; showFavs=false; query=''; activeTab='ALL';
+  syncSearchInputs(''); resetActiveTabs();
+  // several tags already end in "Wallpapers" — don't say it twice
+  setTitle(/wallpapers$/i.test(tag) ? tag : tag+' Wallpapers');
+  render(); safeScrollTop();
+}
+function showFavorites(btn){
+  showGallery(); showFavs=true; activeCat=null; activeTag=null; query=''; activeTab='FAVS';
+  syncSearchInputs(''); resetActiveTabs(); if(btn) btn.classList.add('active');
+  setTitle('Saved Wallpapers'); render(); safeScrollTop();
+}
+function clearFilter(){
+  activeCat=null; activeTag=null; showFavs=false; query=''; activeTab='RECENT';
+  clearResChips();
+  syncSearchInputs(''); resetActiveTabs();
+  const rt=[...tabsEl.children].find(x=>x.textContent.includes('RECENT')); if(rt) rt.classList.add('active');
+  setTitle('Recent Wallpapers'); render();
+}
+function runSearch(v){
+  query=(v||'').toLowerCase(); activeCat=null; activeTag=null; showFavs=false;
+  resetActiveTabs(); syncSearchInputs(v||'');
+  setTitle(query ? 'Results for “'+v+'”' : 'Recent Wallpapers');
+  render();
+}
+
+function updateChrome(count){
+  const rc=document.getElementById('resultCount');
+  if(rc) rc.textContent = count===1 ? '1 wallpaper' : count+' wallpapers';
+  const chip=document.getElementById('filterChip');
+  if(!chip) return;
+  let label=null;
+  if(showFavs) label='♥ Saved';
+  else if(activeCat) label='Category: '+activeCat;
+  else if(activeTag) label='Tag: '+activeTag;
+  else if(query) label='Search: “'+query+'”';
+  if(!label && activeExactRes.size) label = activeExactRes.size + ' resolution' + (activeExactRes.size===1?'':'s');
+  if(label){
+    chip.classList.add('show');
+    chip.innerHTML="<span>"+esc(label)+"</span><button class='x' title='Clear filter'>&times;</button>";
+    chip.querySelector('.x').onclick=clearFilter;
+  } else { chip.classList.remove('show'); chip.innerHTML=''; }
+}
+
+// "Saved" tab appended to the tab bar
+const savedTab=document.createElement('button');
+savedTab.className='tab';
+savedTab.innerHTML=icon('saved')+"SAVED";
+savedTab.onclick=()=>showFavorites(savedTab);
+tabsEl.appendChild(savedTab);
+
+// Hero stats + search
+function updateHeroStats(){
+  const s=document.getElementById('heroStats'); if(!s) return;
+  s.innerHTML="<span><b>"+wallpapers.length+"</b> wallpapers</span>"
+            + "<span><b>"+categories.length+"</b> categories</span>"
+            + "<span><b>"+favs.length+"</b> saved</span>";
+}
+updateHeroStats();
+(function(){
+  const hs=document.getElementById('heroSearch'), hb=document.getElementById('heroSearchBtn');
+  if(hs) hs.addEventListener('input', e=>runSearch(e.target.value));
+  if(hb) hb.onclick=()=>{ const g=document.getElementById('grid'); if(g && g.scrollIntoView) g.scrollIntoView({behavior:'smooth', block:'start'}); };
+})();
+
+// Fullscreen lightbox
+const lightbox=document.createElement('div'); lightbox.className='lightbox';
+lightbox.innerHTML="<button class='lb-close' title='Close (Esc)'>&times;</button>"
+  + "<img alt=''><button class='lb-dl'>"+icon('download','i-sm')+"Download</button><div class='lb-cap'></div>";
+document.body.appendChild(lightbox);
+let _lbWp=null;
+function openLightbox(w){
+  _lbWp=w;
+  const big = w.img.startsWith('data:') ? w.img : w.img.replace(/w=\d+/, 'w=1600');
+  lightbox.querySelector('img').src=big;
+  lightbox.querySelector('.lb-cap').textContent = w.name + ' • ' + (w.res||'')
+    + (w._unsplash ? ' • Photo by ' + (w._unsplash.author || 'a photographer') + ' on Unsplash' : '');
+  lightbox.classList.add('open'); document.body.style.overflow='hidden';
+}
+function closeLightbox(){ lightbox.classList.remove('open'); document.body.style.overflow=''; }
+lightbox.querySelector('.lb-close').onclick=closeLightbox;
+lightbox.querySelector('.lb-dl').onclick=e=>{ e.stopPropagation(); if(_lbWp){ bumpStat(_lbWp,'d'); trackUnsplash(_lbWp); download(_lbWp.name, _lbWp.img); } };
+lightbox.addEventListener('click', e=>{ if(e.target===lightbox) closeLightbox(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && lightbox.classList.contains('open')) closeLightbox(); });
+
+// Click the detail stage to view it fullscreen
+(function(){
+  const stage=document.querySelector('.detail-stage');
+  if(!stage) return;
+  stage.style.cursor='zoom-in';
+  const exp=document.createElement('button'); exp.className='stage-expand'; exp.title='View fullscreen';
+  exp.innerHTML="<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7'/></svg>";
+  stage.appendChild(exp);
+  stage.onclick=()=>{ if(currentWp) openLightbox(currentWp); };
+})();
+
+// Back-to-top button
+const scrollTopBtn=document.createElement('button'); scrollTopBtn.className='scrolltop'; scrollTopBtn.title='Back to top';
+scrollTopBtn.innerHTML="<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 19V5M5 12l7-7 7 7'/></svg>";
+document.body.appendChild(scrollTopBtn);
+scrollTopBtn.onclick=safeScrollTop;
+window.addEventListener('scroll', ()=>{ scrollTopBtn.classList.toggle('show', window.scrollY>600); }, {passive:true});
+
+// ---- Light / dark mode toggle (persisted; first visit follows the OS setting) ----
+(function(){
+  const KEY='8kw_theme';
+  const btn=document.getElementById('themeBtn');
+  function apply(mode){
+    document.documentElement.classList.toggle('light', mode==='light');
+    if(btn) btn.innerHTML = icon(mode==='light' ? 'sun' : 'moon');
+    const tc=document.querySelector('meta[name="theme-color"]');
+    if(tc) tc.content = mode==='light' ? '#f5f6f8' : '#0f1116';
+  }
+  let mode=null;
+  try { mode=localStorage.getItem(KEY); } catch(e){}
+  if(mode!=='light' && mode!=='dark'){
+    mode=(window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+  }
+  apply(mode);
+  if(btn) btn.onclick=()=>{
+    mode = (mode==='light') ? 'dark' : 'light';
+    try { localStorage.setItem(KEY, mode); } catch(e){}
+    apply(mode);
+  };
+})();
+
+// ---- Policy pages ----
+const policies = {
+  privacy: "<h1>Privacy Policy</h1>"
+    + "<p class='lead'>If you require more information or have any questions about our privacy policy, please feel free to contact us.</p>"
+    + "<p>We consider the privacy of our visitors to be extremely important. This privacy policy document outlines the types of personal information that are received and collected, and how that information is used.</p>"
+    + "<h3>Log Files</h3>"
+    + "<p>Like many other websites, this site makes use of log files. The information inside the log files includes internet protocol (IP) addresses, browser type, Internet Service Provider (ISP), date/time stamp, referring and exit pages, and number of clicks. This data is used to analyze trends, administer the site, track user movement around the site, and gather broad demographic information. IP addresses and other such information are not linked to any personally identifiable information.</p>"
+    + "<h3>Cookies and Web Beacons</h3>"
+    + "<p>This site uses cookies to store information about visitor preferences, to record user-specific information on which pages are accessed or visited, and to customize page content based on the visitor's browser type or other information the visitor sends.</p>"
+    + "<h3>Accounts and Sign-In</h3>"
+    + "<p>You can browse and download without an account. If you choose to sign in with Google, Google shares a stable account identifier with us together with your email address, display name and profile picture, which we store to identify your account and to credit and administer anything you submit. We never receive your Google password.</p>"
+    + "<p>We use that information to operate your account, to attribute submissions, to contact you about material you have submitted (including forwarding any notice of claimed infringement, as described in our Copyright policy), and to enforce our Terms. We do not sell it. Your sign-in session is kept in a cookie on your device; signing out clears it. Ask us via the Contact page if you would like your account and its data deleted.</p>"
+    + "<h3>Third-Party Advertising</h3>"
+    + "<ul><li>Third-party vendors may use cookies to serve ads based on a visitor's prior visits to this and other websites.</li>"
+    + "<li>These ad servers or networks use technology to send advertisements and links directly to your browser, and may automatically receive your IP address when this occurs.</li>"
+    + "<li>You may opt out of personalized advertising through your browser settings or the relevant vendor's privacy controls.</li></ul>"
+    + "<p>This site has no access to or control over the cookies used by third-party advertisers. You should consult the respective privacy policies of these third parties for more detailed information on their practices.</p>"
+    + "<p>If you wish to disable cookies, you may do so through your individual browser options. More detailed information about cookie management with specific web browsers can be found on the browsers' respective websites.</p>",
+
+  tos: "<h1>Terms of Service</h1>"
+    + "<p class='lead'>This document outlines what constitutes acceptable use of this website, its associated web services, and server infrastructure. It also covers our content moderation policy and what you can expect regarding performance and availability.</p>"
+    + "<p>If you have questions about what you are legally permitted to do with content found on this website, please visit our Copyright policy.</p>"
+    + "<h3>Access</h3>"
+    + "<p>This website is intended to be accessed via standard web browser software through direct interaction by a human. With the exception of publicly accessible feeds, the website and its associated files are not meant to be accessed via automated means such as scripts, bots, or automated applications.</p>"
+    + "<p>Be aware that if you use automated means of accessing or downloading this website, in whole or in part, your access may be prevented, throttled, or terminated &mdash; especially if you attempt to download many large files simultaneously. This protects the experience for everyone who accesses the site as intended.</p>"
+    + "<h3>Linking &amp; Integration</h3>"
+    + "<p>Hot-linking to images and other large files hosted here is not permitted without our permission. You may of course link directly to individual web pages. Direct linking to small preview images is permitted but not guaranteed.</p>"
+    + "<h3>User-Submitted Content</h3>"
+    + "<p>This is a community-supported website that relies on its user community for the bulk of its content. To maintain quality, only a subset of submissions are selected to be published. Submitted content should not contain personal insults, explicit material, off-topic discussion, or anything not suited for a general audience.</p>"
+    + "<p>We reserve the right to moderate content posted here, both during and after the submission process. Moderators may remove or edit content at any time to keep the site appropriate for its audience.</p>"
+    + "<p>By submitting an image you confirm that you created it or otherwise hold the rights to share it, and you grant us a non-exclusive licence to host, display and distribute it on this website. You keep ownership of your work. Do not upload material you do not have the rights to.</p>"
+    + "<h3>Repeat Infringer Policy</h3>"
+    + "<p>We terminate the access of anyone who repeatedly submits material that infringes the rights of others. In practice: a submission that is the subject of a valid takedown notice is removed and recorded against the submitter; a submitter associated with repeated valid notices is blocked from making further submissions, and existing submissions from them may be removed.</p>"
+    + "<p>If you believe your material was removed in error, contact us and we will review it.</p>"
+    + "<p>Where we receive a notice of claimed infringement about something you submitted, we forward that notice to you and retain the records identifying you for the period required by Canadian law. Keep the contact details on your account current so that we can reach you.</p>",
+
+  copyright: "<h1>Copyright Policy</h1>"
+    + "<p class='lead'>This is a community-supported website with the majority of published content being uploaded by our user community or collected from a wide range of free image resources.</p>"
+    + "<p>Although published content is believed to be authorized for sharing and personal use as desktop wallpaper &mdash; either by the uploader or author, or by being public-domain or freely licensed &mdash; unless otherwise noted in the wallpaper description, all images on this website are copyrighted by their respective authors. If you wish to use these images for any other purpose, you must get permission from their respective authors.</p>"
+    + "<p>If you object to a wallpaper published on our site, please contact us with the wallpaper title or URL and your reason for concern &mdash; whether it is your own work that you do not wish to share, or something you find explicit, unethical, or inappropriate.</p>"
+    + "<p>We reserve the right to decide whether or not to host any wallpaper that was submitted by users.</p>"
+    + "<p>We are an online service provider as defined in the Digital Millennium Copyright Act. We provide legal copyright owners with the ability to self-publish on the internet by uploading, storing, and displaying various media utilizing our services.</p>"
+    + "<p class='emph'>We have no intention of violating anyone's copyright, and take the matter very seriously. If you are a copyright holder of a particular image, please report it using \"Report Image.\"</p>"
+    + "<h3>Filing a Takedown Notice</h3>"
+    + "<p>To report material you believe infringes your copyright, send a notice to our designated agent including: your contact details; identification of the work you say is infringed; the URL of the material in question; a statement that you have a good-faith belief the use is not authorised; a statement, under penalty of perjury, that the information is accurate and that you are the owner or authorised to act for them; and your signature.</p>"
+    + "<div class='contact-card'>"
+    + "<div class='row'><b>Agent</b><span>DMCA Agent, 8K Wallpapers</span></div>"
+    + "<div class='row'><b>Email</b><span>dmca@your-domain.example</span></div>"
+    + "<div class='row'><b>Response</b><span>Valid notices are actioned promptly, usually within 1&ndash;2 business days.</span></div>"
+    + "</div>"
+    + "<p style='font-size:13px;color:var(--muted)'>Site owner: replace the agent details above with your real contact address, and register a designated agent with the U.S. Copyright Office &mdash; safe-harbour protection depends on that registration being on file.</p>"
+    + "<h3>Notice and Notice (Canada)</h3>"
+    + "<p>This site is operated from Canada, where the <i>Copyright Act</i> establishes a &ldquo;notice and notice&rdquo; regime rather than notice and takedown. When we receive a valid notice of claimed infringement about user-submitted material, we forward that notice to the person who submitted it and retain the records identifying them for the period required by law. We are not obliged under Canadian law to remove the material on notice alone.</p>"
+    + "<p>In practice we go further than the minimum: because this site reviews submissions before publication and serves a largely international audience, we also remove material promptly in response to a well-founded notice, and we operate the designated-agent process described above so that rights holders in the United States can reach us through the channel they expect.</p>"
+    + "<h3>Repeat Infringers</h3>"
+    + "<p>We keep a record of submissions that are the subject of valid takedown notices and block submitters associated with repeated notices, as described in our Terms of Service.</p>"
+    + "<p style='font-size:13px;color:var(--muted)'>This page describes our practice, not legal advice, and is not a substitute for advice from a qualified lawyer in your jurisdiction.</p>"
+    + "<p style='font-size:13px;color:var(--muted)'>Note: the wallpapers on this demo are original generated artwork. This policy text is a template and is not legal advice &mdash; have a professional review any policies before publishing a real site.</p>",
+
+  contact: "<h1>Contact Us</h1>"
+    + "<p class='lead'>Have a question, a copyright concern, or a wallpaper request? Reach out and we'll get back to you.</p>"
+    + "<div class='contact-card'>"
+    + "<div class='row'><b>Email</b><span>hello@8kwallpapers.example</span></div>"
+    + "<div class='row'><b>Reports</b><span>Use the \"Report Image\" option on any wallpaper for copyright or content concerns.</span></div>"
+    + "<div class='row'><b>Response</b><span>We typically reply within 2&ndash;3 business days.</span></div>"
+    + "</div>"
+    + "<p style='font-size:13px;color:var(--muted);margin-top:18px'>This is a demo contact page &mdash; the address above is a placeholder.</p>",
+
+  about: "<h1>About</h1>"
+    + "<p class='lead'>8K Wallpapers is a hand-curated gallery of ultra-high-definition backgrounds &mdash; free to download for personal use on desktop, mobile and tablet.</p>"
+    + "<h3>What you'll find here</h3>"
+    + "<ul><li>Wallpapers in resolutions up to 8K (7680&times;4320), organised by category and tag.</li>"
+    + "<li>One-click downloads sized for any device &mdash; Full HD and 4K desktops, ultrawide monitors, iPhone, iPad and Android.</li>"
+    + "<li>New wallpapers added regularly &mdash; check the Recent tab, or save your favorites with the &#9829; button.</li></ul>"
+    + "<h3>Quality first</h3>"
+    + "<p>Every wallpaper is reviewed before it is published. We optimise images so they look sharp on high-DPI displays without wasting your bandwidth.</p>"
+    + "<h3>Get in touch</h3>"
+    + "<p>Spotted a problem, want to request a wallpaper, or have a copyright concern? See the <a href='#' data-policy-link='contact'>Contact</a> page &mdash; we're happy to hear from you.</p>"
+};
+
+const galleryView = document.getElementById('galleryView');
+const policyView = document.getElementById('policyView');
+const policyBody = document.getElementById('policyBody');
+const tabsPolicy = document.getElementById('tabsPolicy');
+
+tabs.forEach(t=>{
+  const b=document.createElement('button');
+  b.className='tab';
+  b.innerHTML=icon(t.ico)+t.label;
+  b.onclick=()=>{
+    showGallery();
+    activeTab=t.label; query=''; document.getElementById('searchInput').value='';
+    [...tabsEl.children].forEach(c=>c.classList.remove('active'));
+    const match=[...tabsEl.children].find(x=>x.textContent.includes(t.label));
+    if(match) match.classList.add('active');
+    setTitle(t.label.charAt(0)+t.label.slice(1).toLowerCase()+' Wallpapers');
+    render();
+  };
+  tabsPolicy.appendChild(b);
+});
+
+function showPolicy(key){
+  policyBody.innerHTML = policies[key];
+  // links between policy pages (e.g. About -> Contact)
+  policyBody.querySelectorAll('[data-policy-link]').forEach(a=>{
+    a.onclick=(e)=>{ e.preventDefault(); showPolicy(a.getAttribute('data-policy-link')); };
+  });
+  galleryView.style.display='none';
+  detailView.style.display='none';
+  policyView.style.display='block';
+  closeSide();
+  safeScrollTop();
+}
+function showGallery(){
+  policyView.style.display='none';
+  detailView.style.display='none';
+  galleryView.style.display='block';
+  setHash('');
+  document.title = '8K Wallpapers — Free 4K, 5K & 8K Ultra HD Backgrounds';
+  if(location.origin && location.origin !== 'null') setCanonical(location.origin + '/');
+  safeScrollTop();
+}
+
+// ---- Wallpaper detail view ----
+const detailView = document.getElementById('detailView');
+const tabsDetail = document.getElementById('tabsDetail');
+let currentWp = null;
+
+// replicate the main tab nav inside the detail view
+tabs.forEach(t=>{
+  const b=document.createElement('button');
+  b.className='tab';
+  b.innerHTML=icon(t.ico)+t.label;
+  b.onclick=()=>{
+    showGallery();
+    activeTab=t.label; query=''; document.getElementById('searchInput').value='';
+    [...tabsEl.children].forEach(c=>c.classList.remove('active'));
+    const match=[...tabsEl.children].find(x=>x.textContent.includes(t.label));
+    if(match) match.classList.add('active');
+    setTitle(t.label.charAt(0)+t.label.slice(1).toLowerCase()+' Wallpapers');
+    render();
+  };
+  tabsDetail.appendChild(b);
+});
+
+function browseCat(name){ filterByCat(name); }
+
+// ---- Resolution picker on the detail page ----
+// Cards set the size the Download button will hand back. "Original" gives the
+// file untouched; the others are cropped to that exact shape on download.
+let dtSelRes = null;   // null = original
+function aspectLabel(w, h){
+  const known = [[16/9,'16:9'],[16/10,'16:10'],[21/9,'21:9'],[32/9,'32:9'],[4/3,'4:3'],
+                 [3/2,'3:2'],[1,'1:1'],[9/16,'9:16'],[2/3,'2:3'],[1080/2400,'9:20']];
+  const r = w / h;
+  let best = known[0], bd = Infinity;
+  known.forEach(k => { const d = Math.abs(r - k[0]); if(d < bd){ bd = d; best = k; } });
+  return best[1];
+}
+// Classified on the SHORT edge, which is what names like FHD/QHD/4K actually
+// describe — judging by the long edge would call an ultrawide 3840x1080 "4K".
+function sizeWord(w, h){
+  const short = Math.min(w, h);
+  if(short >= 4320) return '8K';
+  if(short >= 2880) return '5K';
+  if(short >= 2160) return '4K UHD';
+  if(short >= 1440) return 'QHD';
+  if(short >= 1080) return 'FHD';
+  return 'HD';
+}
+function buildResCards(wp){
+  const host = document.getElementById('dtResCards');
+  const note = document.getElementById('dtAspNote');
+  const pill = document.getElementById('dtRes');
+  const label = document.querySelector('#dtDownload .dl-label');
+  if(!host) return;
+  host.innerHTML = '';
+  dtSelRes = null;
+
+  const p = parseResDims(wp.res);
+  const cards = [];
+  if(p) cards.push({ nm:'Original', w:p.w, h:p.h, orig:true });
+  cards.push({ nm:'Full HD', w:1920, h:1080 });
+  cards.push({ nm:'UltraWide', w:3440, h:1440 });
+  cards.push({ nm:'Super UltraWide', w:3840, h:1080 });
+  cards.push({ nm:'Mobile', w:1080, h:1920 });
+
+  function choose(c, el){
+    host.querySelectorAll('.rescard').forEach(x => x.classList.remove('on'));
+    if(el) el.classList.add('on');
+    dtSelRes = c.orig ? null : c;
+    pill.textContent = c.w + ' × ' + c.h;
+    note.textContent = (aspectLabel(c.w, c.h) + ' ' + sizeWord(c.w, c.h)).toUpperCase();
+    if(label) label.textContent = c.orig ? 'Download Original' : 'Download ' + c.nm;
+  }
+
+  cards.forEach((c, i) => {
+    const b = document.createElement('button');
+    b.className = 'rescard' + (i === 0 ? ' on' : '');
+    b.innerHTML = "<div class='nm'>" + esc(c.nm) + "</div>"
+      + "<div class='dim'>" + c.w + "×" + c.h + "</div>"
+      + "<div class='asp'>" + esc(aspectLabel(c.w, c.h) + ' ' + sizeWord(c.w, c.h)) + "</div>";
+    b.onclick = ()=> choose(c, b);
+    host.appendChild(b);
+  });
+  if(cards.length) choose(cards[0], host.firstChild);
+}
+
+// ---- Shareable deep links: every wallpaper gets a #w/<slug> URL ----
+function slugOf(w){ return String(w.name||'').replace(/[^a-z0-9]+/gi,'-').replace(/^-+|-+$/g,'').toLowerCase(); }
+function findBySlug(slug){ for(const w of wallpapers){ if(slugOf(w)===slug) return w; } return null; }
+// Real crawlable page for a PUBLISHED wallpaper (matches the server function):
+// name-slug + the upload id already in its image path. Demo/Unsplash images
+// aren't on the server, so they have no such page.
+function wpIdOf(w){ const p = (w._ref && w._ref.path) || ''; const m = String(p).match(/(\d{6,})(?=\.[a-z0-9]+$)/i); return m ? m[1] : ''; }
+function realPathOf(w){
+  if(!(w._ref && w._ref.site === 'r2' && w._ref.path)) return null;
+  const id = wpIdOf(w);
+  return '/wallpaper/' + slugOf(w) + (id ? '-' + id : '');
+}
+function pageUrlOf(w){
+  if(!location.origin || location.origin === 'null') return location.href;   // opened as a local file
+  const real = realPathOf(w);
+  // published wallpapers share their real, indexable URL; others keep the hash
+  return real ? location.origin + real : location.origin + location.pathname + '#w/' + slugOf(w);
+}
+// point <link rel=canonical> at the real page for published wallpapers so any
+// indexing of the SPA view consolidates onto the crawlable URL
+function setCanonical(href){
+  let l = document.querySelector('link[rel="canonical"]');
+  if(!l){ l = document.createElement('link'); l.rel = 'canonical'; document.head.appendChild(l); }
+  l.href = href;
+}
+let _suppressHash = false;
+function setHash(h){
+  _suppressHash = true;
+  if(h) location.hash = h;
+  else if(location.hash) history.replaceState(null, '', location.pathname + location.search);
+  setTimeout(()=>{ _suppressHash = false; }, 0);
+}
+// Open the right view for the current #hash. Returns false when the target
+// wallpaper isn't loaded yet (the data sync retries it after each load).
+function routeFromHash(){
+  const h = decodeURIComponent(location.hash || '');
+  if(h.indexOf('#w/') === 0){
+    const w = findBySlug(h.slice(3));
+    if(w){ showDetail(w); return true; }
+    return false;
+  }
+  if(h.indexOf('#q=') === 0){ showGallery(); runSearch(h.slice(3)); return true; }
+  if(detailView.style.display === 'block') showGallery();
+  return true;
+}
+window.addEventListener('hashchange', ()=>{ if(!_suppressHash) routeFromHash(); });
+// Open a shared link (#w/<slug> or #q=…) on first load. Deferred with a
+// 0-timeout because showDetail touches consts declared further down the script.
+// If the target wallpaper hasn't arrived from the server yet, the sync loop
+// retries after each refresh.
+let _pendingRoute = /^#(w\/|q=)/.test(location.hash);
+if(_pendingRoute) setTimeout(()=>{ if(_pendingRoute) _pendingRoute = !routeFromHash(); }, 0);
+
+// point the share buttons at the current wallpaper
+function updateShareLinks(w){
+  const u = encodeURIComponent(pageUrlOf(w));
+  const t = encodeURIComponent(w.name + ' — free 4K/5K/8K wallpaper');
+  const m = encodeURIComponent(w.img);
+  const links = {
+    pin: 'https://www.pinterest.com/pin/create/button/?url='+u+'&media='+m+'&description='+t,
+    fb:  'https://www.facebook.com/sharer/sharer.php?u='+u,
+    tw:  'https://twitter.com/intent/tweet?url='+u+'&text='+t,
+    rd:  'https://www.reddit.com/submit?url='+u+'&title='+t
+  };
+  Object.keys(links).forEach(k=>{
+    const a = document.querySelector('.detail-share .share.'+k);
+    if(a){ a.href = links[k]; a.target = '_blank'; a.rel = 'noopener'; }
+  });
+}
+// copy-link + native share buttons (wired once)
+(function(){
+  const cp = document.querySelector('.detail-share .share.cp');
+  const sh = document.querySelector('.detail-share .share.sh');
+  if(cp) cp.onclick = async (e)=>{
+    e.preventDefault();
+    if(!currentWp) return;
+    const url = pageUrlOf(currentWp);
+    try {
+      await navigator.clipboard.writeText(url);
+      const old = cp.innerHTML; cp.innerHTML = '&#10003;';
+      setTimeout(()=>{ cp.innerHTML = old; }, 1200);
+    } catch(err) { prompt('Copy this link:', url); }
+  };
+  if(sh){
+    if(navigator.share){
+      sh.onclick = (e)=>{
+        e.preventDefault();
+        if(!currentWp) return;
+        navigator.share({ title: currentWp.name + ' — 8K Wallpapers', url: pageUrlOf(currentWp) }).catch(()=>{});
+      };
+    } else { sh.style.display = 'none'; }
+  }
+})();
+
+// best-effort file size of the original image (shown when the host reports it)
+function fmtBytes(n){ return n >= 1048576 ? (n/1048576).toFixed(1)+' MB' : Math.round(n/1024)+' KB'; }
+async function fetchFileSize(url){
+  try {
+    if(!/^https?:/.test(url)) return null;
+    const res = await fetch(url, { method:'HEAD' });
+    const len = +res.headers.get('content-length');
+    return len > 0 ? len : null;
+  } catch(e){ return null; }
+}
+
+function showDetail(w){
+  currentWp = w;
+  bumpStat(w, 'v');
+  registerView(w);   // global counter, once per browser per wallpaper
+  // collapse any open resolution list from a previous wallpaper
+  if(typeof resList !== 'undefined' && resList){ resList.classList.remove('open'); resList.innerHTML=''; }
+  if(typeof resDevBtns !== 'undefined' && resDevBtns){ resDevBtns.forEach(b=>b.classList.remove('active')); }
+  document.getElementById('dtCat').textContent = w.cat;
+  document.getElementById('dtName').textContent = w.name;
+  buildResCards(w);
+  const dtDescEl = document.getElementById('dtDesc');
+  dtDescEl.textContent =
+    "Get this "+w.name+" background in "+w.res+" resolution from the "+w.cat+
+    " category. You can also download it for computer, mobile phones, iPhone and iPad from the resolutions below.";
+  // Unsplash photos must credit the photographer (API guideline)
+  if(w._unsplash){
+    const utm = '?utm_source=8k-wallpapers&utm_medium=referral';
+    dtDescEl.innerHTML = esc(dtDescEl.textContent)
+      + "<br>Photo by <a href='" + esc(w._unsplash.authorLink || 'https://unsplash.com') + utm + "' target='_blank' rel='noopener'>"
+      + esc(w._unsplash.author || 'a photographer')
+      + "</a> on <a href='" + esc(w._unsplash.photoLink || 'https://unsplash.com') + utm + "' target='_blank' rel='noopener'>Unsplash</a>.";
+  }
+  // larger preview for the stage
+  const img=document.getElementById('dtImg');
+  img.src = w.img.replace(/w=\d+/, 'w=1400');
+  img.alt = w.name;
+  // category chip carries its style icon when the set has one
+  const catChip = document.getElementById('dtCatChip');
+  catChip.innerHTML = icon(w.cat,'i-sm') + "<span>" + esc(w.cat) + "</span>";
+  catChip.onclick = ()=>browseCat(w.cat);
+  // tags — the icon set leads each one with an accent #
+  const tw=document.getElementById('dtTags'); tw.innerHTML='';
+  w.tags.forEach(t=>{
+    const c=document.createElement('span'); c.className='tag-chip';
+    c.innerHTML = "<span class='hash'>#</span>" + esc(t);
+    c.onclick=()=>{ filterByTag(t); };
+    tw.appendChild(c);
+  });
+
+  // ---- Related wallpapers (same category first, then others) ----
+  const rel=document.getElementById('dtRelated'); rel.innerHTML='';
+  const sameCat = wallpapers.filter(x=>x.cat===w.cat && x.name!==w.name);
+  const others = wallpapers.filter(x=>x.cat!==w.cat && x.name!==w.name);
+  const relList = [...sameCat, ...others].slice(0,8);
+  relList.forEach(x=>{
+    const card=document.createElement('div'); card.className='rel-card';
+    card.innerHTML="<div class='rel-thumb'><img src='"+x.img+"' alt='"+x.name+"' loading='lazy'></div><div class='rel-cap'>"+x.name+"</div>";
+    card.onclick=()=>showDetail(x);
+    rel.appendChild(card);
+  });
+
+  // ---- Popular tags ----
+  const pt=document.getElementById('dtPopTags'); pt.innerHTML='';
+  popTags.forEach(([label,color,size,op])=>{
+    const a=document.createElement('a'); a.className='poptag'; a.textContent=label;
+    a.style.color=color; a.style.fontSize=size+'px'; a.style.opacity=op;
+    a.onclick=()=>{ filterByTag(label); };
+    pt.appendChild(a);
+  });
+
+  // ---- Details line: views, downloads, upload date, file size ----
+  const st = statOf(w);
+  const gs = gOf(w);   // views + likes are global; downloads stay per-browser
+  const parts = [
+    icon('views','i-sm') + '<span><b>' + fmtCount(gs.v) + '</b> view' + (gs.v===1?'':'s') + '</span>',
+    icon('like','i-sm') + '<span><b>' + fmtCount(gs.l) + '</b> like' + (gs.l===1?'':'s') + '</span>',
+    icon('downloads','i-sm') + '<span><b>' + (st.d||0) + '</b> download' + ((st.d||0)===1?'':'s') + '</span>'
+  ];
+  if(w.created_at){
+    const d = new Date(w.created_at);
+    if(!isNaN(d)) parts.push(icon('calendar','i-sm') + '<span>Added '
+      + esc(d.toLocaleDateString(undefined, {year:'numeric', month:'short', day:'numeric'})) + '</span>');
+  }
+  const info = document.getElementById('dtInfo');
+  const sep = "<span class='sep'></span>";
+  info.innerHTML = parts.join(sep);
+  fetchFileSize(w.img).then(len=>{
+    if(len && currentWp === w) info.innerHTML += sep + icon('filesize','i-sm') + '<span>' + fmtBytes(len) + '</span>';
+  });
+
+  // share buttons, address-bar deep link and page title for this wallpaper
+  updateShareLinks(w);
+  setHash('w/' + slugOf(w));
+  document.title = w.name + ' — 8K Wallpapers';
+  // canonical -> the real crawlable page for published wallpapers
+  const real = realPathOf(w);
+  setCanonical(real ? location.origin + real : location.origin + '/');
+
+  galleryView.style.display='none';
+  policyView.style.display='none';
+  detailView.style.display='block';
+  closeSide();
+  safeScrollTop();
+}
+
+document.getElementById('detailBack').onclick=showGallery;
+
+// run a download with a brief "Downloading…" label on the button
+async function downloadWithFeedback(btn, name, img, width){
+  if(btn.dataset.busy) return;
+  const orig = btn.innerHTML;
+  btn.dataset.busy = '1';
+  btn.style.opacity = '0.75';
+  btn.style.pointerEvents = 'none';
+  btn.innerHTML = "&#8635; Downloading\u2026";
+  try { await download(name, img, width); }
+  finally {
+    btn.innerHTML = orig;
+    btn.style.opacity = '';
+    btn.style.pointerEvents = '';
+    delete btn.dataset.busy;
+  }
+}
+
+document.getElementById('dtDownload').onclick=async (e)=>{
+  if(!currentWp) return;
+  bumpStat(currentWp,'d'); trackUnsplash(currentWp);
+  // a picked card downloads at that exact size; otherwise the file untouched
+  if(dtSelRes){
+    const btn = e.currentTarget;
+    if(btn.dataset.busy) return;
+    const orig = btn.innerHTML;
+    btn.dataset.busy = '1'; btn.style.opacity = '0.75'; btn.style.pointerEvents = 'none';
+    btn.textContent = 'Preparing ' + dtSelRes.w + '×' + dtSelRes.h + '…';
+    try { await downloadSized(currentWp.name, currentWp.img, dtSelRes.w, dtSelRes.h); }
+    finally {
+      btn.innerHTML = orig; btn.style.opacity = ''; btn.style.pointerEvents = '';
+      delete btn.dataset.busy;
+    }
+  } else {
+    downloadWithFeedback(e.currentTarget, currentWp.name, currentWp.img);
+  }
+};
+document.getElementById('dtReport').onclick=(e)=>{ e.preventDefault(); alert('Thanks — this image has been flagged for review.'); };
+
+// ---- "More Resolutions": expandable per-device resolution lists ----
+const RESOLUTIONS = {
+  desktop: [
+    {w:1920,h:1080, label:'Full HD 1080p'},
+    {w:1920,h:1200, label:'Widescreen HD'},
+    {w:2560,h:1440, label:'2K | QHD'},
+    {w:2880,h:1800, label:'Retina Widescreen'},
+    {w:3440,h:1440, label:'21:9 UltraWide QHD'},
+    {w:3840,h:1080, label:'Dual Monitor HD'},
+    {w:3840,h:2160, label:'4K UHD'},
+  ],
+  mobiles: [
+    {w:480, h:800,  label:''},
+    {w:768, h:1024, label:''},
+    {w:720, h:1280, label:'HD Phone'},
+    {w:1080,h:1920, label:'Mobile Phone Full HD'},
+    {w:1080,h:2160, label:'Vertical Full HD'},
+  ],
+  tablets: [
+    {w:1280,h:1280, label:'HD Square'},
+    {w:2048,h:2048, label:'Square QHD'},
+    {w:1620,h:2160, label:'Tablet Portrait'},
+    {w:2160,h:1620, label:'Tablet Landscape'},
+  ],
+  iphone: [
+    {w:640, h:1136, label:'iPhone 5, 5S'},
+    {w:750, h:1334, label:'iPhone 6, 7, 8'},
+    {w:1125,h:2436, label:'iPhone X, XS, 11 Pro'},
+    {w:1170,h:2532, label:'iPhone 12, 13, 14'},
+    {w:1290,h:2796, label:'iPhone 14 Pro Max, 15'},
+  ],
+  ipad: [
+    {w:1536,h:2048, label:'iPad Mini, iPad Air'},
+    {w:2048,h:2732, label:'iPad Pro 12.9"'},
+    {w:1668,h:2388, label:'iPad Air, iPad Pro 11"'},
+    {w:2732,h:2048, label:'iPad Pro Landscape'},
+  ],
+};
+
+const resList = document.getElementById('resList');
+const resDevBtns = document.querySelectorAll('.res-dev');
+
+function buildResList(dev){
+  resList.innerHTML='';
+  (RESOLUTIONS[dev]||[]).forEach(r=>{
+    const item=document.createElement('div'); item.className='res-item';
+    item.innerHTML = "<span class='res-dim'>"+r.w+"x"+r.h+"</span>" + (r.label? "<span class='res-name'>("+r.label+")</span>" : "");
+    item.onclick = async ()=>{
+      if(!currentWp || item.classList.contains('busy')) return;
+      const dim = item.querySelector('.res-dim');
+      const orig = dim.textContent;
+      item.classList.add('busy'); dim.textContent = 'Preparing '+r.w+'x'+r.h+'\u2026';
+      bumpStat(currentWp,'d'); trackUnsplash(currentWp);
+      try { await downloadSized(currentWp.name, currentWp.img, r.w, r.h); }
+      finally { dim.textContent = orig; item.classList.remove('busy'); }
+    };
+    resList.appendChild(item);
+  });
+}
+
+resDevBtns.forEach(btn=>{
+  btn.onclick=()=>{
+    const dev = btn.dataset.dev;
+    const isActive = btn.classList.contains('active');
+    resDevBtns.forEach(b=>b.classList.remove('active'));
+    if(isActive){ resList.classList.remove('open'); return; }   // toggle closed
+    btn.classList.add('active');
+    buildResList(dev);
+    resList.classList.add('open');
+  };
+});
+
+document.querySelectorAll('.foot-nav a').forEach(a=>{
+  // only the policy links open in-page; real links (e.g. /upload) navigate
+  if(!a.dataset.policy) return;
+  a.onclick=(e)=>{ e.preventDefault(); showPolicy(a.dataset.policy); };
+});
+document.getElementById('policyBack').onclick=showGallery;
+
+// clicking the logo returns to the home page (default gallery view)
+function goHome(){
+  showGallery();                       // hide detail/policy, show the grid
+  activeTab='RECENT'; query=''; activeCat=null; activeTag=null; showFavs=false;
+  clearResChips();
+  syncSearchInputs('');
+  [...tabsEl.children].forEach(c=>c.classList.remove('active'));
+  const recentTab=[...tabsEl.children].find(x=>x.textContent.includes('RECENT'));
+  if(recentTab) recentTab.classList.add('active');
+  setTitle('Recent Wallpapers');
+  render();
+  safeScrollTop();
+}
+document.getElementById('homeLogo').onclick=goHome;
+
+// ============ ADMIN: Add Wallpaper ============
+(function(){
+  const overlay = document.getElementById('adminOverlay');
+  const elUrl = document.getElementById('afUrl');
+  const elName = document.getElementById('afName');
+  const elCat = document.getElementById('afCat');
+  const elTab = document.getElementById('afTab');
+  const elRes = document.getElementById('afRes');
+  const elTags = document.getElementById('afTags');
+  const elPrev = document.getElementById('afPreview');
+  const elMsg = document.getElementById('afMsg');
+  const elFile = document.getElementById('afFile');
+  const elUploadBtn = document.getElementById('afUploadBtn');
+  const elUploadLabel = document.getElementById('afUploadLabel');
+  let uploadedDataUrl = null;   // holds a base64 image when the user uploads from their PC
+
+  // populate category dropdown from the existing category list
+  categories.slice().sort().forEach(c=>{
+    const o=document.createElement('option'); o.value=c; o.textContent=c; elCat.appendChild(o);
+  });
+  elCat.value = 'Abstract';
+
+  // Detect an image source from a pasted URL/ID. Supports Unsplash and Pexels.
+  // Returns {site:'unsplash'|'pexels', type, value} or null.
+  function parseSource(raw){
+    if(!raw) return null;
+    raw = raw.trim();
+
+    // ---- Pexels ----
+    // images.pexels.com/photos/<id>/pexels-photo-<id>.jpeg
+    let m = raw.match(/images\.pexels\.com\/photos\/(\d+)\//i);
+    if(m) return {site:'pexels', type:'id', value:m[1]};
+    // pexels.com/photo/<words>-<id>/  or  pexels.com/photo/<id>/
+    m = raw.match(/pexels\.com\/photo\/(?:[a-z0-9-]*-)?(\d+)\/?(?:[?#].*)?$/i);
+    if(m) return {site:'pexels', type:'id', value:m[1]};
+
+    // ---- Unsplash ----
+    // images.unsplash.com/photo-<id>  -> numeric id form
+    m = raw.match(/photo-([0-9a-f]+-[0-9a-z]+)/i);
+    if(m) return {site:'unsplash', type:'id', value:m[1]};
+    // unsplash.com/photos/some-words-<slug>  (slug is the trailing token)
+    m = raw.match(/unsplash\.com\/photos\/(?:[a-z0-9-]*-)?([A-Za-z0-9_-]{8,})\/?(?:[?#].*)?$/);
+    if(m) return {site:'unsplash', type:'slug', value:m[1]};
+    // a full source.unsplash.com/<slug> URL
+    m = raw.match(/source\.unsplash\.com\/([A-Za-z0-9_-]{8,})/);
+    if(m) return {site:'unsplash', type:'slug', value:m[1]};
+    // bare Unsplash numeric id form: digits-hex
+    if(/^[0-9]{6,}-[0-9a-z]+$/i.test(raw)) return {site:'unsplash', type:'id', value:raw};
+    // bare Unsplash slug (no slashes, looks like an unsplash short id)
+    if(/^[A-Za-z0-9_-]{8,}$/.test(raw)) return {site:'unsplash', type:'slug', value:raw};
+
+    return null;
+  }
+
+  // Build a usable image URL from a parsed ref at a given width.
+  function buildUrl(ref, w){
+    w = w || 800;
+    if(ref.site === 'pexels'){
+      return "https://images.pexels.com/photos/"+ref.value+"/pexels-photo-"+ref.value+".jpeg?auto=compress&cs=tinysrgb&w="+w;
+    }
+    // unsplash
+    if(ref.type === 'id') return "https://images.unsplash.com/photo-"+ref.value+"?auto=format&fit=crop&w="+w+"&q=80";
+    return "https://source.unsplash.com/"+ref.value+"/"+w+"x"+Math.round(w*0.625);
+  }
+
+  // live preview as the user types/pastes a URL
+  let prevTimer;
+  elUrl.addEventListener('input', ()=>{
+    // typing a URL cancels any uploaded file
+    if(uploadedDataUrl){ clearUpload(); }
+    clearTimeout(prevTimer);
+    prevTimer = setTimeout(()=>{
+      const ref = parseSource(elUrl.value);
+      if(!ref){ elPrev.innerHTML=''; elPrev.textContent = elUrl.value ? 'Could not read an Unsplash or Pexels ID from that' : 'Image preview appears here'; return; }
+      const url = buildUrl(ref, 800);
+      const img = new Image();
+      img.onload = ()=>{ elPrev.innerHTML=''; elPrev.appendChild(img); setMsg('Detected '+(ref.site==='pexels'?'Pexels':'Unsplash')+' image \u2713', 'ok'); };
+      img.onerror = ()=>{ elPrev.innerHTML=''; elPrev.textContent='Preview failed to load (the ID may be invalid)'; };
+      img.src = url; img.alt='preview';
+    }, 400);
+  });
+
+  // ---- file upload from the user's computer ----
+  elUploadBtn.onclick = ()=> elFile.click();
+  elFile.addEventListener('change', ()=>{
+    const file = elFile.files && elFile.files[0];
+    if(!file) return;
+    if(!file.type.startsWith('image/')){ setMsg('That file is not an image.', 'err'); return; }
+    if(file.size > 12 * 1024 * 1024){ setMsg('Image is too large (max 12 MB). Try a smaller file.', 'err'); return; }
+    const reader = new FileReader();
+    reader.onload = e=>{
+      uploadedDataUrl = e.target.result;        // base64 data URL
+      elUrl.value = '';                          // a file overrides any pasted URL
+      elUploadBtn.classList.add('has-file');
+      elUploadLabel.textContent = file.name;
+      const img = new Image();
+      img.onload = ()=>{ elPrev.innerHTML=''; elPrev.appendChild(img); };
+      img.src = uploadedDataUrl; img.alt='preview';
+      // suggest a name from the filename if the name field is empty
+      if(!elName.value.trim()){
+        elName.value = file.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+      }
+      setMsg('Image ready to add \u2713', 'ok');
+    };
+    reader.onerror = ()=> setMsg('Could not read that file.', 'err');
+    reader.readAsDataURL(file);
+  });
+  function clearUpload(){
+    uploadedDataUrl = null; elFile.value='';
+    elUploadBtn.classList.remove('has-file');
+    elUploadLabel.textContent = 'Choose an image file\u2026';
+  }
+
+  function setMsg(text, kind){ elMsg.textContent=text; elMsg.className='admin-msg '+(kind||''); }
+
+  function openAdmin(){ overlay.classList.add('open'); setTimeout(()=>elUrl.focus(),50); }
+  function closeAdmin(){ overlay.classList.remove('open'); }
+
+  function resetForm(){
+    elUrl.value=''; elName.value=''; elRes.value='3840x2160'; elTags.value='';
+    elCat.value='Abstract'; elTab.value='RECENT';
+    clearUpload();
+    elPrev.innerHTML=''; elPrev.textContent='Image preview appears here'; setMsg('');
+  }
+
+  function addWallpaper(){
+    let imgSrc, ref;
+    if(uploadedDataUrl){
+      // uploaded file takes priority — store the image inline as a data URL
+      imgSrc = uploadedDataUrl;
+      ref = {site:'upload'};
+    } else {
+      ref = parseSource(elUrl.value);
+      if(!ref){ setMsg('Upload an image, or paste a valid Unsplash or Pexels URL.', 'err'); return; }
+      imgSrc = buildUrl(ref, 800);
+    }
+    const name = elName.value.trim();
+    if(!name){ setMsg('Please enter a name for the wallpaper.', 'err'); elName.focus(); return; }
+    const tags = elTags.value.split(',').map(t=>t.trim()).filter(Boolean);
+    const wp = {
+      name,
+      img: imgSrc,
+      _ref: ref,                       // 'upload' for files, or {site,type,value} for stock
+      tab: elTab.value,
+      cat: elCat.value,
+      res: elRes.value.trim() || '3840x2160',
+      tags: tags.length ? tags : ['Wallpaper'],
+      _new: true
+    };
+    wallpapers.unshift(wp);            // add to the front so it appears first
+    persistAdded();
+    setMsg('Added! "'+name+'" is now in your gallery.', 'ok');
+    // jump to home so the user sees it, then close shortly after
+    goHome();
+    setTimeout(()=>{ closeAdmin(); resetForm(); }, 900);
+  }
+
+  // ---- persistence (survives reload) ----
+  const STORE_KEY = 'wp_admin_added_v1';
+  function serialize(){
+    // store only the admin-added ones (those flagged _new)
+    return wallpapers.filter(w=>w._new).map(w=>({
+      name:w.name, _ref:w._ref, tab:w.tab, cat:w.cat, res:w.res, tags:w.tags,
+      // for uploaded files, keep the inline image so it survives reload
+      img: (w._ref && w._ref.site==='upload') ? w.img : undefined
+    }));
+  }
+  async function persistAdded(){
+    const data = serialize();
+    try {
+      if(window.storage && window.storage.set){ await window.storage.set(STORE_KEY, JSON.stringify(data)); return; }
+    } catch(e){ /* fall through */ }
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
+    catch(e){ /* storage may be full (uploads are large) or unavailable; session only */ }
+  }
+  // Track which backend images are already on screen so repeated loads
+  // (polling / realtime) never duplicate or miss a wallpaper.
+  const _seenPaths = new Set();
+
+  // --- status banner: ERRORS ONLY on the public site. Routine sync chatter
+  // ("Connected ✓ … up to date") used to pop over the gallery on every 30s
+  // poll; success is now silent — new posts simply appear in the grid. ---
+  const _statusEl = document.createElement('div');
+  _statusEl.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:99999;'
+    + 'padding:11px 18px;border-radius:10px;font:600 13px system-ui,sans-serif;color:#fff;'
+    + 'background:rgba(150,30,30,0.96);border:1px solid rgba(255,255,255,0.22);box-shadow:0 8px 24px rgba(0,0,0,0.55);'
+    + 'max-width:92vw;text-align:center;transition:opacity .4s;display:none;';
+  (function attach(){ if(document.body){ document.body.appendChild(_statusEl); } else { document.addEventListener('DOMContentLoaded', ()=>document.body.appendChild(_statusEl)); } })();
+  function setStatus(msg, kind){
+    if(kind !== 'err'){ _statusEl.style.display = 'none'; return; }   // silent success
+    _statusEl.textContent = msg;
+    _statusEl.style.display = 'block';
+    _statusEl.style.opacity = '1';
+  }
+
+  // Load the wallpaper list from the site's own API (visible to everyone).
+  async function loadAdded(){
+    try {
+      const res = await fetch(metadataUrl(), { cache: 'no-store' });
+      if(res.status === 404){
+        setStatus('Connected ✓ — nothing published yet.', '');
+        return;
+      }
+      if(!res.ok) throw new Error('The wallpaper server returned HTTP ' + res.status);
+      let data = await res.json();
+      // Accept either a bare array or a { wallpapers: [...] } wrapper.
+      if(!Array.isArray(data)){ data = (data && Array.isArray(data.wallpapers)) ? data.wallpapers : []; }
+      // newest-first by created_at (fall back to original order if absent)
+      data = data.slice().sort((a,b)=>{ const av=a.created_at||'', bv=b.created_at||''; return av<bv?1:(av>bv?-1:0); });
+
+      let changed = 0, added = 0;
+      const serverPaths = new Set(data.map(r=>r.image_path).filter(Boolean));
+
+      // 1) remove any backend wallpaper that was deleted from the admin
+      for(let i = wallpapers.length - 1; i >= 0; i--){
+        const w = wallpapers[i];
+        if(w._ref && w._ref.site === 'r2' && w._ref.path && !serverPaths.has(w._ref.path)){
+          _seenPaths.delete(w._ref.path);
+          wallpapers.splice(i, 1);
+          changed++;
+        }
+      }
+
+      // 2) add wallpapers that are new since last check (newest first)
+      data.slice().reverse().forEach(row=>{
+        if(!row.image_path || _seenPaths.has(row.image_path)) return;
+        _seenPaths.add(row.image_path);
+        wallpapers.unshift({
+          name: row.name,
+          img: imageUrl(row.image_path),   // image served from R2 via /images/
+          _ref: { site:'r2', path: row.image_path },
+          tab: row.tab,
+          cat: row.category,
+          res: row.resolution,
+          tags: row.tags || [],
+          created_at: row.created_at,
+          _new: true
+        });
+        added++; changed++;
+      });
+      if(changed){ render(true); buildResChecks(); buildCatList(); }   // repaint, keeping scroll depth
+      // a shared #w/<slug> link may point at a wallpaper that just arrived
+      if(changed && _pendingRoute) _pendingRoute = !routeFromHash();
+      if(data.length === 0){
+        setStatus('Connected ✓ — no wallpapers published yet.', 'ok');
+      } else {
+        setStatus('Connected ✓  ' + data.length + ' wallpaper(s)' + (added ? (' — added ' + added + ' new') : ' — up to date'), 'ok');
+      }
+    } catch(e){
+      console.warn('Could not load the wallpaper list:', e);
+      setStatus('Could not load the wallpaper list: ' + (e && e.message ? e.message : e), 'err');
+    }
+  }
+
+  // wire buttons (the + button is absent on the public site, so guard it)
+  const _adminBtn = document.getElementById('adminBtn');
+  if(_adminBtn){
+    _adminBtn.onclick = openAdmin;
+    document.getElementById('adminClose').onclick = closeAdmin;
+    document.getElementById('afCancel').onclick = ()=>{ closeAdmin(); resetForm(); };
+    document.getElementById('afSubmit').onclick = addWallpaper;
+    overlay.addEventListener('click', e=>{ if(e.target===overlay) closeAdmin(); });
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape' && overlay.classList.contains('open')) closeAdmin(); });
+  }
+
+  // ---- Keep the public gallery in sync with new admin posts ----
+  let _pollTimer = null;
+  function _setPolling(ms){
+    if(_pollTimer) clearInterval(_pollTimer);
+    _pollTimer = setInterval(loadAdded, ms);
+  }
+
+  function startSync(){
+    // initial load
+    loadAdded();
+    // the API serves the list with no-store, so new posts show up on the next
+    // poll — 30s keeps the page fresh without hammering the server
+    _setPolling(30000);
+    // Re-check on any signal that the page may have missed an update.
+    document.addEventListener('visibilitychange', function(){ if(!document.hidden) loadAdded(); });
+    window.addEventListener('focus', loadAdded);
+    window.addEventListener('online', loadAdded);
+    window.addEventListener('pageshow', function(e){ if(e.persisted) loadAdded(); }); // back/forward (bfcache) restore
+  }
+
+  // Boot. No external library to load anymore — the list is just a JSON fetch.
+  startSync();
+})();
+</script>
+</body>
+</html>
