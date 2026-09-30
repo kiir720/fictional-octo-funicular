@@ -33,9 +33,9 @@ function page(origin){
 <link rel="canonical" href="${origin}/upload">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#0a0a0c">
-<link rel="icon" href="/favicon.png" sizes="32x32">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" href="/favicon.png?v=2" sizes="32x32">
+<link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2"><link rel="manifest" href="/site.webmanifest">
 ${STYLE}
 </head><body>
 <header>

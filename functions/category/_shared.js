@@ -157,9 +157,9 @@ export function pageShell(o){
     + '<meta name="description" content="' + escapeHtml(o.desc) + '">'
     + '<meta name="robots" content="' + (o.robots || 'index, follow, max-image-preview:large') + '">'
     + '<meta name="theme-color" content="#0a0a0c">'
-    + '<link rel="icon" href="/favicon.png" sizes="32x32">'
-    + '<link rel="icon" href="/favicon.svg" type="image/svg+xml">'
-    + '<link rel="apple-touch-icon" href="/apple-touch-icon.png">'
+    + '<link rel="icon" href="/favicon.png?v=2" sizes="32x32">'
+    + '<link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">'
+    + '<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2"><link rel="manifest" href="/site.webmanifest">'
     + (o.canonical ? '<link rel="canonical" href="' + escapeHtml(o.canonical) + '">' : '')
     + '<meta property="og:type" content="website">'
     + '<meta property="og:site_name" content="' + SITE + '">'
