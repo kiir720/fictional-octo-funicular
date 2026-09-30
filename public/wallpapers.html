@@ -13,8 +13,65 @@
 <meta name="keywords" content="8k wallpapers, 4k wallpapers, 5k wallpapers, ultra hd backgrounds, free wallpapers, desktop backgrounds, phone wallpapers">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#0f1116">
-<!-- warm up the image CDN connection before the first thumbnail request -->
-<link rel="preconnect" href="https://images.unsplash.com">
+<!-- Boot diagnostics. A blank page tells a visitor nothing and tells us less, so
+     if the gallery never renders, say what actually went wrong. Written in plain
+     ES5 on purpose: it has to survive browsers too old to parse the main script,
+     which is exactly when it is needed. Add ?debug=1 to force it to show. -->
+<script>
+(function(){
+  var errs = [], shown = false;
+  function note(m){ if(m && errs.length < 6) errs.push(String(m)); }
+  window.onerror = function(msg, src, line, col){
+    note(msg + (src ? ('\n    ' + src + ':' + line + ':' + col) : ''));
+    return false;
+  };
+  if(window.addEventListener){
+    window.addEventListener('unhandledrejection', function(e){
+      var r = e && e.reason;
+      note('Unhandled promise rejection: ' + ((r && (r.message || r)) || 'unknown'));
+    });
+  }
+  function report(ok, cards){
+    if(shown) return; shown = true;
+    var box = document.createElement('div');
+    box.setAttribute('style', 'position:fixed;left:0;right:0;top:0;z-index:2147483647;'
+      + 'max-height:70vh;overflow:auto;padding:16px 18px;color:#fff;background:'
+      + (ok ? '#14532d' : '#7f1d1d') + ';'
+      + 'font:13px/1.55 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;'
+      + 'white-space:pre-wrap;word-break:break-word');
+    box.textContent = (ok
+        ? 'Diagnostics: the gallery rendered fine here (' + cards + ' cards).'
+        : 'The wallpaper gallery could not start in this browser.\n\n'
+          + (errs.length ? errs.join('\n\n')
+                         : 'No script error was reported — the wallpaper list itself may have failed to load.'))
+      + '\n\n' + navigator.userAgent;
+    (document.body || document.documentElement).appendChild(box);
+  }
+  function check(){
+    var grid = document.getElementById('grid');
+    var cards = grid ? grid.children.length : 0;
+    if(!cards) report(false, 0);
+    else if(/[?&]debug=1/.test(location.search)) report(true, cards);
+  }
+  if(window.addEventListener) window.addEventListener('load', function(){ setTimeout(check, 5000); });
+  else setTimeout(check, 8000);
+})();
+</script>
+<!-- Site icon: the 8K wordmark. SVG scales to any tab/bookmark size; the PNG is
+     the fallback for browsers that don't take SVG favicons, and iOS uses the
+     apple-touch-icon when the site is added to a home screen. -->
+<link rel="icon" href="/favicon.png" sizes="32x32">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<!-- AdSense. This tag is in the static HTML on purpose: the AdSense crawler reads
+     the page source without running JavaScript, so a script injected at runtime is
+     invisible to it and site verification fails. loadAdScript() detects this tag
+     and will not inject a second copy. -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1600729162514032"
+     crossorigin="anonymous"></script>
+<!-- Thumbnails come from this site. Unsplash is only reached for the few built-in
+     demo photos and to top up a search the library can't fill, so it gets a cheap
+     DNS lookup rather than a full connection opened on every visit. -->
 <link rel="dns-prefetch" href="https://images.unsplash.com">
 <!-- Open Graph (Facebook, Pinterest, WhatsApp link previews) -->
 <meta property="og:type" content="website">
@@ -38,7 +95,11 @@
   // by an R2 bucket. No Supabase, no GitHub tokens, no CDN cache lag. When
   // this page is opened anywhere else (a local file, a dev server), it talks
   // to the live site instead.
-  const API_BASE = /\.pages\.dev$/.test(location.hostname) ? '' : 'https://8k-wallpapers.pages.dev';
+  // Same-origin on ANY deployed host — pages.dev or the custom domain. Only a
+  // local preview (which has no Functions) reaches out to the live site, so
+  // adding a domain never sends the API cross-origin.
+  const IS_LOCAL = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || location.protocol === 'file:';
+  const API_BASE = IS_LOCAL ? 'https://8k-wallpapers.com' : '';
 
   function imageUrl(path){ return API_BASE + '/images/' + encodeURI(path); }
   function metadataUrl(){ return API_BASE + '/api/wallpapers'; }
@@ -399,6 +460,13 @@
     font-size: 15px; line-height: 1.6; color: #c4c8cf; margin: 14px 0;
   }
   .policy p.lead { color: #d6dae0; }
+  /* the "last updated" stamp — readers and ad-network reviewers both look for it */
+  .policy p.updated {
+    font-size: 12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+    color: var(--muted); margin: -4px 0 20px;
+  }
+  .policy a { color: var(--accent); text-decoration: underline; }
+  .policy a:hover { color: var(--accent-glow); }
   .policy p.emph { font-size: 18px; color: var(--text); font-weight: 600; margin-top: 26px; }
   .policy ul { margin: 12px 0 12px 22px; }
   .policy li { font-size: 15px; line-height: 1.6; color: #c4c8cf; margin: 8px 0; font-weight: 600; }
@@ -481,41 +549,6 @@
   .share svg { width: 20px; height: 20px; }
   .share.pin { background: #e60023; } .share.fb { background: #1877f2; }
   .share.tw { background: #1da1f2; } .share.rd { background: #ff4500; }
-  .detail-res {
-    max-width: 1180px; margin: 30px auto 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-    border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; overflow: hidden;
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);
-  }
-  .res-bar {
-    padding: 18px 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center;
-  }
-  .res-lbl { font-size: 13px; font-weight: 700; color: var(--accent); }
-  .res-dev {
-    background: var(--glass); border: 1px solid var(--glass-border); color: var(--text);
-    padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
-    display: flex; align-items: center; gap: 7px; transition: background 0.18s, transform 0.18s, border-color 0.18s;
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  }
-  .res-dev:hover { background: var(--glass-strong); transform: translateY(-2px); }
-  .res-dev .res-caret { font-size: 10px; opacity: 0.7; transition: transform 0.2s; }
-  .res-dev.active { background: rgba(126,226,154,0.16); border-color: rgba(126,226,154,0.5); color: var(--accent-glow); }
-  .res-dev.active .res-caret { transform: rotate(180deg); }
-  .dev-ico { width: 17px; height: 17px; flex-shrink: 0; }
-  .res-list { display: none; border-top: 1px solid rgba(255,255,255,0.1); }
-  .res-list.open { display: block; }
-  .res-item {
-    display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center;
-    padding: 13px 16px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.06);
-    transition: background 0.15s;
-  }
-  .res-item:last-child { border-bottom: none; }
-  .res-item:hover { background: rgba(255,255,255,0.05); }
-  .res-item .res-dim { font-size: 14px; font-weight: 700; color: var(--accent); }
-  .res-item:hover .res-dim { color: var(--accent-glow); text-shadow: 0 0 10px rgba(126,226,154,0.4); }
-  .res-item .res-name { font-size: 12px; color: var(--muted); }
-  .res-item.busy { opacity: 0.6; pointer-events: none; }
 
   /* ---- Related wallpapers ---- */
   .related-panel {
@@ -524,8 +557,32 @@
     border: 1px solid rgba(255,255,255,0.12); border-radius: 14px;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
   }
-  .related-head { text-align: center; font-size: 14px; font-weight: 700; color: var(--accent); margin-bottom: 18px; }
+  /* "More in <category> — N wallpapers": icon, label, dim count, arrow */
+  .related-head {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-size: 14px; font-weight: 700; color: var(--text);
+    margin: 0 auto 18px; padding: 8px 2px; background: none; border: none;
+    font-family: inherit; transition: color .16s;
+  }
+  .related-panel { text-align: center; }
+  .related-head.is-link { cursor: pointer; }
+  .cat-ico {
+    width: 17px; height: 17px; flex-shrink: 0; fill: currentColor; color: var(--muted);
+    transition: color .16s, transform .3s cubic-bezier(.2,.9,.25,1);
+  }
+  .cat-cnt { color: var(--muted); font-weight: 600; }
+  .cat-arw {
+    width: 13px; height: 13px; flex-shrink: 0; fill: var(--muted);
+    transition: transform .2s cubic-bezier(.2,.9,.25,1), fill .16s;
+  }
+  .related-head.is-link:hover .cat-ico { color: var(--accent); transform: scale(1.08); }
+  .related-head.is-link:hover .cat-arw { transform: translateX(3px); fill: var(--accent); }
+  .related-head.is-link:hover { color: var(--accent); }
+  .related-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
   .related-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  /* four across is unreadable on a phone — the cards end up ~85px wide */
+  @media (max-width: 900px) { .related-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; } }
+  @media (max-width: 600px) { .related-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
   .rel-card {
     border-radius: 12px; overflow: hidden; cursor: pointer; background: #2a2a2a;
     border: 1px solid #383838; box-shadow: 0 4px 14px rgba(0,0,0,0.35);
@@ -536,22 +593,40 @@
   .rel-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .rel-cap { padding: 10px 12px; font-size: 12.5px; color: var(--muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  /* ---- Popular tags ---- */
-  .poptags-panel {
-    max-width: 1340px; margin: 34px auto 0; padding: 22px 26px 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
-    border: 1px solid rgba(255,255,255,0.12); border-radius: 14px 14px 0 0;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.25); overflow: hidden;
+  /* ---- Shelves: "Most Liked" / "Most Downloaded" rows under the gallery ---- */
+  .shelf { max-width: 1680px; margin: 40px auto 0; padding: 0 40px; }
+  .shelf-head { display: flex; align-items: center; gap: 11px; margin-bottom: 15px; }
+  .shelf-head .bar { width: 4px; height: 20px; background: var(--accent); border-radius: 3px; }
+  .shelf-head h2 { font-size: 18px; font-weight: 700; letter-spacing: 0.2px; }
+  .shelf-more {
+    margin-left: auto; color: var(--muted); font-size: 13.5px; font-weight: 600;
+    cursor: pointer; background: none; border: none; padding: 4px 2px;
   }
-  .poptags-head { font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--muted); margin-bottom: 16px; }
-  .poptags-wrap {
-    display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px;
-    justify-content: center; padding-bottom: 22px;
+  .shelf-more:hover { color: var(--accent); }
+  .shelf-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .shelf-card {
+    position: relative; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden;
+    cursor: pointer; background: var(--surface-2); border: 1px solid var(--line);
+    transition: transform 0.22s, box-shadow 0.22s;
   }
-  .poptag { cursor: pointer; font-weight: 600; line-height: 1.5; transition: opacity 0.15s, text-shadow 0.15s; text-decoration: none; }
-  .poptag:hover { opacity: 1 !important; text-shadow: 0 0 12px currentColor; }
-  .poptags-line { height: 3px; margin: 0 -26px; background: linear-gradient(90deg, #00d4ff, #7c4dff, #ff2d9b, #00d4ff); background-size: 300% 100%; animation: tagflow 8s linear infinite; }
-  @keyframes tagflow { 0% { background-position: 0% 0; } 100% { background-position: 300% 0; } }
+  .shelf-card:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(0,0,0,0.45); }
+  .shelf-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .shelf-cap {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 24px 10px 8px;
+    font-size: 12px; font-weight: 600; color: #fff; text-align: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+  }
+  .shelf-count {
+    position: absolute; top: 8px; right: 8px; display: flex; align-items: center; gap: 4px;
+    padding: 3px 8px; border-radius: 100px; font-size: 11.5px; font-weight: 700;
+    color: #fff; background: rgba(0,0,0,0.62); backdrop-filter: blur(6px);
+  }
+  .shelf-count .i { width: 13px; height: 13px; }
+  .shelf-empty { color: var(--muted); font-size: 13.5px; padding: 6px 0 2px; }
+  @media (max-width: 1100px) { .shelf-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 700px) { .shelf { padding: 0 16px; margin-top: 28px; } .shelf-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
+
   footer { text-align: center; color: var(--muted); font-size: 13px; padding: 26px; border-top: 1px solid rgba(255,255,255,0.22); background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03)); backdrop-filter: blur(24px) brightness(1.12); -webkit-backdrop-filter: blur(24px) brightness(1.12); box-shadow: inset 0 1px 0 rgba(255,255,255,0.45); position: relative; overflow: hidden; }
   footer::after {
     content: ''; position: absolute; top: -50%; left: -60%; width: 60%; height: 200%;
@@ -570,9 +645,30 @@
     header { flex-wrap: wrap; gap: 12px; }
     .search input { width: 110px; }
   }
+  /* ---- Phones and small tablets ------------------------------------------
+     The header row is wider than a phone screen, which pushed the whole page
+     into a horizontal scroll. Below 760px the controls drop to their own full
+     -width row and the search box takes whatever space is left. */
+  @media (max-width: 820px) {
+    header { padding: 12px 16px; row-gap: 10px; }
+    .top-right { flex: 1 1 100%; gap: 8px; min-width: 0; }
+    .search { flex: 1 1 auto; min-width: 0; }
+    .search input { width: 100%; min-width: 0; flex: 1 1 auto; }
+    .categories-btn { padding: 9px 13px; font-size: 13px; }
+    .logo { font-size: 21px; }
+  }
+  @media (max-width: 560px) {
+    /* Submit also lives in the footer, so the header can drop it and give the
+       search box room rather than squeezing it to nothing. The selector is
+       header-scoped so it outranks the .categories-btn rules further down. */
+    header .top-right .submit-link { display: none; }
+    header { padding: 10px 13px; }
+    .logo { font-size: 19px; }
+    .hero { padding: 20px 14px 14px; }
+  }
   @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
   @media (prefers-reduced-motion: reduce) {
-    .header-sheen::after, footer::after, .poptags-line { animation: none; }
+    .header-sheen::after, footer::after { animation: none; }
     .tag::after, .tab::after, .card { transition: none; }
   }
 
@@ -588,14 +684,15 @@
   .thumb::before, .rel-thumb::before, .admin-preview::before {
     content: ''; display: block; padding-top: 62.5%;  /* 16 : 10 */
   }
-  .thumb > img, .rel-thumb > img, .admin-preview > img {
+  .shelf-card::before { content: ''; display: block; padding-top: 56.25%; }  /* 16 : 9 */
+  .thumb > img, .rel-thumb > img, .admin-preview > img, .shelf-card > img {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   }
   /* Modern browsers use the native aspect-ratio box, so drop the spacer to
      avoid doubling the height. */
   @supports (aspect-ratio: 1 / 1) {
-    .thumb::before, .rel-thumb::before, .admin-preview::before { display: none; }
-    .thumb > img, .rel-thumb > img, .admin-preview > img { position: static; }
+    .thumb::before, .rel-thumb::before, .admin-preview::before, .shelf-card::before { display: none; }
+    .thumb > img, .rel-thumb > img, .admin-preview > img, .shelf-card > img { position: static; }
   }
 
   /* 2) Legacy browsers without CSS custom properties (IE11, very old Safari):
@@ -627,6 +724,8 @@
     -webkit-text-fill-color: transparent; color: #fff; animation: heroShine 9s linear infinite;
   }
   @keyframes heroShine { to { background-position: 220% center; } }
+  /* "8K" picks up the accent colour, same treatment as the header wordmark */
+  .hero h1 b { color: var(--accent); font-weight: 800; }
   .hero p { color: var(--muted); font-size: 15.5px; margin-top: 12px; }
   .hero-search {
     margin: 22px auto 4px; max-width: 640px; display: flex; align-items: center; gap: 8px;
@@ -642,6 +741,26 @@
     font-size: 14px; font-weight: 700; cursor: pointer; transition: transform .18s, box-shadow .18s; white-space: nowrap;
   }
   .hero-search button:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(255,255,255,0.25); }
+  /* ---- Pager under the grid: numbered pages, current one filled ---- */
+  .pager {
+    display: flex; justify-content: center; align-items: center; flex-wrap: wrap;
+    gap: 8px; margin: 34px auto 10px; padding: 0 16px;
+  }
+  .pg-btn {
+    min-width: 44px; padding: 10px 14px; border-radius: 10px; cursor: pointer;
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
+    font-size: 14px; font-weight: 700; line-height: 1; text-align: center;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .pg-btn:hover { background: var(--surface); border-color: var(--accent); }
+  .pg-btn.on { background: var(--accent); border-color: var(--accent); color: #fff; cursor: default; }
+  .pg-btn.on:hover { background: var(--accent); }
+  .pg-gap { color: var(--muted); padding: 0 2px; user-select: none; }
+  @media (max-width: 700px) {
+    .pager { gap: 6px; margin-top: 24px; }
+    .pg-btn { min-width: 38px; padding: 9px 11px; font-size: 13px; }
+  }
+
   .hero-stats { margin-top: 18px; color: var(--muted); font-size: 13px; display: flex; gap: 26px; justify-content: center; flex-wrap: wrap; }
   .hero-stats b { color: var(--text); font-size: 15px; }
 
@@ -800,13 +919,9 @@
   html.light .detail-download { color: var(--text); background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.16); box-shadow: 0 6px 20px rgba(0,0,0,0.09); }
   html.light .detail-desc, html.light .policy p, html.light .policy li { color: #45484f; }
   html.light .policy p.lead { color: #33363c; }
-  html.light .detail-res, html.light .related-panel, html.light .poptags-panel {
+  html.light .related-panel {
     background: rgba(255,255,255,0.75); border-color: rgba(0,0,0,0.1); box-shadow: none;
   }
-  html.light .res-list { border-color: rgba(0,0,0,0.08); }
-  html.light .res-item { border-color: rgba(0,0,0,0.05); }
-  html.light .res-item:hover { background: rgba(0,0,0,0.04); }
-  html.light .res-dev { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.14); }
   html.light .scrolltop { background: rgba(255,255,255,0.92); border-color: rgba(0,0,0,0.16); box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
   html.light .filter-chip { background: rgba(0,0,0,0.07); }
   html.light .filter-chip .x { background: rgba(0,0,0,0.25); }
@@ -814,9 +929,6 @@
   html.light .meta-chip, html.light .tag-chip { background: rgba(0,0,0,0.05); }
   html.light .policy .contact-card { background: rgba(255,255,255,0.85); border-color: rgba(0,0,0,0.12); box-shadow: none; }
   html.light .policy .contact-card .row { color: #45484f; }
-  /* the tag cloud uses fixed bright colors tuned for a dark panel; invert the
-     lightness (keeping roughly the same hue) so white/pale tags stay visible */
-  html.light .poptag { filter: invert(1) hue-rotate(180deg); }
 
   /* ============================================================
      v6 — simple flat theme: one accent color, solid surfaces,
@@ -899,23 +1011,12 @@
   }
   html .detail-download:hover, html.light .detail-download:hover { box-shadow: 0 10px 24px rgba(99,102,241,0.4); }
   html .detail-stage, html.light .detail-stage { background: var(--surface-2); border-color: var(--line); box-shadow: none; }
-  html .detail-res, html .related-panel, html .poptags-panel,
-  html.light .detail-res, html.light .related-panel, html.light .poptags-panel {
+  html .related-panel,
+  html.light .related-panel {
     background: var(--surface); border-color: var(--line);
     backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
   }
-  html .res-dev, html.light .res-dev {
-    background: var(--surface-2); border-color: var(--line); color: var(--text);
-    backdrop-filter: none; -webkit-backdrop-filter: none;
-  }
-  html .res-dev.active, html.light .res-dev.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-  html .res-item:hover .res-dim, html.light .res-item:hover .res-dim { color: var(--accent-glow); text-shadow: none; }
   html .meta-chip, html .tag-chip, html.light .meta-chip, html.light .tag-chip { background: var(--surface-2); border-color: var(--line); }
-
-  /* tag cloud: one simple color, accent on hover (beats the inline colors) */
-  html .poptags-line, html.light .poptags-line { background: var(--accent); animation: none; }
-  html .poptag, html.light .poptag { color: var(--muted) !important; opacity: 1 !important; filter: none; }
-  html .poptag:hover, html.light .poptag:hover { color: var(--accent) !important; text-shadow: none; }
 
   html .scrolltop, html.light .scrolltop {
     background: var(--surface-2); border-color: var(--line);
@@ -1105,6 +1206,31 @@
     color: var(--muted); opacity: 0.6; padding: 6px 0 2px;
   }
   .ad-detail { max-width: 1180px; margin: 0 auto 26px; }
+
+  /* ---- Side rails: one tall ad fixed down each margin -------------------
+     The gutters only open (body.has-rails) at the moment ads actually go
+     live, so an unconfigured site keeps its full width rather than showing
+     two empty columns. Below 1280px there isn't room, so they stay off and
+     the page is untouched — phones and tablets never see them. */
+  .ad-rail { display: none; }
+  @media (min-width: 1280px) {
+    body.has-rails { padding-left: 178px; padding-right: 178px; }
+    body.has-rails .ad-rail {
+      display: block; position: fixed; top: 84px; width: 160px; z-index: 55;
+      max-height: calc(100vh - 104px); overflow: hidden;
+    }
+    body.has-rails .ad-rail-left { left: 9px; }
+    body.has-rails .ad-rail-right { right: 9px; }
+    body.has-rails .ad-tall.on { min-height: 600px; height: 600px; max-height: 100%; }
+    /* keep the back-to-top button clear of the right rail */
+    body.has-rails .scrolltop { right: 190px; }
+  }
+  /* preview mode (?ads=preview): show the rails as outlined placeholders so the
+     layout can be checked before a publisher ID exists */
+  .ad-slot.ad-ghost.on {
+    border-style: dashed; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; color: var(--muted); font-size: 12px;
+  }
   /* ---- cookie / ads consent ---- */
   .consent {
     position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
@@ -1255,9 +1381,577 @@
   .search button, .lb-dl, .detail-report a { display: inline-flex; align-items: center; gap: 8px; }
   .lb-dl { justify-content: center; }
   @media (prefers-reduced-motion: reduce) { .tab:hover .i, .tab:hover .i * { animation: none !important; } }
+
+  /* ============================================================
+     Performance
+     The old glass design put a backdrop-filter on every badge and action
+     button, so a 24-card page ran ~120 live blurs — the compositor re-blurs
+     each one on every scroll frame, which is what made scrolling lag on a
+     laptop. The flat theme draws these as solid chips anyway, so the blur
+     bought nothing. Off-screen cards are also skipped entirely, which stops
+     two dozen skeleton shimmers animating in parts of the page nobody is
+     looking at.
+     ============================================================ */
+  .card-badge, .act, .shelf-count {
+    backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  }
+  .card-badge { background: rgba(8,8,10,0.78); }
+  .act { background: var(--surface-2); }
+  .shelf-count { background: rgba(8,8,10,0.72); }
+  /* the browser skips layout, paint and animation for cards out of view */
+  .card { content-visibility: auto; contain-intrinsic-size: auto 300px; }
+  .shelf-card { content-visibility: auto; contain-intrinsic-size: auto 150px; }
+  .rel-card { content-visibility: auto; contain-intrinsic-size: auto 160px; }
+
+  /* ---- The wallpaper should fit the screen it is being viewed on --------
+     A 3840x2160 image at full container width made the page taller than a
+     laptop viewport, so you landed on the wallpaper and had to scroll to
+     find the download button. Cap the stage to the viewport instead. */
+  .detail-stage img {
+    max-height: calc(100vh - 210px); width: 100%; object-fit: contain;
+    background: var(--surface-2);
+  }
+  @media (max-width: 820px) { .detail-stage img { max-height: calc(100vh - 150px); } }
+
+  /* the vertical tab rail has to fit a laptop's height, not just a desktop's */
+  @media (min-width: 1280px) {
+    .detail-view .tabs-detail { gap: 6px; max-height: calc(100vh - 120px); }
+    .detail-view .tabs-detail .tab {
+      padding: 13px 8px; font-size: 12px; letter-spacing: .6px; gap: 6px;
+    }
+    .detail-view .tabs-detail .tab .i { width: 15px; height: 15px; }
+    .detail-view .detail-share { gap: 8px; }
+    .detail-view .share { width: 34px; height: 34px; }
+    .detail-view .share svg { width: 17px; height: 17px; }
+  }
+
+  /* ---- Wallpaper title panel -------------------------------------------
+     Category eyebrow over a serif title, with the pixel size set off to the
+     right behind a hairline rule. Layout follows the reference; the colours
+     are the site's own surfaces rather than the reference's green. */
+  .dt-head {
+    max-width: 1180px; margin: 22px auto 0; padding: 26px 30px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    display: flex; align-items: center; gap: 30px;
+  }
+  .dt-head-main { flex: 1; min-width: 0; }
+  .dt-eyebrow {
+    font-size: 11px; font-weight: 800; letter-spacing: 2.4px; text-transform: uppercase;
+    color: var(--muted); padding-bottom: 7px; margin-bottom: 13px;
+    border-bottom: 2px solid var(--accent); display: inline-block;
+  }
+  .dt-title {
+    font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+    font-size: clamp(26px, 3.4vw, 40px); font-weight: 600; line-height: 1.14;
+    letter-spacing: 0.2px; color: var(--text); margin: 0 0 12px;
+  }
+  .dt-head .detail-desc { margin: 0; max-width: 62ch; }
+  .dt-dims {
+    flex-shrink: 0; text-align: right; padding-left: 30px;
+    border-left: 1px solid var(--line); align-self: stretch;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .dt-dims-val {
+    font-size: 19px; font-weight: 800; color: var(--text);
+    font-variant-numeric: tabular-nums; letter-spacing: 0.4px;
+  }
+  .dt-dims-lbl {
+    margin-top: 5px; font-size: 10.5px; font-weight: 700; letter-spacing: 1.6px;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .dt-dims-lbl .dot { opacity: 0.5; }
+  @media (max-width: 760px) {
+    .dt-head { flex-direction: column; align-items: flex-start; gap: 18px; padding: 20px; }
+    .dt-dims { border-left: none; border-top: 1px solid var(--line); padding: 14px 0 0; text-align: left; width: 100%; }
+  }
+
+  /* ============================================================
+     Wallpaper page: side rails
+     The tab bar moves to a vertical rail down the left edge and the share
+     buttons to a matching rail down the right, so the wallpaper itself owns
+     the middle of the screen. Everything stays in the site's own palette —
+     no brand colours — so the rails read as part of the page, not stickers.
+     ============================================================ */
+
+  /* share buttons lose their brand colours at every width */
+  .share, .share.pin, .share.fb, .share.tw, .share.rd, .share.cp, .share.sh {
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
+    box-shadow: none;
+  }
+  .share:hover, html .share:hover, html.light .share:hover {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+    transform: translateY(-2px);
+  }
+
+  @media (min-width: 1280px) {
+    /* left rail — the tab bar, turned on its side */
+    .detail-view .tabs-detail {
+      position: fixed; left: 10px; top: 50%; transform: translateY(-50%);
+      flex-direction: column; align-items: stretch; gap: 8px;
+      margin: 0; padding: 0; width: auto; max-width: none; z-index: 50;
+    }
+    .detail-view .tabs-detail .tab {
+      writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);
+      padding: 16px 9px; border-radius: 12px; justify-content: center; gap: 8px;
+    }
+    /* right rail — share, as a matching column of round buttons */
+    .detail-view .detail-share {
+      position: fixed; right: 10px; top: 50%; transform: translateY(-50%);
+      flex-direction: column; gap: 10px; margin: 0; width: auto; max-width: none; z-index: 50;
+    }
+    .detail-view .share { width: 38px; height: 38px; border-radius: 50%; }
+
+    /* when the ad rails are live they own the outer margins — move in past them */
+    body.has-rails .detail-view .tabs-detail { left: 192px; }
+    body.has-rails .detail-view .detail-share { right: 192px; }
+  }
+
+  /* ============================================================
+     v11 — simple
+     The sheet above grew in layers (glass -> flat -> cards -> rails)
+     and ended up carrying two visual languages at once: pills beside
+     rectangles, four different corner radii, a lift-and-glow on every
+     hover, and five stacked control strips before the first wallpaper.
+     This block is the final word on the look. It touches surfaces,
+     spacing and type only — no markup and no behaviour change — so the
+     page reads as one quiet frame around the images.
+     ============================================================ */
+  :root {
+    --bg-0: #0a0a0c;
+    --surface: #121216;
+    --surface-2: #1b1b21;
+    --line: #272730;
+    --muted: rgba(255,255,255,0.55);
+    --r: 10px;          /* one radius for panels and cards */
+    --r-sm: 8px;        /* one radius for chips and buttons */
+  }
+  html.light {
+    --bg-0: #f7f8fa;
+    --surface: #ffffff;
+    --surface-2: #eef0f4;
+    --line: #e3e6ec;
+    --muted: rgba(22,22,26,0.58);
+  }
+
+  /* ---- nothing lifts, scales or glows on hover ---- */
+  html .tag:hover, html .tab:hover, html .card:hover, html .rel-card:hover,
+  html .shelf-card:hover, html .res-chip:hover, html .theme-btn:hover,
+  html .rescard:hover, html .share:hover, html .act:hover, html .fav-btn:hover,
+  html .hero-search button:hover, html .detail-download:hover, html .scrolltop:hover,
+  html .admin-btn:hover, html .admin-submit:hover, html .cat-item:hover .chev,
+  html .tag:hover .i, html .related-head.is-link:hover .cat-ico {
+    transform: none;
+  }
+  html .card:hover, html .rel-card:hover, html .shelf-card:hover,
+  html .hero-search button:hover, html .detail-download:hover,
+  html .admin-submit:hover, html .lb-dl:hover, html .theme-btn:hover {
+    box-shadow: none;
+  }
+  html .tab:hover .i, html .tab:hover .i * { animation: none; }
+
+  /* ---- header: one line, hairline rule, square-ish controls ---- */
+  html header, html.light header { padding: 11px 24px; gap: 14px; }
+  html .logo, html.light .logo { font-size: 19px; font-weight: 700; letter-spacing: 0; }
+  html .top-right, html.light .top-right { gap: 9px; }
+  html .categories-btn, html .search, html .theme-btn, html .auth-me,
+  html .policy-back, html .detail-back, html .auth-signout,
+  html.light .categories-btn, html.light .search, html.light .theme-btn, html.light .auth-me,
+  html.light .policy-back, html.light .detail-back, html.light .auth-signout {
+    border-radius: var(--r-sm); font-weight: 600; box-shadow: none;
+  }
+  html .categories-btn, html.light .categories-btn { padding: 8px 14px; font-size: 13px; }
+  html .theme-btn, html.light .theme-btn { width: 35px; height: 35px; }
+  html .search input, html.light .search input { padding: 8px 14px; font-size: 13px; }
+  html .search button, html.light .search button { padding: 8px 12px; }
+
+  /* ---- hero: left-aligned and compact, so wallpapers start higher ---- */
+  html .hero, html.light .hero {
+    max-width: 1680px; margin: 0 auto; padding: 32px 40px 20px; text-align: left;
+  }
+  html .hero h1, html.light .hero h1 {
+    font-size: clamp(26px, 3.2vw, 38px); font-weight: 700; letter-spacing: -0.6px;
+  }
+  html .hero p, html.light .hero p { font-size: 14.5px; margin-top: 8px; max-width: 62ch; }
+  html .hero-search, html.light .hero-search {
+    margin: 18px 0 0; max-width: 520px; border-radius: var(--r); padding: 4px 4px 4px 14px;
+  }
+  html .hero-search svg, html.light .hero-search svg { width: 17px; height: 17px; }
+  html .hero-search input, html.light .hero-search input { font-size: 14px; padding: 10px 4px; }
+  html .hero-search button, html.light .hero-search button {
+    border-radius: var(--r-sm); padding: 10px 18px; font-size: 13px; font-weight: 600;
+  }
+  html .hero-stats, html.light .hero-stats {
+    margin-top: 14px; gap: 18px; justify-content: flex-start; font-size: 12.5px;
+  }
+  html .hero-stats b, html.light .hero-stats b { font-size: 13.5px; font-weight: 700; }
+
+  /* ---- the three control strips share the hero left edge and get quiet ---- */
+  html .tags, html .resbar, html .tabs,
+  html.light .tags, html.light .resbar, html.light .tabs {
+    max-width: 1680px; margin: 0 auto; justify-content: flex-start;
+  }
+  html .tags, html.light .tags { gap: 7px; padding: 6px 40px 0; }
+  html .tag, html.light .tag {
+    border-radius: var(--r-sm); padding: 7px 12px; font-size: 12.5px; font-weight: 600;
+  }
+  html .resbar, html.light .resbar { gap: 7px; padding: 12px 40px 0; }
+  html .res-chip, html.light .res-chip {
+    border-radius: var(--r-sm); padding: 6px 12px; font-size: 12px; font-weight: 600;
+  }
+
+  /* tab bar: an underline rail instead of a row of filled pills */
+  html .tabs, html.light .tabs {
+    gap: 2px; padding: 16px 40px 0; border-bottom: 1px solid var(--line);
+  }
+  html .tabs .tab, html.light .tabs .tab {
+    background: none; border: none; box-shadow: none; border-radius: 0;
+    padding: 10px 13px; font-size: 13px; font-weight: 600; letter-spacing: 0;
+    color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  html .tabs .tab:hover, html.light .tabs .tab:hover { color: var(--text); background: none; }
+  html .tabs .tab.active, html.light .tabs .tab.active {
+    background: none; color: var(--text); border-bottom-color: var(--accent);
+  }
+  /* the detail view turns its tab bar into a fixed rail, so it keeps the pill */
+  html .tabs-detail, html.light .tabs-detail { border-bottom: none; padding-top: 22px; }
+  html .tabs-detail .tab, html.light .tabs-detail .tab {
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-sm);
+    color: var(--text); margin-bottom: 0; padding: 9px 15px;
+  }
+  html .tabs-detail .tab.active, html.light .tabs-detail .tab.active {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+  }
+
+  /* ---- section headings: plain text, no accent bar, no glow ---- */
+  html .section-head .bar, html .shelf-head .bar,
+  html.light .section-head .bar, html.light .shelf-head .bar { display: none; }
+  html .section-head h2, html.light .section-head h2 {
+    font-size: 19px; font-weight: 700; letter-spacing: -0.2px;
+  }
+  html .shelf-head h2, html.light .shelf-head h2 { font-size: 16px; font-weight: 700; }
+  html .filter-chip, html.light .filter-chip { border-radius: var(--r-sm); font-weight: 600; }
+
+  /* ---- gallery: sidebar + grid ---- */
+  html .gallery-body, html.light .gallery-body { padding: 22px 40px 0; gap: 26px; }
+  html .side-panel, html.light .side-panel { border-radius: var(--r); padding: 14px 10px; }
+  html .show-all, html.light .show-all { border-radius: var(--r-sm); }
+  html .gallery-main .grid, html.light .gallery-main .grid { gap: 18px; }
+
+  /* ---- cards: hairline box, small type, no ornament ---- */
+  html .card, html .rel-card, html .shelf-card,
+  html.light .card, html.light .rel-card, html.light .shelf-card { border-radius: var(--r); }
+  html .card-body, html.light .card-body { padding: 11px 12px 9px; }
+  html .card-title, html.light .card-title { font-size: 13.5px; font-weight: 600; }
+  html .card-tag, html.light .card-tag {
+    font-size: 10.5px; font-weight: 500; border-radius: 5px; padding: 3px 7px;
+  }
+  html .card-badge, html.light .card-badge {
+    font-size: 9.5px; font-weight: 700; letter-spacing: 0.3px;
+    border: none; border-radius: 5px; padding: 4px 7px;
+  }
+  html .card-views, html.light .card-views { font-size: 11.5px; margin-top: 8px; }
+  html .cact, html.light .cact {
+    font-size: 11.5px; font-weight: 600; border-radius: var(--r-sm); padding: 7px 3px;
+  }
+  html .act, html.light .act { border-radius: var(--r-sm); font-weight: 600; font-size: 12.5px; }
+  html .caption, html .rel-cap, html.light .caption, html.light .rel-cap { font-size: 12.5px; }
+
+  /* ---- pager / shelves / footer ---- */
+  html .pg-btn, html.light .pg-btn { border-radius: var(--r-sm); font-weight: 600; }
+  html .shelf, html.light .shelf { margin-top: 34px; }
+  html .shelf-grid, html.light .shelf-grid { gap: 12px; }
+  html footer, html.light footer { padding: 30px 24px; }
+  html .foot-nav a, html.light .foot-nav a { text-decoration: none; font-weight: 500; font-size: 13px; }
+  html .foot-nav a:hover, html.light .foot-nav a:hover { text-decoration: underline; }
+
+  /* ---- detail view and panels pick up the same radius ---- */
+  html .dt-head, html .related-panel, html .detail-stage, html .rescard,
+  html .auth-panel, html .cat-panel, html .consent, html .ad-slot.on,
+  html.light .dt-head, html.light .related-panel, html.light .detail-stage, html.light .rescard,
+  html.light .auth-panel, html.light .cat-panel, html.light .consent, html.light .ad-slot.on {
+    border-radius: var(--r);
+  }
+  html .dt-head, html.light .dt-head { padding: 24px 26px; }
+  html .detail-download, html.light .detail-download {
+    border-radius: var(--r); padding: 15px; font-size: 14.5px; font-weight: 700;
+  }
+  html .share, html.light .share { border-radius: var(--r-sm); }
+  html .meta-chip, html .tag-chip, html.light .meta-chip, html.light .tag-chip {
+    border-radius: var(--r-sm); font-weight: 600;
+  }
+
+  /* ---- phones: the strips scroll sideways instead of stacking into rows ---- */
+  @media (max-width: 1050px) {
+    html .hero, html.light .hero { padding: 26px 20px 16px; }
+    html .tags, html.light .tags { padding: 6px 20px 0; }
+    html .resbar, html.light .resbar { padding: 10px 20px 0; }
+    html .tabs, html.light .tabs { padding: 14px 20px 0; }
+    html .gallery-body, html.light .gallery-body { padding: 18px 20px 0; }
+  }
+  @media (max-width: 700px) {
+    html .tags, html .resbar, html .tabs,
+    html.light .tags, html.light .resbar, html.light .tabs {
+      flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+      scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    }
+    html .tags::-webkit-scrollbar, html .resbar::-webkit-scrollbar,
+    html .tabs::-webkit-scrollbar { display: none; }
+    html .tag, html .res-chip, html .tabs .tab { flex-shrink: 0; }
+  }
+  @media (max-width: 560px) {
+    html .hero, html.light .hero { padding: 22px 16px 14px; }
+    html .hero-search, html.light .hero-search { max-width: none; }
+    html .tags, html.light .tags { padding: 6px 16px 0; }
+    html .resbar, html.light .resbar { padding: 10px 16px 0; }
+    html .tabs, html.light .tabs { padding: 12px 16px 0; }
+    html .gallery-body, html.light .gallery-body { padding: 16px 16px 0; }
+    html footer, html.light footer { padding: 24px 16px; }
+  }
+
+  /* ============================================================
+     v12 — wallpaper-site layout
+     Modelled on how the big wallpaper sites present a library: the
+     picture IS the card (title and actions surface on hover), the
+     front page leads with images — a wall of wallpapers behind the
+     search and a row of category tiles — and category / search / tab
+     views drop that furniture so results start under the header.
+     ============================================================ */
+
+  /* ---- header: the search takes the middle of the bar ---- */
+  html .top-right, html.light .top-right { flex: 1; min-width: 0; margin-left: 28px; }
+  html .search, html.light .search { flex: 0 1 560px; margin-right: auto; }
+  html .search input, html.light .search input { flex: 1 1 auto; width: auto; min-width: 0; }
+  html .categories-btn, html.light .categories-btn { white-space: nowrap; }
+
+  /* ---- front-page hero: a wall of wallpapers behind the search ---- */
+  html .hero, html.light .hero {
+    position: relative; overflow: hidden; isolation: isolate;
+    width: calc(100% - 80px); max-width: 1600px; margin: 18px auto 0;
+    padding: 64px 24px 40px; text-align: center; border-radius: 14px;
+    background: #101014;   /* dark in both themes: it sits under pictures */
+  }
+  .hero-bg {
+    position: absolute; inset: 0; z-index: -1;
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+  .hero-bg img { width: 100%; height: 100%; min-height: 0; object-fit: cover; display: block; }
+  .hero-bg::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(8,8,12,0.58) 0%, rgba(8,8,12,0.74) 55%, rgba(8,8,12,0.92) 100%);
+  }
+  .hero-inner { position: relative; max-width: 860px; margin: 0 auto; }
+  html .hero h1, html.light .hero h1 {
+    color: #fff; font-size: clamp(30px, 4.2vw, 50px); font-weight: 800; letter-spacing: -1px;
+    text-shadow: 0 2px 24px rgba(0,0,0,0.45);
+  }
+  html .hero h1 b, html.light .hero h1 b { color: #8b8ff8; }
+  html .hero p, html.light .hero p {
+    color: rgba(255,255,255,0.82); font-size: 15.5px; margin: 10px auto 0; max-width: 60ch;
+  }
+  /* white search box on the dark wall, in both themes */
+  html .hero-search, html.light .hero-search {
+    margin: 24px auto 0; max-width: 620px; border-radius: 12px; padding: 5px 5px 5px 16px;
+    background: #fff; border: none;
+  }
+  html .hero-search svg, html.light .hero-search svg { color: #6b7280; width: 18px; height: 18px; }
+  html .hero-search input, html.light .hero-search input { color: #111; font-size: 15px; padding: 12px 4px; }
+  html .hero-search input::placeholder, html.light .hero-search input::placeholder { color: #6b7280; }
+  html .hero-search button, html.light .hero-search button {
+    border-radius: 9px; padding: 12px 22px; font-size: 14px; font-weight: 700;
+  }
+  /* the topic chips become "trending" pills under the search */
+  html .hero .tags, html.light .hero .tags {
+    max-width: none; margin: 18px auto 0; padding: 0; justify-content: center; gap: 8px;
+  }
+  html .hero .tag, html.light .hero .tag {
+    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color: #fff;
+    padding: 6px 13px; font-size: 12.5px;
+  }
+  html .hero .tag:hover, html.light .hero .tag:hover { background: rgba(255,255,255,0.24); }
+  html .hero-stats, html.light .hero-stats {
+    justify-content: center; color: rgba(255,255,255,0.7); margin-top: 18px;
+  }
+  html .hero-stats b, html.light .hero-stats b { color: #fff; }
+
+  /* ---- popular categories: picture tiles ---- */
+  .cat-tiles { width: calc(100% - 80px); max-width: 1600px; margin: 26px auto 0; }
+  .ct-head { font-size: 17px; font-weight: 700; letter-spacing: -0.2px; margin-bottom: 12px; color: var(--text); }
+  .ct-row { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 12px; }
+  .ct {
+    position: relative; aspect-ratio: 16 / 10; border-radius: var(--r); overflow: hidden;
+    border: none; padding: 0; cursor: pointer; background: var(--surface-2);
+    font-family: inherit; text-align: left;
+  }
+  .ct img {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;
+    transition: transform 0.35s ease;
+  }
+  .ct::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.8));
+  }
+  .ct:hover img { transform: scale(1.05); }
+  .ct-name {
+    position: absolute; left: 12px; bottom: 10px; z-index: 1; max-width: calc(100% - 56px);
+    color: #fff; font-size: 14px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ct-n {
+    position: absolute; right: 11px; bottom: 11px; z-index: 1;
+    color: rgba(255,255,255,0.78); font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums;
+  }
+  .ct:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @supports not (aspect-ratio: 1 / 1) { .ct::before { content: ''; display: block; padding-top: 62.5%; } }
+
+  /* ---- toolbar: tabs on the left, resolution chips on the right, one rule ---- */
+  .toolbar {
+    width: calc(100% - 80px); max-width: 1600px; margin: 26px auto 0;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  html .toolbar .tabs, html.light .toolbar .tabs {
+    max-width: none; margin: 0; padding: 0; border-bottom: none; min-width: 0;
+  }
+  html .toolbar .tabs .tab, html.light .toolbar .tabs .tab { margin-bottom: 0; }
+  html .toolbar .resbar, html.light .toolbar .resbar {
+    max-width: none; margin: 0; padding: 0 0 7px; flex-shrink: 0;
+  }
+
+  /* browsing anything but the front page folds the hero and tiles away */
+  #galleryView:not(.is-home) .hero, #galleryView:not(.is-home) .cat-tiles { display: none; }
+  #galleryView:not(.is-home) .toolbar { margin-top: 18px; }
+
+  /* ---- the grid: the picture is the card ---- */
+  html .gallery-main .grid:not(.phone-view), html.light .gallery-main .grid:not(.phone-view) { gap: 14px; }
+  html .grid:not(.phone-view) .card, html.light .grid:not(.phone-view) .card {
+    border: none; background: var(--surface-2); contain-intrinsic-size: auto 200px;
+  }
+  .grid:not(.phone-view) .thumb .hover { display: none; }
+  .grid:not(.phone-view) .thumb img { transition: opacity 0.5s ease, transform 0.35s ease; }
+  .grid:not(.phone-view) .card:hover .thumb img.loaded { transform: scale(1.04); }
+  /* title, views and actions ride on a gradient over the bottom of the image */
+  .grid:not(.phone-view) .card-body {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 5;
+    padding: 38px 12px 10px;
+    background: linear-gradient(180deg, rgba(6,6,9,0) 0%, rgba(6,6,9,0.62) 42%, rgba(6,6,9,0.9) 100%);
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 10px;
+    opacity: 0; pointer-events: none; transition: opacity 0.16s ease;
+  }
+  .grid:not(.phone-view) .card:hover .card-body,
+  .grid:not(.phone-view) .card:focus-within .card-body { opacity: 1; pointer-events: auto; }
+  /* touch screens can't hover, so the strip stays up there */
+  @media (hover: none) { .grid:not(.phone-view) .card-body { opacity: 1; pointer-events: auto; } }
+  .grid:not(.phone-view) .card-tags { display: none; }
+  html .grid:not(.phone-view) .card-title, html.light .grid:not(.phone-view) .card-title {
+    color: #fff; grid-column: 1; grid-row: 1;
+  }
+  html .grid:not(.phone-view) .card-views, html.light .grid:not(.phone-view) .card-views {
+    color: rgba(255,255,255,0.72); margin: 0; grid-column: 2; grid-row: 1;
+  }
+  /* the no-JS cards the server injects carry a category · size line */
+  .grid:not(.phone-view) .card-sub { grid-column: 1 / -1; color: rgba(255,255,255,0.72); font-size: 11.5px; margin-top: 2px; }
+  html .grid:not(.phone-view) .card-actions, html.light .grid:not(.phone-view) .card-actions {
+    grid-column: 1 / -1; margin-top: 8px; padding-top: 0; border-top: none; gap: 6px;
+  }
+  html .grid:not(.phone-view) .cact, html.light .grid:not(.phone-view) .cact {
+    flex: 0 0 auto; min-width: 34px; height: 30px; padding: 0 9px;
+    color: #fff; background: rgba(255,255,255,0.14); border-radius: 7px;
+  }
+  html .grid:not(.phone-view) .cact:hover, html.light .grid:not(.phone-view) .cact:hover {
+    background: rgba(255,255,255,0.26); color: #fff;
+  }
+  html .grid:not(.phone-view) .cact.on, html.light .grid:not(.phone-view) .cact.on { background: var(--accent); color: #fff; }
+  html .grid:not(.phone-view) .cact.fav.on, html.light .grid:not(.phone-view) .cact.fav.on { background: #e11d48; color: #fff; }
+  .grid:not(.phone-view) .cact.full { margin-left: auto; }
+  /* the full-screen button lives in the overlay only in phone view */
+  .grid.phone-view .cact.full { display: none; }
+
+  /* ---- shelves and related: same picture-first card, caption on the image ---- */
+  .shelf-card img { transition: transform 0.35s ease; }
+  .shelf-card:hover img { transform: scale(1.04); }
+  html .rel-card, html.light .rel-card { position: relative; border: none; background: var(--surface-2); }
+  .rel-thumb img { transition: transform 0.35s ease; }
+  .rel-card:hover .rel-thumb img { transform: scale(1.04); }
+  html .rel-cap, html.light .rel-cap {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 1;
+    padding: 26px 10px 8px; color: #fff; font-weight: 600; text-align: left;
+    background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,0.8));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ct img, .grid .thumb img, .shelf-card img, .rel-thumb img { transition: none; }
+    .ct:hover img, .grid .card:hover .thumb img.loaded, .shelf-card:hover img,
+    .rel-card:hover .rel-thumb img { transform: none; }
+  }
+
+  /* ---- smaller screens ---- */
+  @media (max-width: 1200px) { .ct-row { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  @media (max-width: 1050px) {
+    html .hero, html.light .hero { width: calc(100% - 40px); padding: 50px 20px 30px; }
+    .hero-bg { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .hero-bg img:nth-child(n+9) { display: none; }
+    .cat-tiles, .toolbar { width: calc(100% - 40px); }
+  }
+  @media (max-width: 900px) {
+    .toolbar { flex-direction: column; align-items: stretch; gap: 10px; border-bottom: none; }
+    html .toolbar .tabs, html.light .toolbar .tabs { border-bottom: 1px solid var(--line); }
+    html .toolbar .resbar, html.light .toolbar .resbar { padding: 0; }
+  }
+  @media (max-width: 820px) {
+    html .top-right, html.light .top-right { flex: 1 1 100%; margin-left: 0; }
+    html .search, html.light .search { flex: 1 1 auto; margin-right: 0; }
+  }
+  @media (max-width: 700px) {
+    html .hero .tags, html.light .hero .tags { justify-content: flex-start; }
+    .ct-row { display: flex; overflow-x: auto; scrollbar-width: none; gap: 10px; }
+    .ct-row::-webkit-scrollbar { display: none; }
+    .ct { flex: 0 0 150px; }
+  }
+  @media (max-width: 560px) {
+    html .hero, html.light .hero {
+      width: calc(100% - 32px); margin-top: 12px; padding: 36px 16px 24px; border-radius: 12px;
+    }
+    .hero-bg { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .hero-bg img:nth-child(n+7) { display: none; }
+    html .hero p, html.light .hero p { font-size: 14px; }
+    html .hero-search button, html.light .hero-search button { padding: 11px 16px; }
+    .cat-tiles, .toolbar { width: calc(100% - 32px); }
+    .cat-tiles { margin-top: 20px; }
+  }
+
+  /* ---- header account panel ---- */
+  .auth-panel .auth-title { font-size: 14.5px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  #gbtnMain { min-height: 40px; }
+  .auth-links { display: grid; gap: 2px; margin: 0 -6px 10px; }
+  .auth-links a {
+    display: block; padding: 8px; border-radius: 7px; text-decoration: none;
+    font-size: 13px; font-weight: 600; color: var(--text);
+  }
+  .auth-links a:hover { background: var(--surface-2); }
+
+  /* ---- Speed -------------------------------------------------------------
+     The server's no-JS cards (a.card) now stay up until the library arrives,
+     and nothing marks their images .loaded — show them as they come in. */
+  .grid > a.card { color: inherit; text-decoration: none; }
+  .grid > a.card .thumb img { opacity: 1; }
+  /* The full-screen view shows the thumbnail first and swaps in the sharp image;
+     a fixed box stops that swap jumping from 640px to full size. */
+  .lightbox img { width: 94vw; height: 86vh; object-fit: contain; border-radius: 0; box-shadow: none; }
 </style>
 </head>
 <body>
+<noscript>
+  <p style="padding:20px;text-align:center;font:15px/1.6 -apple-system,system-ui,sans-serif;color:#fff;background:#7f1d1d;margin:0">
+    This gallery needs JavaScript to load the wallpapers. Please enable it for this site.
+  </p>
+</noscript>
+
+<!-- Side ad rails. They sit outside every view container (gallery / detail /
+     policy), so they stay put as the visitor moves around the site instead of
+     being torn down and rebuilt on each view. -->
+<aside class="ad-rail ad-rail-left"><div class="ad-slot ad-tall" data-ad="rail-left"></div></aside>
+<aside class="ad-rail ad-rail-right"><div class="ad-slot ad-tall" data-ad="rail-right"></div></aside>
 
 <div class="backdrop"></div>
 <div class="grain"></div>
@@ -1279,8 +1973,13 @@
     <div class="auth-wrap" id="authWrap" hidden>
       <button class="categories-btn" id="authBtn">Sign in</button>
       <div class="auth-panel" id="authPanel">
+        <p class="auth-title" id="authTitle">Sign in</p>
         <p id="authPanelText">Sign in with Google to submit your own wallpapers and be credited for them.</p>
         <div id="gbtnMain"></div>
+        <nav class="auth-links" id="authLinks" hidden>
+          <a href="/upload">Submit a wallpaper</a>
+          <a href="#" id="authSaved">Saved wallpapers</a>
+        </nav>
         <button class="auth-signout" id="authSignout" hidden>Sign out</button>
       </div>
     </div>
@@ -1347,20 +2046,29 @@
   </div>
 </div>
 
-<div id="galleryView">
+<div id="galleryView" class="is-home">
   <section class="hero">
-    <h1>Stunning 8K Wallpapers</h1>
-    <p>Hand-picked ultra-HD backgrounds for desktop, mobile &amp; tablet — free to download.</p>
-    <div class="hero-search">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input type="text" id="heroSearch" placeholder="Search wallpapers — space, neon, minimal…">
-      <button id="heroSearchBtn">Search</button>
+    <div class="hero-bg" id="heroBg" aria-hidden="true"></div>
+    <div class="hero-inner">
+      <h1><b>8K</b> Wallpapers</h1>
+      <p>Hand-picked ultra-HD backgrounds for desktop, mobile &amp; tablet — free to download.</p>
+      <div class="hero-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="heroSearch" placeholder="Search wallpapers — space, neon, minimal…">
+        <button id="heroSearchBtn">Search</button>
+      </div>
+      <div class="tags" id="tags"></div>
+      <div class="hero-stats" id="heroStats"></div>
     </div>
-    <div class="hero-stats" id="heroStats"></div>
   </section>
-  <div class="tags" id="tags"></div>
-  <nav class="tabs" id="tabs"></nav>
-  <div class="resbar" id="resBar"></div>
+  <section class="cat-tiles" id="catTiles" aria-label="Popular categories" hidden>
+    <h2 class="ct-head">Popular categories</h2>
+    <div class="ct-row" id="ctRow"></div>
+  </section>
+  <div class="toolbar">
+    <nav class="tabs" id="tabs"></nav>
+    <div class="resbar" id="resBar"></div>
+  </div>
 
   <div class="gallery-body">
     <aside class="side-panel" id="sidePanel">
@@ -1387,9 +2095,32 @@
       <p class="section-desc" id="sectionDesc" style="display:none"></p>
 
       <main class="grid" id="grid"></main>
-      <div id="gridSentinel" aria-hidden="true" style="height:1px"></div>
+      <nav class="pager" id="pager" aria-label="Pagination"></nav>
     </div>
   </div>
+
+  <!-- Best-of rows, driven by the real global like / download counters -->
+  <section class="shelf" id="shelfViews">
+    <div class="shelf-head">
+      <span class="bar"></span><h2>Most Viewed Wallpapers</h2>
+      <button class="shelf-more" data-sort="views">more&hellip;</button>
+    </div>
+    <div class="shelf-grid"></div>
+  </section>
+  <section class="shelf" id="shelfLikes">
+    <div class="shelf-head">
+      <span class="bar"></span><h2>Most Liked Wallpapers</h2>
+      <button class="shelf-more" data-sort="likes">more&hellip;</button>
+    </div>
+    <div class="shelf-grid"></div>
+  </section>
+  <section class="shelf" id="shelfDownloads">
+    <div class="shelf-head">
+      <span class="bar"></span><h2>Most Downloaded Wallpapers</h2>
+      <button class="shelf-more" data-sort="downloads">more&hellip;</button>
+    </div>
+    <div class="shelf-grid"></div>
+  </section>
 </div>
 
 <div id="policyView" class="policy-view" style="display:none">
@@ -1408,8 +2139,17 @@
       <img id="dtImg" src="" alt="">
     </div>
     <div class="detail-report"><a href="#" id="dtReport"><svg class="i i-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-1.5 3.5L16 11H5"/></svg> Report Image</a></div>
-    <h2 class="detail-title"><span class="dt-cat" id="dtCat"></span> / <span class="dt-name" id="dtName"></span> Wallpaper</h2>
-    <p class="detail-desc" id="dtDesc"></p>
+    <div class="dt-head">
+      <div class="dt-head-main">
+        <div class="dt-eyebrow" id="dtCat"></div>
+        <h2 class="dt-title"><span id="dtName"></span></h2>
+        <p class="detail-desc" id="dtDesc"></p>
+      </div>
+      <div class="dt-dims">
+        <div class="dt-dims-val" id="dtDimsVal"></div>
+        <div class="dt-dims-lbl">PIXELS <span class="dot">·</span> <span id="dtDimsTier"></span></div>
+      </div>
+    </div>
     <button class="detail-download" id="dtDownload"><svg class="i i-lg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11M7 10l5 5 5-5M5 20h14"/></svg> <span class="dl-label">Download Original</span> <span class="dl-pill" id="dtRes"></span></button>
     <div class="rhead">
       <h3>Choose a resolution</h3>
@@ -1431,41 +2171,28 @@
       <a class="share cp" title="Copy link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a>
       <a class="share sh" title="Share&hellip;" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></a>
     </div>
-    <div class="detail-res">
-      <div class="res-bar">
-        <span class="res-lbl">More Resolutions:</span>
-        <button class="res-dev" data-dev="desktop"><svg class="i dev-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg> Desktop <span class="res-caret"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></button>
-        <button class="res-dev" data-dev="mobiles"><svg class="i dev-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg> Mobiles <span class="res-caret"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></button>
-        <button class="res-dev" data-dev="tablets"><svg class="i dev-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M11 18h2"/></svg> Tablets <span class="res-caret"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></button>
-        <button class="res-dev" data-dev="iphone"><svg class="i dev-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2" width="11" height="20" rx="3"/><path d="M9.5 4.5h5"/><path d="M11 19.5h2"/></svg> iPhone <span class="res-caret"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></button>
-        <button class="res-dev" data-dev="ipad"><svg class="i dev-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="2.5" width="15" height="19" rx="2.5"/><circle cx="12" cy="18.7" r=".9"/></svg> iPad <span class="res-caret"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></button>
-      </div>
-      <div class="res-list" id="resList"></div>
-    </div>
+
 
     <div class="related-panel">
       <div class="related-head">&#128444;&#65039; Related Wallpapers</div>
       <div class="related-grid" id="dtRelated"></div>
     </div>
 
-    <div class="poptags-panel">
-      <div class="poptags-head">POPULAR TAGS</div>
-      <div class="poptags-wrap" id="dtPopTags"></div>
-      <div class="poptags-line"></div>
-    </div>
   </div>
 </div>
 
 <footer>
   <nav class="foot-nav">
+    <a href="/guides">Guides</a><span>|</span>
     <a href="/upload">Submit a wallpaper</a><span>|</span>
-    <a href="#" data-policy="about">About</a><span>|</span>
-    <a href="#" data-policy="privacy">Privacy</a><span>|</span>
-    <a href="#" data-policy="tos">TOS</a><span>|</span>
-    <a href="#" data-policy="copyright">Copyright</a><span>|</span>
-    <a href="#" data-policy="contact">Contact Us</a>
+    <a href="/about" data-policy="about">About</a><span>|</span>
+    <a href="/privacy" data-policy="privacy">Privacy</a><span>|</span>
+    <a href="/tos" data-policy="tos">TOS</a><span>|</span>
+    <a href="/copyright" data-policy="copyright">Copyright</a><span>|</span>
+    <a href="/contact" data-policy="contact">Contact Us</a><span>|</span>
+    <a href="/report">Report Image</a>
   </nav>
-  <div class="foot-copy">&copy; 2026 8K Wallpapers &mdash; original generated artwork, free for personal use</div>
+  <div class="foot-copy">&copy; 2026 8K Wallpapers &mdash; free to download for personal use. Submitted wallpapers remain the property of their creators and are reviewed by hand before they appear.</div>
 </footer>
 
 <script>
@@ -1494,6 +2221,49 @@ function saveBlob(blob, filename){
   return true;
 }
 const categories = ['Abstract','Lifestyle','Animals','Love','Anime','Military','Architecture','Minimal','Bikes','Movies','Black/Dark','Music','Cars','Nature','Celebrations','People','Cute','Photography','Fantasy','Quotes','Flowers','Sci-Fi','Food','Space','Games','Sports','Gradients','Technology','CGI','World'];
+
+// ---- Category icons: one solid 24-grid glyph per category ----
+// Used by the "More in <category>" link under a wallpaper. Solid fills rather
+// than strokes so they stay legible at 17px next to the label.
+const CAT_ICONS = {
+  'Cars':'<path d="M5 11l1.6-4.2A2 2 0 0 1 8.5 5.5h7a2 2 0 0 1 1.9 1.3L19 11h.5a1.5 1.5 0 0 1 1.5 1.5V17a1 1 0 0 1-1 1h-1v1.2a1.3 1.3 0 0 1-2.6 0V18H7.6v1.2a1.3 1.3 0 0 1-2.6 0V18H4a1 1 0 0 1-1-1v-4.5A1.5 1.5 0 0 1 4.5 11Zm2.1-.6h8.8l-1.2-3.1a.6.6 0 0 0-.6-.4H9.5a.6.6 0 0 0-.6.4ZM6.5 15.4a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6Zm11 0a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6Z"/>',
+  'Anime':'<path d="M12 3c4.6 0 8.4 3.2 8.4 7.2 0 1.6-.6 3-1.7 4.2l1.1 4.4-4.1-1.7A9.8 9.8 0 0 1 12 17.5c-4.6 0-8.4-3.2-8.4-7.2S7.4 3 12 3Zm-3.2 6a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8Zm6.4 0a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8Z"/>',
+  'Nature':'<path d="M12 2c3.4 0 6 3.4 6 7.1 0 3.5-2.6 5.9-6 5.9s-6-2.4-6-5.9C6 5.4 8.6 2 12 2Zm-1 13h2v7h-2Z"/>',
+  'Space':'<path d="M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm8.6-1.6c.9 1.6-.7 4.5-3.6 7.4l-.4.4a7 7 0 0 0 .3-1.5c1.9-2 2.8-3.8 2.4-4.5-.5-.8-2.9-.4-5.7 1.1a24 24 0 0 0-5.9 4.4c-2.4 2.4-3.6 4.6-3.1 5.4.4.7 2.3.5 4.8-.7.4.4.9.8 1.4 1-3.6 1.9-6.6 2.4-7.5.8-.9-1.6.6-4.5 3.5-7.4a26 26 0 0 1 6.3-4.7c3.6-2 6.6-2.5 7.5-.9Z"/>',
+  'Abstract':'<path d="M7.5 3a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm6 .5h7v7h-7ZM7 13.5l4.5 7h-9Zm7.5 1.5h6v6h-6Z"/>',
+  'Games':'<path d="M7.5 7h9a5.5 5.5 0 0 1 5.4 6.5l-.7 3.4A2.8 2.8 0 0 1 16.4 18l-1.6-2h-5.6L7.6 18a2.8 2.8 0 0 1-4.8-1.1l-.7-3.4A5.5 5.5 0 0 1 7.5 7Zm.5 3v1.5H6.5V13H8v1.5h1.5V13H11v-1.5H9.5V10Zm7.5.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm2 2.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/>',
+  'Movies':'<path d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm1 2v2h2V7Zm4 0v2h2V7Zm4 0v2h2V7Zm4 0v2h2V7ZM4 15v2h2v-2Zm4 0v2h2v-2Zm4 0v2h2v-2Zm4 0v2h2v-2Z"/>',
+  'Music':'<path d="M20 3v12.5a3.5 3.5 0 1 1-2-3.2V7.6l-8 1.7v8.2a3.5 3.5 0 1 1-2-3.2V6.3Z"/>',
+  'Minimal':'<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-5 9h10v2H7Z"/>',
+  'Black/Dark':'<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 2v16a8 8 0 0 1 0-16Z"/>',
+  'Animals':'<path d="M5.5 6.5c1.2 0 2.2 1.4 2.2 3.1 0 1.7-1 3.1-2.2 3.1S3.3 11.3 3.3 9.6c0-1.7 1-3.1 2.2-3.1Zm13 0c1.2 0 2.2 1.4 2.2 3.1 0 1.7-1 3.1-2.2 3.1s-2.2-1.4-2.2-3.1c0-1.7 1-3.1 2.2-3.1ZM9.5 3c1.2 0 2.2 1.5 2.2 3.4S10.7 9.8 9.5 9.8 7.3 8.3 7.3 6.4 8.3 3 9.5 3Zm5 0c1.2 0 2.2 1.5 2.2 3.4s-1 3.4-2.2 3.4-2.2-1.5-2.2-3.4S13.3 3 14.5 3ZM12 11.5c3 0 5.5 2.4 5.5 5.2 0 2-1.4 3.3-3.3 3.3-1.1 0-1.6-.5-2.2-.5s-1.1.5-2.2.5c-1.9 0-3.3-1.3-3.3-3.3 0-2.8 2.5-5.2 5.5-5.2Z"/>',
+  'Sports':'<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 2.2c1.6 2.4 2.5 5 2.5 7.8s-.9 5.4-2.5 7.8c-1.6-2.4-2.5-5-2.5-7.8s.9-5.4 2.5-7.8ZM3.2 11h17.6v2H3.2Z"/>',
+  'Technology':'<path d="M8 8h8v8H8Zm2-6h1.5v3.5H10Zm4 0h1.5v3.5H14Zm-4 16.5h1.5V22H10Zm4 0h1.5V22H14ZM2 10h3.5v1.5H2Zm0 4h3.5v1.5H2Zm16.5-4H22v1.5h-3.5Zm0 4H22v1.5h-3.5Z"/>',
+  // drawn to match the set above for the categories it did not cover
+  'Architecture':'<path d="M3 21V10l6-4.5L15 10v11Zm3-8v2h2v-2Zm4 0v2h2v-2ZM17 21V13h4v8Z"/>',
+  'Bikes':'<path d="M5.5 13.5a3.25 3.25 0 1 0 0 6.5 3.25 3.25 0 0 0 0-6.5Zm13 0a3.25 3.25 0 1 0 0 6.5 3.25 3.25 0 0 0 0-6.5ZM14 4.5h3.5l1 3H16l-2 4.2H9.4L7 9.6l1.2-1.8h4.5Z"/>',
+  'Celebrations':'<path d="M3 21.5 7.2 9.8l7 7Zm12.6-10-1.3-2.8L11.5 7.5l2.8-1.3L15.6 3.4l1.3 2.8 2.8 1.3-2.8 1.3Zm3.9 6.8-.8-1.9-1.9-.8 1.9-.8.8-1.9.8 1.9 1.9.8-1.9.8Z"/>',
+  'CGI':'<path d="M12 2 21 7v10l-9 5-9-5V7Zm0 2.3L5.5 8 12 11.7 18.5 8Zm-7 5.4v6.5l6 3.3v-6.3Zm14 0-6 3.5v6.3l6-3.3Z"/>',
+  'Cute':'<path d="m12 2 2.9 6.3 6.9.8-5.1 4.6 1.4 6.8L12 17.1 5.9 20.5l1.4-6.8L2.2 9.1l6.9-.8Z"/>',
+  'Fantasy':'<path d="m3.5 20.5 10-10 2 2-10 10Zm12.5-14.6 1.1 2.5 2.5 1.1-2.5 1.1L16 13.1l-1.1-2.5-2.5-1.1 2.5-1.1Zm4.3 6.6.7 1.6 1.6.7-1.6.7-.7 1.6-.7-1.6-1.6-.7 1.6-.7Z"/>',
+  'Flowers':'<path d="M12 9.8a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4ZM12 2c1.9 0 3 1.6 2.6 3.6 1.7-1.1 3.6-.6 4.4 1s.1 3.4-1.7 4c1.8.6 2.5 2.4 1.7 4s-2.7 2.1-4.4 1c.4 2-.7 3.6-2.6 3.6s-3-1.6-2.6-3.6c-1.7 1.1-3.6.6-4.4-1s-.1-3.4 1.7-4c-1.8-.6-2.5-2.4-1.7-4s2.7-2.1 4.4-1C9 3.6 10.1 2 12 2Z"/>',
+  'Food':'<path d="M3 11h18a9 9 0 0 1-9 8.5A9 9 0 0 1 3 11Zm0 10h18v1.5H3ZM7 2h1.5v6H7Zm4 0h1.5v6H11Zm4 0h1.5v6H15Z"/>',
+  'Gradients':'<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 2.2a7.8 7.8 0 0 1 0 15.6Z"/>',
+  'Lifestyle':'<path d="M4 4h13v3h2.5a2.5 2.5 0 0 1 0 5H17v2a5 5 0 0 1-10 0V4Zm13 5v1.5h2a1 1 0 0 0 0-2h-2ZM3 20h18v2H3Z"/>',
+  'Love':'<path d="M12 21c-5-3.4-8.5-6.6-8.5-10.6A4.9 4.9 0 0 1 12 6.8a4.9 4.9 0 0 1 8.5 3.6C20.5 14.4 17 17.6 12 21Z"/>',
+  'Military':'<path d="M12 2 4 5.2v6.3c0 4.6 3.3 8.6 8 10.5 4.7-1.9 8-5.9 8-10.5V5.2Zm0 4 1.6 3.4 3.6.4-2.7 2.5.8 3.6L12 14.1l-3.3 1.8.8-3.6-2.7-2.5 3.6-.4Z"/>',
+  'People':'<path d="M12 2.5a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 0 1 0-8.4ZM4 21c0-4.2 3.6-7.2 8-7.2s8 3 8 7.2v.5H4Z"/>',
+  'Photography':'<path d="M9.2 4h5.6l1.3 2H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.9Zm2.8 4.6a4.7 4.7 0 1 0 0 9.4 4.7 4.7 0 0 0 0-9.4Zm0 2.2a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Z"/>',
+  'Quotes':'<path d="M3 14.5c0-4.6 2.4-8 6.5-9.3l.8 2.3C7.8 8.5 6.4 10 6.2 12H9a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Zm11 0c0-4.6 2.4-8 6.5-9.3l.8 2.3c-2.5.9-3.9 2.5-4.1 4.5H20a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1Z"/>',
+  'Sci-Fi':'<path d="M14.5 2c3.5 1.6 5.5 5 5.5 9l-3.2 3.2v3.3l-3 2.5v-3.5h-3.6V20l-3-2.5v-3.3L4 11c0-4 2-7.4 5.5-9ZM12 6.5A2.2 2.2 0 1 0 12 11a2.2 2.2 0 0 0 0-4.5ZM8.8 19.2 7 22h10l-1.8-2.8Z"/>',
+  'World':'<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm6.9 7h-2.7a15.6 15.6 0 0 0-1.6-4.4A8 8 0 0 1 18.9 9ZM12 4.2c.8 1.1 1.6 2.7 2 4.8h-4c.4-2.1 1.2-3.7 2-4.8ZM4.3 15a8 8 0 0 1 0-6h3.1a17.6 17.6 0 0 0 0 6Zm.8 2h2.7c.4 1.7 1 3.2 1.6 4.4A8 8 0 0 1 5.1 17Zm2.3-8H4.7a8 8 0 0 1 4.7-4.4A15.6 15.6 0 0 0 7.8 9Zm4.2 10.8c-.8-1.1-1.6-2.7-2-4.8h4c-.4 2.1-1.2 3.7-2 4.8ZM14.4 13H9.6a15.7 15.7 0 0 1 0-6h4.8a15.7 15.7 0 0 1 0 6Zm.2 8.4c.6-1.2 1.2-2.7 1.6-4.4h2.7a8 8 0 0 1-4.3 4.4Zm2-6.4a17.6 17.6 0 0 0 0-6h3.1a8 8 0 0 1 0 6Z"/>',
+  // fallback when a wallpaper has no category
+  'Gallery':'<path d="M3 4h18a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm1 12.6L8.5 12l3.2 3 3-2.6 4.3 4.2V6H4Zm4-8.1a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2Z"/>'
+};
+function catIcon(cat){
+  const d = CAT_ICONS[cat] || CAT_ICONS.Gallery;
+  return "<svg class='cat-ico' viewBox='0 0 24 24' aria-hidden='true'>" + d + "</svg>";
+}
 
 // ============================================================
 // Icon set (from the project's icon library): one 24 grid,
@@ -1572,18 +2342,6 @@ const tabs = [
   {label:'COLLECTIONS', ico:'collections'},
 ];
 
-// colorful popular tags: [label, color, sizePx, opacity]
-const popTags = [
-  ['Stock','#7c8cff',19,1],['Black background','#5fd17a',13.5,0.85],['Green background','#3ad07a',15,1],
-  ['8K','#3aa0ff',18,1],['PlayStation','#aab0bb',13,0.8],['2026','#6a6f78',12.5,0.7],
-  ['Gradient background','#ff8a3c',18,1],['Red aesthetic','#cfd3da',13,0.85],['5K','#ff3db5',18,1],
-  ['Illustration','#b07cff',17,1],['Abstract background','#6a6f78',12.5,0.6],['Neon','#e8ebf0',15,1],
-  ['White background','#f0f2f5',18,1],['Dark aesthetic','#aab0bb',13,0.85],['Green','#3ad07a',14,1],
-  ['Geometric','#cfd3da',17,1],['Minimalist','#9aa0a8',13.5,0.9],['Hello','#9cff5a',18,1],
-  ['Vibrant','#ff3db5',13,0.7],['Futuristic','#cfd3da',14,0.95],['Dark background','#2cc8e0',18,1],
-  ['3D Render','#aab0bb',12.5,0.85],['Apple','#e8ebf0',13.5,1],['Blue background','#5aa0ff',16,1],
-];
-
 function gradient(c){return "<defs><linearGradient id='%ID%' x1='0' y1='0' x2='1' y2='1'>"+c.map((x,i)=>"<stop offset='"+(i/(c.length-1))+"' stop-color='"+x+"'/>").join('')+"</linearGradient></defs><rect width='800' height='500' fill='url(#%ID%)'/>";}
 function glow(c){return "<rect width='800' height='500' fill='"+c[0]+"'/><defs><radialGradient id='%ID%' cx='50%' cy='60%' r='70%'><stop offset='0' stop-color='"+c[1]+"' stop-opacity='0.9'/><stop offset='1' stop-color='"+c[0]+"' stop-opacity='0'/></radialGradient></defs><ellipse cx='400' cy='300' rx='420' ry='160' fill='url(#%ID%)'/>";}
 function aurora(c){return gradient([c[0],c[0]])+c.map((x,i)=>"<ellipse cx='"+(180+i*180)+"' cy='"+(160+i*120)+"' rx='300' ry='190' fill='"+x+"' opacity='0.5' style='mix-blend-mode:screen'/>").join('');}
@@ -1623,6 +2381,7 @@ let activeTab = 'RECENT';
 let query = '';
 let activeCat = null;    // active category filter (null = none)
 let activeTag = null;    // active tag filter
+let activeSort = null;   // 'likes' | 'downloads' — the best-of views
 let showFavs = false;    // showing the Saved view
 let activeRes = null;    // resolution filter: '4K' | '5K' | '8K'
 let activeOrient = null; // orientation filter: 'Portrait' | 'Landscape'
@@ -1660,6 +2419,10 @@ function bumpStat(w, key){
   const id = favId(w), s = stats[id] || (stats[id] = {v:0, d:0});
   s[key] = (s[key]||0) + 1;
   try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(e){}
+  // downloads also feed the SHARED counter behind "Most Downloaded". Every
+  // download counts (unlike views/votes, which are one per browser) — grabbing
+  // a wallpaper twice is a real download twice.
+  if(key === 'd') registerDownload(w);
 }
 
 // ---- Global counters: views / likes / dislikes, shared by every visitor ----
@@ -1677,7 +2440,7 @@ function statKey(w){
   if(w._ref && w._ref.site === 'unsplash' && w._ref.id) return 'u:' + w._ref.id;
   return 'd:' + slugOf(w);
 }
-function gOf(w){ return gStats[statKey(w)] || { v:0, l:0, d:0 }; }
+function gOf(w){ return gStats[statKey(w)] || { v:0, l:0, d:0, dl:0 }; }
 function fmtCount(n){ return (+n || 0).toLocaleString(); }
 
 async function loadGlobalStats(){
@@ -1706,6 +2469,14 @@ function registerView(w){
   try { localStorage.setItem(VIEWED_KEY, JSON.stringify([...viewedSet])); } catch(e){}
   g.v++;
   postStat(k, 'view');
+}
+// counted every time, so the number is total downloads rather than people
+function registerDownload(w){
+  const k = statKey(w);
+  const g = gStats[k] || (gStats[k] = { v:0, l:0, d:0, dl:0 });
+  g.dl = (g.dl || 0) + 1;
+  postStat(k, 'download');
+  renderShelves();   // the ranking may have just changed
 }
 // dir: 1 = like, -1 = dislike. Clicking the active one clears the vote.
 function voteOn(w, dir){
@@ -1975,6 +2746,8 @@ function makeCard(w, idx){
           + icon('like') + "<span class='n'>" + fmtCount(g.l) + "</span></button>"
         + "<button class='cact down" + (myVote===-1?' on':'') + "' title='Dislike' aria-label='Dislike'>"
           + icon('dislike') + "</button>"
+        + "<button class='cact full' title='Preview full screen' aria-label='Preview full screen'>"
+          + icon('fullscreen') + "</button>"
       + "</div>"
     + "</div>";
 
@@ -1990,6 +2763,7 @@ function makeCard(w, idx){
   if(img.complete && img.naturalWidth){ img.classList.add('loaded'); thumb.classList.add('loaded'); }
 
   card.querySelector('.exp').onclick=e=>{ e.stopPropagation(); openLightbox(w); };
+  card.querySelector('.cact.full').onclick=e=>{ e.stopPropagation(); openLightbox(w); };
   // phone view's own download hands back a phone-shaped 1080x1920 crop
   card.querySelector('.dl2').onclick=e=>{
     e.stopPropagation(); bumpStat(w,'d'); trackUnsplash(w);
@@ -2051,6 +2825,10 @@ function updateSectionDesc(){
 const AD_EVERY = 12;                 // one ad row per 12 wallpapers
 const AD_CONSENT_KEY = '8kw_ads_consent';
 const ADS = { configured:false, client:null, active:false };
+// Ads are switched OFF for now. Flip this to true to bring back the side rails
+// and the in-grid / wallpaper-page slots. The AdSense <script> in <head> and
+// /ads.txt are left live either way, because AdSense review reads those.
+const ADS_ENABLED = false;
 
 function makeAdSlot(){
   const el = document.createElement('div');
@@ -2062,23 +2840,44 @@ function makeAdSlot(){
 function fillSlot(el){
   if(!ADS.active || el.dataset.filled) return;
   el.dataset.filled = '1';
+  const rail = el.classList.contains('ad-tall');
   const ins = document.createElement('ins');
   ins.className = 'adsbygoogle';
   ins.style.display = 'block';
+  if(rail){ ins.style.width = '160px'; ins.style.height = '600px'; }
   ins.setAttribute('data-ad-client', ADS.client);
-  ins.setAttribute('data-ad-format', 'auto');
-  ins.setAttribute('data-full-width-responsive', 'true');
+  // a 160px column needs a vertical unit; the in-grid slots stay responsive
+  ins.setAttribute('data-ad-format', rail ? 'vertical' : 'auto');
+  if(!rail) ins.setAttribute('data-full-width-responsive', 'true');
   el.appendChild(ins);
   try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch(e){}
 }
+// Opening the side gutters is what makes the rails visible, so it happens only
+// once ads are genuinely running — never for an unconfigured or declined site.
+function openRails(){ try { document.body.classList.add('has-rails'); } catch(e){} }
 function loadAdScript(){
   if(ADS.active) return;
   ADS.active = true;
-  const s = document.createElement('script');
-  s.async = true; s.crossOrigin = 'anonymous';
-  s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(ADS.client);
-  document.head.appendChild(s);
+  // The loader is already in the static <head> so the AdSense crawler can see it.
+  // Loading adsbygoogle.js twice throws, so only inject if it is somehow absent.
+  const already = document.querySelector('script[src*="adsbygoogle.js"]');
+  if(!already){
+    const s = document.createElement('script');
+    s.async = true; s.crossOrigin = 'anonymous';
+    s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(ADS.client);
+    document.head.appendChild(s);
+  }
+  openRails();
   document.querySelectorAll('.ad-slot').forEach(el=>{ el.classList.add('on'); fillSlot(el); });
+}
+// ?ads=preview — lay the rails out with placeholders so the design can be
+// checked before a publisher ID exists. Loads no ad code and sets no cookies.
+function previewRails(){
+  openRails();
+  document.querySelectorAll('.ad-slot').forEach(el=>{
+    el.classList.add('on', 'ad-ghost');
+    if(!el.textContent) el.appendChild(document.createTextNode('ad slot preview'));
+  });
 }
 function showConsent(){
   const bar = document.createElement('div');
@@ -2098,6 +2897,8 @@ function showConsent(){
   bar.querySelector('.no').onclick  = ()=> close('no');
 }
 async function initAds(){
+  if(/[?&]ads=preview/.test(location.search)){ previewRails(); return; }
+  if(!ADS_ENABLED) return;
   let cfg;
   try { cfg = await (await fetch(API_BASE + '/api/ads')).json(); } catch(e){ return; }
   if(!cfg || !cfg.configured) return;          // no publisher ID — nothing runs
@@ -2110,54 +2911,178 @@ async function initAds(){
   showConsent();
 }
 
-// ---- Infinite scroll: cards render in pages as the visitor scrolls down ----
+// ---- Paged gallery: PAGE_SIZE cards per page, with a numbered pager ----
 const PAGE_SIZE = 24;
-const HAS_IO = 'IntersectionObserver' in window;
 let _list = [];   // the currently filtered list
-let _shown = 0;   // how many of _list are on screen
+let _page = 1;    // 1-based page the visitor is on
+let _fills = 0;   // Unsplash top-ups spent filling the current page
+let _libLoaded = false;   // the wallpaper list has come back from the API
 
-function render(preserveCount){
+function render(preservePage){
   const grid=document.getElementById('grid');
-  grid.innerHTML='';
   _list = applyFilters();
-  if(preserveCount){
+  if(preservePage){
     // background refresh: keep the Unsplash photos already mixed into this view
     _list = _list.concat(_extra);
   } else {
     _extra = []; _usPage = 0; _usDone = false; _usSeen.clear();
+    _page = 1;
   }
   updateChrome(_list.length);
   grid.classList.toggle('phone-view', wantPhoneView());
   updateSectionDesc();
   paintActiveCat();
+  _fills = 0;
+  renderPage();
+  renderShelves();
+}
+
+// ---- "Most Liked" / "Most Downloaded" shelves -------------------------------
+// Both read the REAL global counters from /api/stats, so a wallpaper only
+// appears once someone has actually liked or downloaded it.
+const SHELF_SIZE = 10;   // two rows of five
+function sortValue(metric){
+  if(metric === 'views') return (w => gOf(w).v || 0);
+  if(metric === 'likes') return (w => gOf(w).l || 0);
+  return (w => gOf(w).dl || 0);
+}
+function renderShelf(id, metric, emptyMsg){
+  const host = document.getElementById(id);
+  if(!host) return;
+  const grid = host.querySelector('.shelf-grid');
+  const val = sortValue(metric);
+  const top = wallpapers.filter(w => val(w) > 0).sort((a,b) => val(b) - val(a)).slice(0, SHELF_SIZE);
+  grid.innerHTML = '';
+  const more = host.querySelector('.shelf-more');
+  if(more) more.style.display = top.length ? '' : 'none';
+  if(!top.length){
+    grid.innerHTML = "<p class='shelf-empty' style='grid-column:1/-1'>" + emptyMsg + "</p>";
+    return;
+  }
+  top.forEach(w=>{
+    const card = document.createElement('div');
+    card.className = 'shelf-card';
+    card.innerHTML = "<img src='" + esc(thumbUrl(w)) + "' alt='" + esc(w.name) + "' loading='lazy'>"
+      + "<span class='shelf-count'>"
+      + icon(metric === 'views' ? 'views' : metric === 'likes' ? 'like' : 'download', 'i-sm')
+      + fmtCount(val(w)) + "</span>"
+      + "<span class='shelf-cap'>" + esc(w.name) + "</span>";
+    // no stored thumbnail (a few older posts): fall back to the full image once, as the grid does
+    const im = card.querySelector('img');
+    im.onerror = ()=>{ im.onerror = null; if(w.img) im.src = w.img; };
+    card.onclick = ()=> showDetail(w);
+    grid.appendChild(card);
+  });
+}
+function renderShelves(){
+  renderShelf('shelfViews', 'views',
+    'No views counted yet — the most viewed wallpapers will appear here.');
+  renderShelf('shelfLikes', 'likes',
+    'No likes yet — tap the like button on a wallpaper and it will show up here.');
+  renderShelf('shelfDownloads', 'downloads',
+    'No downloads counted yet — the most downloaded wallpapers will appear here.');
+}
+// "more…" switches the whole gallery to that ranking
+function showSorted(metric){
+  showGallery(); activeSort = metric;
+  activeCat = null; activeTag = null; showFavs = false; query = ''; activeTab = 'ALL';
+  syncSearchInputs(''); resetActiveTabs();
+  setTitle(metric === 'views' ? 'Most Viewed Wallpapers'
+         : metric === 'likes' ? 'Most Liked Wallpapers' : 'Most Downloaded Wallpapers');
+  render(); safeScrollTop();
+}
+document.querySelectorAll('.shelf-more').forEach(b=>{
+  b.onclick = ()=> showSorted(b.dataset.sort);
+});
+
+function pageCount(){ return Math.max(1, Math.ceil(_list.length / PAGE_SIZE)); }
+// Unsplash keeps the gallery going past the local library, so while the feed
+// still has results the pager offers one more page than we can count yet.
+function canFetchMore(){ return !!usQuery() && !_usDone; }
+
+function renderPage(){
+  paintHomeChrome();
+  const grid=document.getElementById('grid');
+  const pages = pageCount();
+  if(_page > pages && !canFetchMore()) _page = pages;
+  grid.innerHTML='';
   if(!_list.length){
-    _shown = 0;
     const msg = showFavs
       ? 'No saved wallpapers yet — tap the &#9829; on any wallpaper to save it here.'
       : 'No wallpapers match your search.';
     grid.innerHTML="<p style='grid-column:1/-1;text-align:center;color:var(--muted);padding:60px 20px'>"+msg+"</p>";
-    scheduleAutoLoad();   // Unsplash can still fill an empty search view
+    renderPager();
+    fillPage();      // Unsplash can still fill an empty search view
     return;
   }
-  // On a background refresh (preserveCount) keep the visitor's scroll depth;
-  // without IntersectionObserver just render everything up front.
-  const target = !HAS_IO ? _list.length
-    : preserveCount ? Math.max(PAGE_SIZE, Math.min(_shown, _list.length))
-    : PAGE_SIZE;
-  _shown = 0;
-  appendCards(target);
-  scheduleAutoLoad();   // top up if the sentinel is already on screen
-}
-function appendCards(n){
-  const grid=document.getElementById('grid');
-  const end = Math.min(_list.length, _shown + n);
-  for(let i=_shown; i<end; i++){
+  const start = (_page - 1) * PAGE_SIZE;
+  const end = Math.min(_list.length, start + PAGE_SIZE);
+  for(let i=start; i<end; i++){
     grid.appendChild(makeCard(_list[i], i));
     // a full-width ad row every so often — the element is invisible unless
     // ads are actually configured and permitted
-    if((i + 1) % AD_EVERY === 0) grid.appendChild(makeAdSlot());
+    if(ADS_ENABLED && (i + 1 - start) % AD_EVERY === 0) grid.appendChild(makeAdSlot());
   }
-  _shown = end;
+  renderPager();
+  fillPage();
+}
+
+// The visitor asked for a page we don't have enough wallpapers for yet — pull
+// the next batch from Unsplash. Capped so a thin feed can't loop on fetches.
+function fillPage(){
+  // the library itself hasn't arrived yet — don't spend an Unsplash request
+  // filling a grid that is about to be replaced by the real wallpapers
+  if(!_libLoaded) return;
+  if(_list.length >= _page * PAGE_SIZE) return;
+  if(!canFetchMore() || _fills >= 6) return;
+  _fills++;
+  loadMoreUnsplash();
+}
+
+function goToPage(n){
+  const max = pageCount() + (canFetchMore() ? 1 : 0);
+  const next = Math.min(Math.max(1, n), max);
+  if(next === _page) return;
+  _page = next;
+  _fills = 0;
+  renderPage();
+  safeScrollTop();
+}
+
+// 1 2 3 … 953 — first and last page always shown, the current one with a
+// neighbour either side, gaps collapsed to an ellipsis.
+function pageNumbers(cur, last){
+  if(last <= 7){ const all=[]; for(let i=1;i<=last;i++) all.push(i); return all; }
+  let a = Math.max(2, cur - 1), b = Math.min(last - 1, cur + 1);
+  if(cur <= 2){ a = 2; b = 3; }
+  if(cur >= last - 1){ a = last - 2; b = last - 1; }
+  const out = [1];
+  if(a > 2) out.push('…');
+  for(let i=a;i<=b;i++) out.push(i);
+  if(b < last - 1) out.push('…');
+  out.push(last);
+  return out;
+}
+
+function renderPager(){
+  const el = document.getElementById('pager');
+  if(!el) return;
+  const pages = pageCount();
+  const more = canFetchMore();
+  if(pages <= 1 && !more){ el.innerHTML=''; return; }
+  const btn = (label, page, cls) =>
+    "<button class='pg-btn"+(cls?' '+cls:'')+"' data-page='"+page+"'"
+    + (cls==='on' ? " aria-current='page'" : '') + ">"+label+"</button>";
+  let html = '';
+  if(_page > 1) html += btn('&lsaquo; Prev', _page-1, 'pg-step');
+  pageNumbers(_page, Math.max(pages, _page)).forEach(n=>{
+    html += (n === '…') ? "<span class='pg-gap'>…</span>" : btn(n, n, n===_page ? 'on' : '');
+  });
+  if(_page < pages || more) html += btn('Next &rsaquo;', _page+1, 'pg-step');
+  el.innerHTML = html;
+  el.querySelectorAll('.pg-btn[data-page]').forEach(b=>{
+    b.onclick = ()=> goToPage(parseInt(b.dataset.page, 10));
+  });
 }
 
 // ---- "More wallpapers" from Unsplash, via the site's /api/unsplash proxy ----
@@ -2171,6 +3096,9 @@ const _usSeen = new Set();
 
 function usQuery(){
   if(showFavs) return null;
+  // a "most liked / most downloaded" ranking is about THIS site's wallpapers —
+  // stock photos have no counters, so they'd only dilute the list
+  if(activeSort) return null;
   // an exact-size filter can't be satisfied by arbitrary stock photos, so the
   // endless feed stands down rather than showing results that don't match
   if(activeExactRes.size) return null;
@@ -2227,56 +3155,34 @@ async function loadMoreUnsplash(){
         return w;
       }).filter(w => (!activeRes || resTier(w) === activeRes) && (!activeOrient || orientOf(w) === activeOrient));
       if(!mapped.length) continue;                        // page filtered out — try the next one
-      if(_shown === 0) document.getElementById('grid').innerHTML = '';   // replace "no matches"
       _extra = _extra.concat(mapped);
       _list = _list.concat(mapped);
-      appendCards(mapped.length);
       updateChrome(_list.length);
       updateSectionDesc();   // the blurb names wallpapers, which may only arrive now
+      renderPage();          // repaint the page the visitor is on, now that it can fill
       return;
     }
     // three pages in a row fell to the res/orientation filter — stop here so a
     // background retry loop can't burn through the Unsplash rate limit
     _usDone = true;
-  } catch(e){ /* network hiccup — the next scroll retries */ }
+  } catch(e){ /* network hiccup — the next page click retries */ }
   finally {
     _usLoading = false;
     // if the view changed while this request was in flight (fast typing), the
-    // response was discarded — check again for the view that's on screen now
-    scheduleAutoLoad();
+    // response was discarded — check whether the page on screen now needs more
+    fillPage();
   }
 }
 
-// The IntersectionObserver only reports CHANGES — if a search shrinks the grid
-// while the sentinel is already on screen, no event fires and the view would
-// never fill. So after every render (debounced, so typing doesn't spam the
-// API) actively check whether the visible view needs more content.
-let _kickTimer = null;
-function scheduleAutoLoad(){
-  clearTimeout(_kickTimer);
-  _kickTimer = setTimeout(maybeLoadMore, 350);
-}
-function maybeLoadMore(){
-  if(!HAS_IO) return;   // legacy browsers render everything up front
-  const s = document.getElementById('gridSentinel');
-  if(!s || document.getElementById('galleryView').style.display === 'none') return;
-  const r = s.getBoundingClientRect();
-  if(r.top > innerHeight + 900) return;   // sentinel far below — wait for scroll
-  if(_shown < _list.length) appendCards(PAGE_SIZE);
-  else loadMoreUnsplash();
-}
-
-if(HAS_IO){
-  const io = new IntersectionObserver(entries=>{
-    entries.forEach(en=>{
-      if(!en.isIntersecting) return;
-      if(_shown < _list.length) appendCards(PAGE_SIZE);
-      else loadMoreUnsplash();
-    });
-  }, {rootMargin:'900px 0px'});
-  io.observe(document.getElementById('gridSentinel'));
-}
-render();
+// The server already put the newest real wallpapers into the grid. Rendering
+// now would swap them for the built-in demo photos (from Unsplash) and then swap
+// again a moment later when the library arrives: wasted downloads and a flash of
+// pictures that aren't from this site. So the server's cards stay up and
+// loadAdded() draws the real library over them (or the demo set, if it fails).
+// The first rows are the same wallpapers in the same order, so nothing jumps.
+let _gridDrawn = !document.querySelector('#grid > a.card');
+if(_gridDrawn) render();
+else document.getElementById('grid').classList.toggle('phone-view', wantPhoneView());
 buildResChecks();    // resolution options come from the library itself
 buildCatList();      // categories with live counts
 initAds();           // no-op until a publisher ID exists
@@ -2290,8 +3196,11 @@ loadGlobalStats();   // fills in the real view / like counts, then repaints
   const panelText = document.getElementById('authPanelText');
   const signout = document.getElementById('authSignout');
   const gbtn = document.getElementById('gbtnMain');
+  const title = document.getElementById('authTitle');
+  const links = document.getElementById('authLinks');
   if(!wrap) return;
   let gsiLoaded = false;
+  let gsiClientId = null;
 
   function closePanel(){ panel.classList.remove('open'); }
   document.addEventListener('click', e=>{ if(!wrap.contains(e.target)) closePanel(); });
@@ -2312,7 +3221,8 @@ loadGlobalStats();   // fills in the real view / like counts, then repaints
             if(res.ok) refresh(); else panelText.textContent = (res.d && res.d.error) || 'Sign-in failed.';
           }).catch(()=>{ panelText.textContent = 'Could not reach the server.'; });
         }});
-        google.accounts.id.renderButton(gbtn, { theme:'filled_blue', size:'large', text:'signin_with', shape:'pill' });
+        // width fills the panel (268px less its padding) instead of Google's narrow default
+        google.accounts.id.renderButton(gbtn, { theme:'filled_blue', size:'large', text:'signin_with', shape:'pill', width: 238 });
       } catch(e){ panelText.textContent = 'Google sign-in could not load.'; }
     };
     s.onerror = ()=>{ panelText.textContent = 'Google sign-in could not load (blocked?).'; };
@@ -2344,20 +3254,28 @@ loadGlobalStats();   // fills in the real view / like counts, then repaints
       const sp = document.createElement('span');
       sp.textContent = me.user.name || me.user.email || 'Account';
       btn.appendChild(sp);
+      title.textContent = who;
       panelText.textContent = me.user.email || '';
-      gbtn.hidden = true; signout.hidden = false;
+      gbtn.hidden = true; signout.hidden = false; links.hidden = false;
     } else {
       btn.className = 'categories-btn'; btn.textContent = 'Sign in';
-      panelText.textContent = 'Sign in with Google to submit your own wallpapers and be credited for them.';
-      gbtn.hidden = false; signout.hidden = true;
-      loadGsi(me.client_id);
+      title.textContent = 'Sign in';
+      panelText.textContent = 'Submit your own wallpapers and get credited for them. Google handles the sign-in, so we never see your password.';
+      gbtn.hidden = false; signout.hidden = true; links.hidden = true;
+      // Google's sign-in library (~100 KB and an iframe) is fetched when someone
+      // heads for the Sign in button, not on every page view
+      gsiClientId = me.client_id;
     }
   }
   function refresh(){
     fetch(API_BASE + '/api/auth/me', { cache:'no-store' })
       .then(r=>r.json()).then(paint).catch(()=>{ wrap.hidden = true; });
   }
-  btn.onclick = e=>{ e.stopPropagation(); panel.classList.toggle('open'); };
+  function warmGsi(){ if(gsiClientId) loadGsi(gsiClientId); }
+  btn.addEventListener('pointerenter', warmGsi);
+  btn.addEventListener('focus', warmGsi);
+  btn.onclick = e=>{ e.stopPropagation(); warmGsi(); panel.classList.toggle('open'); };
+  document.getElementById('authSaved').onclick = e=>{ e.preventDefault(); closePanel(); showFavorites(savedTab); };
   signout.onclick = ()=>{ fetch(API_BASE + '/api/auth/logout', { method:'POST' }).then(()=>location.reload()); };
   refresh();
 })();
@@ -2383,6 +3301,12 @@ function applyFilters(){
       else if(activeTab === 'COLLECTIONS' || activeTab === 'ALL'){ /* show everything */ }
       else list = list.filter(w => w.tab === activeTab);
     }
+  }
+  // "most liked" / "most downloaded" views: rank by the global counter and drop
+  // everything nobody has liked/downloaded yet, so the order is always meaningful
+  if(activeSort){
+    const val = sortValue(activeSort);
+    list = list.filter(w => val(w) > 0).sort((a,b) => val(b) - val(a));
   }
   // resolution / orientation chips refine every view (tabs, search, favorites…)
   if(activeRes) list = list.filter(w => resTier(w) === activeRes);
@@ -2435,37 +3359,37 @@ function resetActiveTabs(){ [...tabsEl.children].forEach(c=>c.classList.remove('
 function syncSearchInputs(v){ ['searchInput','heroSearch'].forEach(id=>{ const el=document.getElementById(id); if(el && el!==document.activeElement) el.value=v; }); }
 
 function selectTab(label, btn){
-  activeTab=label; query=''; activeCat=null; activeTag=null; showFavs=false;
+  activeTab=label; query=''; activeCat=null; activeTag=null; showFavs=false; activeSort=null;
   syncSearchInputs(''); resetActiveTabs(); if(btn) btn.classList.add('active');
   setTitle(label.charAt(0)+label.slice(1).toLowerCase()+' Wallpapers');
   render(); safeScrollTop();
 }
 function filterByCat(name){
-  showGallery(); activeCat=name; activeTag=null; showFavs=false; query=''; activeTab='ALL';
+  showGallery(); activeCat=name; activeTag=null; showFavs=false; query=''; activeTab='ALL'; activeSort=null;
   syncSearchInputs(''); resetActiveTabs(); closeSide();
   setTitle(name+' Wallpapers'); render(); safeScrollTop();
 }
 function filterByTag(tag){
-  showGallery(); activeTag=tag; activeCat=null; showFavs=false; query=''; activeTab='ALL';
+  showGallery(); activeTag=tag; activeCat=null; showFavs=false; query=''; activeTab='ALL'; activeSort=null;
   syncSearchInputs(''); resetActiveTabs();
   // several tags already end in "Wallpapers" — don't say it twice
   setTitle(/wallpapers$/i.test(tag) ? tag : tag+' Wallpapers');
   render(); safeScrollTop();
 }
 function showFavorites(btn){
-  showGallery(); showFavs=true; activeCat=null; activeTag=null; query=''; activeTab='FAVS';
+  showGallery(); showFavs=true; activeCat=null; activeTag=null; query=''; activeTab='FAVS'; activeSort=null;
   syncSearchInputs(''); resetActiveTabs(); if(btn) btn.classList.add('active');
   setTitle('Saved Wallpapers'); render(); safeScrollTop();
 }
 function clearFilter(){
-  activeCat=null; activeTag=null; showFavs=false; query=''; activeTab='RECENT';
+  activeCat=null; activeTag=null; showFavs=false; query=''; activeTab='RECENT'; activeSort=null;
   clearResChips();
   syncSearchInputs(''); resetActiveTabs();
   const rt=[...tabsEl.children].find(x=>x.textContent.includes('RECENT')); if(rt) rt.classList.add('active');
   setTitle('Recent Wallpapers'); render();
 }
 function runSearch(v){
-  query=(v||'').toLowerCase(); activeCat=null; activeTag=null; showFavs=false;
+  query=(v||'').toLowerCase(); activeCat=null; activeTag=null; showFavs=false; activeSort=null;
   resetActiveTabs(); syncSearchInputs(v||'');
   setTitle(query ? 'Results for “'+v+'”' : 'Recent Wallpapers');
   render();
@@ -2478,6 +3402,8 @@ function updateChrome(count){
   if(!chip) return;
   let label=null;
   if(showFavs) label='♥ Saved';
+  else if(activeSort) label = activeSort === 'views' ? 'Most viewed'
+                            : activeSort === 'likes' ? 'Most liked' : 'Most downloaded';
   else if(activeCat) label='Category: '+activeCat;
   else if(activeTag) label='Tag: '+activeTag;
   else if(query) label='Search: “'+query+'”';
@@ -2503,23 +3429,123 @@ function updateHeroStats(){
             + "<span><b>"+categories.length+"</b> categories</span>"
             + "<span><b>"+favs.length+"</b> saved</span>";
 }
-updateHeroStats();
+// the real count arrives with the library; showing the demo count ("20
+// wallpapers") and then jumping to the real one is worse than a moment's blank
+if(!document.querySelector('#grid > a.card')) updateHeroStats();
 (function(){
   const hs=document.getElementById('heroSearch'), hb=document.getElementById('heroSearchBtn');
   if(hs) hs.addEventListener('input', e=>runSearch(e.target.value));
   if(hb) hb.onclick=()=>{ const g=document.getElementById('grid'); if(g && g.scrollIntoView) g.scrollIntoView({behavior:'smooth', block:'start'}); };
 })();
 
+// ---- Front page: a wall of wallpapers behind the hero, and a row of
+// category tiles. Both are built from the live library out of the 640px
+// thumbnails, so the front page gains pictures without any heavy images.
+function isLandscape(w){ return orientOf(w) !== 'Portrait'; }
+function paintHeroMosaic(){
+  const bg = document.getElementById('heroBg'); if(!bg) return;
+  // skip the first page of the grid so the mosaic doesn't repeat what sits
+  // directly below it
+  const pool = wallpapers.filter(w => w.img && isLandscape(w));
+  const pick = (pool.length >= 34 ? pool.slice(24) : pool).slice(0, 10);
+  const html = pick.length < 10 ? ''
+    : pick.map(w => "<img src='" + esc(thumbUrl(w)) + "' alt='' decoding='async' fetchpriority='low'>").join('');
+  if(bg.dataset.sig === html) return;     // unchanged — don't re-decode ten images
+  bg.dataset.sig = html;
+  bg.innerHTML = html;
+  bg.querySelectorAll('img').forEach(i => { i.onerror = () => { i.style.visibility = 'hidden'; }; });
+}
+function buildCatTiles(){
+  const host = document.getElementById('catTiles'), row = document.getElementById('ctRow');
+  if(!host || !row) return;
+  const byCat = {};
+  wallpapers.forEach(w => { if(w.cat && w.img) (byCat[w.cat] = byCat[w.cat] || []).push(w); });
+  const top = Object.keys(byCat).sort((a, b) => byCat[b].length - byCat[a].length).slice(0, 8);
+  const sig = top.map(c => c + ':' + byCat[c].length).join('|');
+  if(row.dataset.sig === sig) return;
+  row.dataset.sig = sig;
+  row.innerHTML = '';
+  top.forEach(name => {
+    const list = byCat[name];
+    const cover = list.find(isLandscape) || list[0];   // the newest landscape one
+    const b = document.createElement('button');
+    b.className = 'ct';
+    b.innerHTML = "<img src='" + esc(thumbUrl(cover)) + "' alt='' loading='lazy' decoding='async'>"
+      + "<span class='ct-name'>" + esc(name) + "</span>"
+      + "<span class='ct-n'>" + list.length + "</span>";
+    b.querySelector('img').onerror = function(){ this.style.visibility = 'hidden'; };
+    b.onclick = () => filterByCat(name);
+    row.appendChild(b);
+  });
+  host.hidden = top.length < 4;
+}
+// The hero and the category tiles belong to the front page only. Browsing a
+// category, a search, a tab or page 2+ folds them away so the results start
+// right under the header — the way category pages work on the big sites.
+function paintHomeChrome(){
+  const home = !activeCat && !activeTag && !query && !showFavs && !activeSort
+    && !activeRes && !activeOrient && !activeExactRes.size
+    && activeTab === 'RECENT' && _page === 1;
+  const gv = document.getElementById('galleryView');
+  if(gv) gv.classList.toggle('is-home', home);
+}
+
 // Fullscreen lightbox
 const lightbox=document.createElement('div'); lightbox.className='lightbox';
 lightbox.innerHTML="<button class='lb-close' title='Close (Esc)'>&times;</button>"
   + "<img alt=''><button class='lb-dl'>"+icon('download','i-sm')+"Download</button><div class='lb-cap'></div>";
 document.body.appendChild(lightbox);
+// ---- Big images: something on screen at once, then the sharp version ------
+// Cloudflare can hand out a right-sized copy of any /images/ file once "Image
+// Transformations" is switched on for the zone (free for 5,000 unique sizes a
+// month). One tiny probe per visit finds out; until it succeeds the original
+// files are used, so switching it on in the dashboard needs no redeploy.
+let _resizeOK = false;
+function probeResize(){
+  try { const c = sessionStorage.getItem('8kw_resize'); if(c){ _resizeOK = c === '1'; return; } } catch(e){}
+  const t = new Image();
+  t.onload  = ()=>{ _resizeOK = true;  try { sessionStorage.setItem('8kw_resize', '1'); } catch(e){} };
+  t.onerror = ()=>{ _resizeOK = false; try { sessionStorage.setItem('8kw_resize', '0'); } catch(e){} };
+  t.src = API_BASE + '/cdn-cgi/image/width=16/favicon.png';
+}
+if('requestIdleCallback' in window) requestIdleCallback(probeResize, { timeout: 4000 });
+else setTimeout(probeResize, 2500);
+
+// the URL for showing a wallpaper about `cssWidth` CSS pixels wide
+function displayUrl(w, cssWidth, unsplashSize){
+  const ours = w._ref && w._ref.site === 'r2' && w._ref.path;
+  if(!ours || !_resizeOK) return w.img.replace(/w=\d+/, unsplashSize);
+  const need = Math.ceil(cssWidth * Math.min(window.devicePixelRatio || 1, 2));
+  // a handful of fixed widths keeps the number of unique transformations low
+  const width = [1280, 1920, 2560, 3840].find(b => b >= need) || 3840;
+  return API_BASE + '/cdn-cgi/image/width=' + width + ',quality=85,format=auto,fit=scale-down/images/' + encodeURI(w._ref.path);
+}
+
+// Show the cached thumbnail straight away, download the sharp image in the
+// background and swap it in once it's complete. A resized copy that fails
+// (feature switched off, monthly limit reached) falls back to the original.
+function showProgressive(img, w, cssWidth, unsplashSize){
+  const low = thumbUrl(w);
+  const orig = w.img.replace(/w=\d+/, unsplashSize);
+  const high = displayUrl(w, cssWidth, unsplashSize);
+  const token = {};
+  img._want = token;                      // a newer call wins if the visitor moves on
+  img.onerror = ()=>{ if(img._want !== token) return; img.onerror = null; img.src = orig; };  // no thumbnail
+  img.src = low;
+  if(high === low) return;
+  const pre = new Image();
+  let triedOrig = high === orig;
+  pre.onload = ()=>{ if(img._want === token){ img.onerror = null; img.src = pre.src; } };
+  pre.onerror = ()=>{ if(!triedOrig && img._want === token){ triedOrig = true; pre.src = orig; } };
+  pre.src = high;
+}
+
 let _lbWp=null;
 function openLightbox(w){
   _lbWp=w;
-  const big = w.img.startsWith('data:') ? w.img : w.img.replace(/w=\d+/, 'w=1600');
-  lightbox.querySelector('img').src=big;
+  const lbImg = lightbox.querySelector('img');
+  if(w.img.startsWith('data:')) lbImg.src = w.img;
+  else showProgressive(lbImg, w, window.innerWidth * 0.94, 'w=1600');
   lightbox.querySelector('.lb-cap').textContent = w.name + ' • ' + (w.res||'')
     + (w._unsplash ? ' • Photo by ' + (w._unsplash.author || 'a photographer') + ' on Unsplash' : '');
   lightbox.classList.add('open'); document.body.style.overflow='hidden';
@@ -2574,40 +3600,61 @@ window.addEventListener('scroll', ()=>{ scrollTopBtn.classList.toggle('show', wi
 // ---- Policy pages ----
 const policies = {
   privacy: "<h1>Privacy Policy</h1>"
-    + "<p class='lead'>If you require more information or have any questions about our privacy policy, please feel free to contact us.</p>"
-    + "<p>We consider the privacy of our visitors to be extremely important. This privacy policy document outlines the types of personal information that are received and collected, and how that information is used.</p>"
-    + "<h3>Log Files</h3>"
-    + "<p>Like many other websites, this site makes use of log files. The information inside the log files includes internet protocol (IP) addresses, browser type, Internet Service Provider (ISP), date/time stamp, referring and exit pages, and number of clicks. This data is used to analyze trends, administer the site, track user movement around the site, and gather broad demographic information. IP addresses and other such information are not linked to any personally identifiable information.</p>"
-    + "<h3>Cookies and Web Beacons</h3>"
-    + "<p>This site uses cookies to store information about visitor preferences, to record user-specific information on which pages are accessed or visited, and to customize page content based on the visitor's browser type or other information the visitor sends.</p>"
-    + "<h3>Accounts and Sign-In</h3>"
-    + "<p>You can browse and download without an account. If you choose to sign in with Google, Google shares a stable account identifier with us together with your email address, display name and profile picture, which we store to identify your account and to credit and administer anything you submit. We never receive your Google password.</p>"
-    + "<p>We use that information to operate your account, to attribute submissions, to contact you about material you have submitted (including forwarding any notice of claimed infringement, as described in our Copyright policy), and to enforce our Terms. We do not sell it. Your sign-in session is kept in a cookie on your device; signing out clears it. Ask us via the Contact page if you would like your account and its data deleted.</p>"
-    + "<h3>Third-Party Advertising</h3>"
-    + "<ul><li>Third-party vendors may use cookies to serve ads based on a visitor's prior visits to this and other websites.</li>"
-    + "<li>These ad servers or networks use technology to send advertisements and links directly to your browser, and may automatically receive your IP address when this occurs.</li>"
-    + "<li>You may opt out of personalized advertising through your browser settings or the relevant vendor's privacy controls.</li></ul>"
-    + "<p>This site has no access to or control over the cookies used by third-party advertisers. You should consult the respective privacy policies of these third parties for more detailed information on their practices.</p>"
-    + "<p>If you wish to disable cookies, you may do so through your individual browser options. More detailed information about cookie management with specific web browsers can be found on the browsers' respective websites.</p>",
-
+    + "<p class='updated'>Last updated: 31 July 2026</p>"
+    + "<p class='lead'>This policy explains what 8K Wallpapers collects, why, and what control you have over it. If anything here is unclear, email us at <a href='mailto:8kwallpapersupport@gmail.com'>8kwallpapersupport@gmail.com</a> and we will answer.</p>"
+    + "<h3>The short version</h3>"
+    + "<p>You can browse and download every wallpaper without an account and without telling us who you are. We do not sell personal information. The data we do hold exists to run the site, credit contributors, and answer copyright complaints.</p>"
+    + "<h3>Information we collect</h3>"
+    + "<ul><li><b>Server logs.</b> Like any website, our host records the IP address, browser type, referring page, and time of each request. These logs are used to keep the site running and to investigate abuse.</li>"
+    + "<li><b>Stored on your device.</b> Your saved wallpapers, your light or dark theme choice, your advertising consent choice, and a record of which wallpapers you have already viewed or voted on are kept in your browser's local storage. They never leave your device, and clearing your browser data removes them.</li>"
+    + "<li><b>If you sign in with Google.</b> We receive a stable account identifier, your email address, display name, and profile picture. We never receive your Google password.</li>"
+    + "<li><b>If you submit a wallpaper or file a report.</b> We keep what you enter, plus a one-way salted hash of your IP address. The hash lets us enforce rate limits and our repeat-infringer policy without storing the address itself.</li></ul>"
+    + "<h3>Cookies and similar technologies</h3>"
+    + "<p>A cookie is a small file a site stores in your browser. We use one for your sign-in session, which is removed when you sign out. Our advertising partners may set their own, as described below. You can block or delete cookies in your browser settings; the gallery keeps working if you do, though you will be signed out.</p>"
+    + "<h3>Advertising</h3>"
+    + "<p>This site is supported by advertising served through Google AdSense.</p>"
+    + "<ul><li>Third-party vendors, including Google, use cookies to serve ads based on your prior visits to this website or other websites.</li>"
+    + "<li>Google's use of advertising cookies enables it and its partners to serve ads to you based on your visit to this site and/or other sites on the internet.</li>"
+    + "<li>You may opt out of personalised advertising by visiting <a href='https://www.google.com/settings/ads' target='_blank' rel='noopener nofollow'>Google Ads Settings</a>.</li>"
+    + "<li>You can opt out of a third-party vendor's use of cookies for personalised advertising at <a href='https://www.aboutads.info/choices/' target='_blank' rel='noopener nofollow'>aboutads.info/choices</a>.</li>"
+    + "<li>How Google uses data from sites that use its services is described at <a href='https://policies.google.com/technologies/partner-sites' target='_blank' rel='noopener nofollow'>policies.google.com/technologies/partner-sites</a>.</li></ul>"
+    + "<p>Visitors in the European Economic Area, the United Kingdom and Switzerland are asked for consent before any advertising cookies are set. Declining is honoured, remembered on your device, and the site remains fully usable. You can change your answer by clearing this site's data in your browser.</p>"
+    + "<p>We have no access to or control over cookies set by advertisers. Consult their privacy policies for details of their practices.</p>"
+    + "<h3>Analytics</h3>"
+    + "<p>We do not currently run any third-party analytics product. The view, like and download counts shown on wallpapers are our own, are counted once per browser, and are not tied to an identity.</p>"
+    + "<h3>Children</h3>"
+    + "<p>This site is not directed at children under 13, and we do not knowingly collect information from them. If you believe a child has given us personal information, email us and we will delete it.</p>"
+    + "<h3>Your rights</h3>"
+    + "<p>You can ask us what we hold about you, ask for it to be corrected, or ask for your account and its data to be deleted &mdash; email <a href='mailto:8kwallpapersupport@gmail.com'>8kwallpapersupport@gmail.com</a> and we will action it within 30 days. Depending on where you live, these rights may be guaranteed by Canada's PIPEDA, the GDPR, or the CCPA. We do not sell personal information, so there is nothing to opt out of under the CCPA's \"do not sell\" provision.</p>"
+    + "<h3>Retention</h3>"
+    + "<p>Account records are kept while the account exists. Submission and report records are kept for as long as needed to operate the repeat-infringer policy and to answer any legal claim about them. Server logs are kept only briefly by our host.</p>"
+    + "<h3>Where your data is handled</h3>"
+    + "<p>This site is operated from Canada and hosted on Cloudflare's global network, so requests are served from, and data may be processed in, the country closest to you.</p>"
+    + "<h3>Changes</h3>"
+    + "<p>If this policy changes materially we will update the date at the top of this page.</p>"
+    + "<p>Questions: <a href='mailto:8kwallpapersupport@gmail.com'>8kwallpapersupport@gmail.com</a></p>",
   tos: "<h1>Terms of Service</h1>"
-    + "<p class='lead'>This document outlines what constitutes acceptable use of this website, its associated web services, and server infrastructure. It also covers our content moderation policy and what you can expect regarding performance and availability.</p>"
-    + "<p>If you have questions about what you are legally permitted to do with content found on this website, please visit our Copyright policy.</p>"
-    + "<h3>Access</h3>"
-    + "<p>This website is intended to be accessed via standard web browser software through direct interaction by a human. With the exception of publicly accessible feeds, the website and its associated files are not meant to be accessed via automated means such as scripts, bots, or automated applications.</p>"
-    + "<p>Be aware that if you use automated means of accessing or downloading this website, in whole or in part, your access may be prevented, throttled, or terminated &mdash; especially if you attempt to download many large files simultaneously. This protects the experience for everyone who accesses the site as intended.</p>"
-    + "<h3>Linking &amp; Integration</h3>"
-    + "<p>Hot-linking to images and other large files hosted here is not permitted without our permission. You may of course link directly to individual web pages. Direct linking to small preview images is permitted but not guaranteed.</p>"
-    + "<h3>User-Submitted Content</h3>"
-    + "<p>This is a community-supported website that relies on its user community for the bulk of its content. To maintain quality, only a subset of submissions are selected to be published. Submitted content should not contain personal insults, explicit material, off-topic discussion, or anything not suited for a general audience.</p>"
-    + "<p>We reserve the right to moderate content posted here, both during and after the submission process. Moderators may remove or edit content at any time to keep the site appropriate for its audience.</p>"
-    + "<p>By submitting an image you confirm that you created it or otherwise hold the rights to share it, and you grant us a non-exclusive licence to host, display and distribute it on this website. You keep ownership of your work. Do not upload material you do not have the rights to.</p>"
-    + "<h3>Repeat Infringer Policy</h3>"
-    + "<p>We terminate the access of anyone who repeatedly submits material that infringes the rights of others. In practice: a submission that is the subject of a valid takedown notice is removed and recorded against the submitter; a submitter associated with repeated valid notices is blocked from making further submissions, and existing submissions from them may be removed.</p>"
-    + "<p>If you believe your material was removed in error, contact us and we will review it.</p>"
-    + "<p>Where we receive a notice of claimed infringement about something you submitted, we forward that notice to you and retain the records identifying you for the period required by Canadian law. Keep the contact details on your account current so that we can reach you.</p>",
-
+    + "<p class='updated'>Last updated: 31 July 2026</p>"
+    + "<p class='lead'>By using 8K Wallpapers you agree to what follows. If you do not agree, please do not use the site.</p>"
+    + "<h3>Using the wallpapers</h3>"
+    + "<p>Wallpapers here are free to download and use as a background on your own devices, personal or work. You may not resell them, redistribute them as your own collection, bundle them into an app or product, or claim authorship of them. Some images carry the licence of the photographer or platform they came from; where a source is credited, that licence governs.</p>"
+    + "<h3>Submitting a wallpaper</h3>"
+    + "<p>You may only submit images you created or otherwise hold the rights to share. By submitting you confirm you have those rights and grant us a non-exclusive, royalty-free licence to host, resize and display the image on this site, and to remove it at any time. You keep ownership of your work. Every submission is reviewed by a person before it appears.</p>"
+    + "<h3>Acceptable use</h3>"
+    + "<p>Do not upload material that infringes copyright; that is sexual, violent or hateful; that shows a real person who has not agreed to it; or that is unlawful. Do not scrape the library in bulk, attempt to overload the service, or interfere with its security. We may refuse, remove or block anything at our discretion.</p>"
+    + "<h3>Accounts</h3>"
+    + "<p>Accounts are optional and exist so contributors can be credited. You are responsible for the Google account you sign in with. We may suspend an account that breaks these terms, in particular one associated with repeated copyright notices, as set out in the Copyright policy.</p>"
+    + "<h3>Advertising</h3>"
+    + "<p>The site is supported by advertising. We do not control which ads are shown and do not endorse advertisers or anything they link to. Dealings with an advertiser are between you and them.</p>"
+    + "<h3>Availability</h3>"
+    + "<p>The site is provided as-is and as-available. We do not promise it will be uninterrupted or error-free, and we may change or withdraw any part of it. To the fullest extent the law allows, we are not liable for indirect or consequential loss arising from your use of the site.</p>"
+    + "<h3>Reporting a problem</h3>"
+    + "<p>Use the <a href='/report'>Report Image</a> page for anything wrong with an image, or email <a href='mailto:8kwallpapersupport@gmail.com'>8kwallpapersupport@gmail.com</a> for anything else. Copyright complaints follow the process in our Copyright policy.</p>"
+    + "<h3>Changes and governing law</h3>"
+    + "<p>We may update these terms; the date at the top shows when they last changed, and continuing to use the site means you accept the current version. These terms are governed by the laws of Canada, without regard to conflict-of-law rules.</p>"
+    + "<p>Questions: <a href='mailto:8kwallpapersupport@gmail.com'>8kwallpapersupport@gmail.com</a></p>",
   copyright: "<h1>Copyright Policy</h1>"
+    + "<p class='updated'>Last updated: 31 July 2026</p>"
     + "<p class='lead'>This is a community-supported website with the majority of published content being uploaded by our user community or collected from a wide range of free image resources.</p>"
     + "<p>Although published content is believed to be authorized for sharing and personal use as desktop wallpaper &mdash; either by the uploader or author, or by being public-domain or freely licensed &mdash; unless otherwise noted in the wallpaper description, all images on this website are copyrighted by their respective authors. If you wish to use these images for any other purpose, you must get permission from their respective authors.</p>"
     + "<p>If you object to a wallpaper published on our site, please contact us with the wallpaper title or URL and your reason for concern &mdash; whether it is your own work that you do not wish to share, or something you find explicit, unethical, or inappropriate.</p>"
@@ -2618,37 +3665,49 @@ const policies = {
     + "<p>To report material you believe infringes your copyright, send a notice to our designated agent including: your contact details; identification of the work you say is infringed; the URL of the material in question; a statement that you have a good-faith belief the use is not authorised; a statement, under penalty of perjury, that the information is accurate and that you are the owner or authorised to act for them; and your signature.</p>"
     + "<div class='contact-card'>"
     + "<div class='row'><b>Agent</b><span>DMCA Agent, 8K Wallpapers</span></div>"
-    + "<div class='row'><b>Email</b><span>dmca@your-domain.example</span></div>"
+    + "<div class='row'><b>Email</b><span><a href='mailto:8kwallpapersupport@gmail.com'>8kwallpapersupport@gmail.com</a></span></div>"
     + "<div class='row'><b>Response</b><span>Valid notices are actioned promptly, usually within 1&ndash;2 business days.</span></div>"
     + "</div>"
-    + "<p style='font-size:13px;color:var(--muted)'>Site owner: replace the agent details above with your real contact address, and register a designated agent with the U.S. Copyright Office &mdash; safe-harbour protection depends on that registration being on file.</p>"
+    + "<p style='font-size:13px;color:var(--muted)'>Site owner: this address is monitored, but a designated agent still has to be registered with the U.S. Copyright Office &mdash; safe-harbour protection depends on that registration being on file.</p>"
     + "<h3>Notice and Notice (Canada)</h3>"
     + "<p>This site is operated from Canada, where the <i>Copyright Act</i> establishes a &ldquo;notice and notice&rdquo; regime rather than notice and takedown. When we receive a valid notice of claimed infringement about user-submitted material, we forward that notice to the person who submitted it and retain the records identifying them for the period required by law. We are not obliged under Canadian law to remove the material on notice alone.</p>"
     + "<p>In practice we go further than the minimum: because this site reviews submissions before publication and serves a largely international audience, we also remove material promptly in response to a well-founded notice, and we operate the designated-agent process described above so that rights holders in the United States can reach us through the channel they expect.</p>"
     + "<h3>Repeat Infringers</h3>"
     + "<p>We keep a record of submissions that are the subject of valid takedown notices and block submitters associated with repeated notices, as described in our Terms of Service.</p>"
     + "<p style='font-size:13px;color:var(--muted)'>This page describes our practice, not legal advice, and is not a substitute for advice from a qualified lawyer in your jurisdiction.</p>"
-    + "<p style='font-size:13px;color:var(--muted)'>Note: the wallpapers on this demo are original generated artwork. This policy text is a template and is not legal advice &mdash; have a professional review any policies before publishing a real site.</p>",
+    + "<p style='font-size:13px;color:var(--muted)'>Wallpapers here come from a mix of sources: images created for this site, and images submitted by visitors, each reviewed by hand before publishing. This policy describes our practice and is not legal advice.</p>",
 
   contact: "<h1>Contact Us</h1>"
-    + "<p class='lead'>Have a question, a copyright concern, or a wallpaper request? Reach out and we'll get back to you.</p>"
+    + "<p class='updated'>Last updated: 31 July 2026</p>"
+    + "<p class='lead'>8K Wallpapers is run by one person in Canada. Every message goes to a real inbox and gets a real reply &mdash; there is no ticket robot here.</p>"
     + "<div class='contact-card'>"
-    + "<div class='row'><b>Email</b><span>hello@8kwallpapers.example</span></div>"
-    + "<div class='row'><b>Reports</b><span>Use the \"Report Image\" option on any wallpaper for copyright or content concerns.</span></div>"
-    + "<div class='row'><b>Response</b><span>We typically reply within 2&ndash;3 business days.</span></div>"
+    + "<div class='row'><b>Email</b><span><a href='mailto:8kwallpapersupport@gmail.com'>8kwallpapersupport@gmail.com</a></span></div>"
+    + "<div class='row'><b>Response</b><span>Usually within 2&ndash;3 business days.</span></div>"
+    + "<div class='row'><b>Based in</b><span>Canada &mdash; replies are sent in English.</span></div>"
     + "</div>"
-    + "<p style='font-size:13px;color:var(--muted);margin-top:18px'>This is a demo contact page &mdash; the address above is a placeholder.</p>",
-
+    + "<h3>Something wrong with an image</h3>"
+    + "<p>Use the <a href='/report'>Report Image</a> page rather than email. It attaches the exact wallpaper, gives you a reference number, and those reports are read first. Copyright claims filed there follow the process in our Copyright policy.</p>"
+    + "<h3>Requests and corrections</h3>"
+    + "<p>Want a wallpaper in a size that is not listed, spotted a wrong credit, or found a broken download? Email us with the wallpaper name and we will fix it.</p>"
+    + "<h3>Contributing</h3>"
+    + "<p>You can <a href='/upload'>submit a wallpaper</a> directly. Every submission is reviewed by hand, and you are credited by name if you ask to be.</p>"
+    + "<h3>Advertising and business enquiries</h3>"
+    + "<p>Email the address above with \"advertising\" in the subject line.</p>",
   about: "<h1>About</h1>"
-    + "<p class='lead'>8K Wallpapers is a hand-curated gallery of ultra-high-definition backgrounds &mdash; free to download for personal use on desktop, mobile and tablet.</p>"
-    + "<h3>What you'll find here</h3>"
-    + "<ul><li>Wallpapers in resolutions up to 8K (7680&times;4320), organised by category and tag.</li>"
-    + "<li>One-click downloads sized for any device &mdash; Full HD and 4K desktops, ultrawide monitors, iPhone, iPad and Android.</li>"
-    + "<li>New wallpapers added regularly &mdash; check the Recent tab, or save your favorites with the &#9829; button.</li></ul>"
-    + "<h3>Quality first</h3>"
-    + "<p>Every wallpaper is reviewed before it is published. We optimise images so they look sharp on high-DPI displays without wasting your bandwidth.</p>"
-    + "<h3>Get in touch</h3>"
-    + "<p>Spotted a problem, want to request a wallpaper, or have a copyright concern? See the <a href='#' data-policy-link='contact'>Contact</a> page &mdash; we're happy to hear from you.</p>"
+    + "<p class='lead'>8K Wallpapers is a hand-curated gallery of ultra-high-definition backgrounds, free to download for personal use on desktop, phone and tablet.</p>"
+    + "<h3>What this site is</h3>"
+    + "<p>It is a small independent project, run from Canada by one person, built because finding a genuinely high-resolution wallpaper that fits your screen is more annoying than it should be. There is no sign-up wall and no download counter forcing you to wait &mdash; you pick a size and the file is yours.</p>"
+    + "<h3>What you will find</h3>"
+    + "<ul><li>Wallpapers up to 8K (7680&times;4320), organised by category and tag.</li>"
+    + "<li>A download sized to the screen you are actually using, alongside Full HD, ultrawide and phone presets.</li>"
+    + "<li>Most viewed, most liked and most downloaded rows built from real counts, not invented numbers.</li>"
+    + "<li>Favourites you can save without an account.</li></ul>"
+    + "<h3>Where the images come from</h3>"
+    + "<p>Some are generated or created for this site. Others are submitted by visitors, who are credited by name where they ask to be. Every submission is reviewed by a person before it goes live, and anything credited to an outside photographer or platform keeps that credit and its licence.</p>"
+    + "<h3>Reporting something</h3>"
+    + "<p>If an image is yours and should not be here, or there is something wrong with it, the <a href='/report'>Report Image</a> page reaches a person and is answered first. Copyright claims are handled under our Copyright policy.</p>"
+    + "<h3>Contact</h3>"
+    + "<p>Email <a href='mailto:8kwallpapersupport@gmail.com'>8kwallpapersupport@gmail.com</a> &mdash; questions, requests and corrections are all welcome. We usually reply within 2&ndash;3 business days.</p>"
 };
 
 const galleryView = document.getElementById('galleryView');
@@ -2688,7 +3747,7 @@ function showGallery(){
   policyView.style.display='none';
   detailView.style.display='none';
   galleryView.style.display='block';
-  setHash('');
+  clearRoute();
   document.title = '8K Wallpapers — Free 4K, 5K & 8K Ultra HD Backgrounds';
   if(location.origin && location.origin !== 'null') setCanonical(location.origin + '/');
   safeScrollTop();
@@ -2732,6 +3791,39 @@ function aspectLabel(w, h){
 }
 // Classified on the SHORT edge, which is what names like FHD/QHD/4K actually
 // describe — judging by the long edge would call an ultrawide 3840x1080 "4K".
+// ---- Wallpaper blurb -------------------------------------------------------
+// The old copy was one sentence stamped onto every wallpaper, and it ended with
+// "from the resolutions below" — pointing at the device lists that no longer
+// exist. This builds a sentence from what is actually true of THIS image: its
+// shape, how big it is, and what the page can actually give you.
+function describe(w){
+  const p = parseResDims(w.res);
+  const name = w.name || 'This wallpaper';
+  const cat = w.cat ? w.cat.toLowerCase().replace('black/dark', 'dark') : '';
+  if(!p) return name + (cat ? ' — a ' + cat + ' wallpaper' : '') + ', free to download for personal use.';
+
+  const tier = sizeWord(p.w, p.h);          // 8K / 5K / 4K UHD / QHD / FHD / HD
+  const aspect = aspectLabel(p.w, p.h);     // 16:9, 21:9, 9:16 …
+  const portrait = p.h > p.w;
+  const ultrawide = p.w / p.h >= 2.1;
+
+  // what this shape is genuinely good for
+  let suits;
+  if(portrait) suits = 'It is shaped for phone screens and tablets held upright';
+  else if(ultrawide) suits = 'The ' + aspect + ' shape is cut for ultrawide monitors';
+  else if(tier === '8K' || tier === '5K') suits = 'At this size it stays sharp on a large or high-DPI display';
+  else suits = 'It fits a standard ' + aspect + ' desktop or laptop screen';
+
+  // "an anime wallpaper", not "a anime wallpaper"
+  const article = /^[aeiou]/i.test(cat) ? 'an ' : 'a ';
+  const opening = cat
+    ? name + ' is ' + article + cat + ' wallpaper at ' + p.w + ' × ' + p.h + ' (' + tier + ').'
+    : name + ' at ' + p.w + ' × ' + p.h + ' (' + tier + ').';
+
+  return opening + ' ' + suits
+    + '. Pick your screen size below and the download is resized to match — no account needed.';
+}
+
 function sizeWord(w, h){
   const short = Math.min(w, h);
   if(short >= 4320) return '8K';
@@ -2740,6 +3832,17 @@ function sizeWord(w, h){
   if(short >= 1440) return 'QHD';
   if(short >= 1080) return 'FHD';
   return 'HD';
+}
+// The visitor's real screen in device pixels, rounded to something sane. Two
+// browsers on the same laptop report the same number, which is the point.
+function screenSize(){
+  try {
+    const dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+    const w = Math.round((screen.width || 0) * dpr);
+    const h = Math.round((screen.height || 0) * dpr);
+    if(w < 320 || h < 320) return null;
+    return { w: w, h: h };
+  } catch(e){ return null; }
 }
 function buildResCards(wp){
   const host = document.getElementById('dtResCards');
@@ -2752,6 +3855,13 @@ function buildResCards(wp){
 
   const p = parseResDims(wp.res);
   const cards = [];
+  // The visitor's own screen leads the list, using real device pixels (CSS
+  // size × pixel ratio), so the download fits their display without them
+  // picking anything. It is only the DEFAULT when the source is actually big
+  // enough — otherwise Original wins, rather than handing over an upscale.
+  const me = screenSize();
+  const fits = !!(me && p && p.w >= me.w && p.h >= me.h);
+  if(me) cards.push({ nm:'Your screen', w:me.w, h:me.h, mine:true, upscale: !fits });
   if(p) cards.push({ nm:'Original', w:p.w, h:p.h, orig:true });
   cards.push({ nm:'Full HD', w:1920, h:1080 });
   cards.push({ nm:'UltraWide', w:3440, h:1440 });
@@ -2764,19 +3874,26 @@ function buildResCards(wp){
     dtSelRes = c.orig ? null : c;
     pill.textContent = c.w + ' × ' + c.h;
     note.textContent = (aspectLabel(c.w, c.h) + ' ' + sizeWord(c.w, c.h)).toUpperCase();
-    if(label) label.textContent = c.orig ? 'Download Original' : 'Download ' + c.nm;
+    if(label) label.textContent = c.orig ? 'Download Original'
+                                : c.mine ? 'Download for your screen'
+                                : 'Download ' + c.nm;
   }
 
   cards.forEach((c, i) => {
     const b = document.createElement('button');
-    b.className = 'rescard' + (i === 0 ? ' on' : '');
+    b.className = 'rescard';
     b.innerHTML = "<div class='nm'>" + esc(c.nm) + "</div>"
       + "<div class='dim'>" + c.w + "×" + c.h + "</div>"
-      + "<div class='asp'>" + esc(aspectLabel(c.w, c.h) + ' ' + sizeWord(c.w, c.h)) + "</div>";
+      + "<div class='asp'>" + esc(c.mine ? (c.upscale ? 'YOUR DISPLAY · UPSCALED' : 'YOUR DISPLAY')
+                                         : aspectLabel(c.w, c.h) + ' ' + sizeWord(c.w, c.h)) + "</div>";
     b.onclick = ()=> choose(c, b);
     host.appendChild(b);
   });
-  if(cards.length) choose(cards[0], host.firstChild);
+  // default to the visitor's screen when the source can fill it, else Original
+  let di = cards.findIndex(c => c.mine && !c.upscale);
+  if(di < 0) di = cards.findIndex(c => c.orig);
+  if(di < 0) di = 0;
+  if(cards.length) choose(cards[di], host.children[di]);
 }
 
 // ---- Shareable deep links: every wallpaper gets a #w/<slug> URL ----
@@ -2805,11 +3922,52 @@ function setCanonical(href){
   l.href = href;
 }
 let _suppressHash = false;
+// Opening a wallpaper puts its REAL path in the address bar (/wallpaper/<slug>-<id>)
+// via the History API rather than a #hash. Anything after a # never reaches the
+// server and Google does not treat it as a separate URL, so the hash version was
+// invisible to search. That path is already server-rendered, so refreshing or
+// sharing it lands on a real page. Wallpapers with no server file (the built-in
+// demos and Unsplash results) have nothing to point at, so they keep the hash.
+const HOME_PATH = location.pathname === '/wallpapers' ? '/wallpapers' : '/';
 function setHash(h){
   _suppressHash = true;
   if(h) location.hash = h;
   else if(location.hash) history.replaceState(null, '', location.pathname + location.search);
   setTimeout(()=>{ _suppressHash = false; }, 0);
+}
+function setRoute(w){
+  const real = w && realPathOf(w);
+  const onWp = location.pathname.indexOf('/wallpaper/') === 0;
+  _suppressHash = true;
+  if(real){
+    if(location.pathname !== real || location.hash) history.pushState({ wp: real }, '', real);
+  } else {
+    // no server page for demo/Unsplash images — keep the hash, but never leave
+    // a stale /wallpaper/ path in front of it
+    history.pushState(null, '', HOME_PATH + '#w/' + slugOf(w));
+  }
+  setTimeout(()=>{ _suppressHash = false; }, 0);
+}
+function clearRoute(){
+  if(!location.hash && location.pathname.indexOf('/wallpaper/') !== 0) return;
+  _suppressHash = true;
+  history.pushState(null, '', HOME_PATH);
+  setTimeout(()=>{ _suppressHash = false; }, 0);
+}
+// back / forward between the gallery and a wallpaper
+window.addEventListener('popstate', ()=>{
+  if(_suppressHash) return;
+  const m = location.pathname.match(/^\/wallpaper\/(.+)$/);
+  if(m){
+    const w = findByRealPath(location.pathname);
+    if(w){ showDetail(w, true); return; }
+  }
+  if(location.hash){ routeFromHash(); return; }
+  showGallery();
+});
+function findByRealPath(path){
+  for(const x of wallpapers){ if(realPathOf(x) === path) return x; }
+  return null;
 }
 // Open the right view for the current #hash. Returns false when the target
 // wallpaper isn't loaded yet (the data sync retries it after each load).
@@ -2884,20 +4042,21 @@ async function fetchFileSize(url){
   } catch(e){ return null; }
 }
 
-function showDetail(w){
+function showDetail(w, fromHistory){
   currentWp = w;
   bumpStat(w, 'v');
   registerView(w);   // global counter, once per browser per wallpaper
-  // collapse any open resolution list from a previous wallpaper
-  if(typeof resList !== 'undefined' && resList){ resList.classList.remove('open'); resList.innerHTML=''; }
-  if(typeof resDevBtns !== 'undefined' && resDevBtns){ resDevBtns.forEach(b=>b.classList.remove('active')); }
   document.getElementById('dtCat').textContent = w.cat;
   document.getElementById('dtName').textContent = w.name;
+  // pixel size, set off to the right of the title
+  const dims = parseResDims(w.res);
+  const dv = document.getElementById('dtDimsVal');
+  const dl = document.getElementById('dtDimsTier');
+  if(dv) dv.textContent = dims ? (dims.w + ' × ' + dims.h) : (w.res || '');
+  if(dl) dl.textContent = dims ? sizeWord(dims.w, dims.h) : (resTier(w) || '');
   buildResCards(w);
   const dtDescEl = document.getElementById('dtDesc');
-  dtDescEl.textContent =
-    "Get this "+w.name+" background in "+w.res+" resolution from the "+w.cat+
-    " category. You can also download it for computer, mobile phones, iPhone and iPad from the resolutions below.";
+  dtDescEl.textContent = describe(w);
   // Unsplash photos must credit the photographer (API guideline)
   if(w._unsplash){
     const utm = '?utm_source=8k-wallpapers&utm_medium=referral';
@@ -2906,10 +4065,11 @@ function showDetail(w){
       + esc(w._unsplash.author || 'a photographer')
       + "</a> on <a href='" + esc(w._unsplash.photoLink || 'https://unsplash.com') + utm + "' target='_blank' rel='noopener'>Unsplash</a>.";
   }
-  // larger preview for the stage
+  // The thumbnail is already in the browser cache from the grid, so it goes up
+  // instantly; the sharp image replaces it once it has downloaded.
   const img=document.getElementById('dtImg');
-  img.src = w.img.replace(/w=\d+/, 'w=1400');
   img.alt = w.name;
+  showProgressive(img, w, Math.min(1180, window.innerWidth), 'w=1400');
   // category chip carries its style icon when the set has one
   const catChip = document.getElementById('dtCatChip');
   catChip.innerHTML = icon(w.cat,'i-sm') + "<span>" + esc(w.cat) + "</span>";
@@ -2925,23 +4085,54 @@ function showDetail(w){
 
   // ---- Related wallpapers (same category first, then others) ----
   const rel=document.getElementById('dtRelated'); rel.innerHTML='';
-  const sameCat = wallpapers.filter(x=>x.cat===w.cat && x.name!==w.name);
-  const others = wallpapers.filter(x=>x.cat!==w.cat && x.name!==w.name);
-  const relList = [...sameCat, ...others].slice(0,8);
+  // Everything on the site that shares this wallpaper's category or any of its
+  // tags — the whole set, not a sample. Closest matches lead: same category AND
+  // a shared tag, then same category, then a shared tag alone.
+  const myTags = (w.tags||[]).map(t=>String(t).toLowerCase());
+  const both=[], catOnly=[], tagOnly=[];
+  wallpapers.forEach(x=>{
+    if(x===w || x.name===w.name) return;
+    const sameCat = !!w.cat && x.cat===w.cat;
+    const sharesTag = (x.tags||[]).some(t=>myTags.indexOf(String(t).toLowerCase())>-1);
+    if(sameCat && sharesTag) both.push(x);
+    else if(sameCat) catOnly.push(x);
+    else if(sharesTag) tagOnly.push(x);
+  });
+  const relList = both.concat(catOnly, tagOnly);
+  const relHead = document.querySelector('.related-head');
+  if(relHead){
+    const ARW = "<svg class='cat-arw' viewBox='0 0 24 24' aria-hidden='true'>"
+      + "<path d='M9 4.5 16.5 12 9 19.5 7.6 18.1 13.7 12 7.6 5.9z'/></svg>";
+    if(relList.length){
+      relHead.innerHTML = catIcon(w.cat)
+        + "<span>More in " + esc(w.cat || 'this collection') + "</span>"
+        + "<span class='cat-cnt'>&mdash; " + relList.length + " wallpaper" + (relList.length===1?'':'s') + "</span>"
+        + ARW;
+      // the whole heading is the way through to that category
+      relHead.classList.add('is-link');
+      const go = w.cat ? (()=> filterByCat(w.cat)) : null;
+      relHead.onclick = go;
+      // it behaves like a link, so it has to be reachable from the keyboard
+      if(go){
+        relHead.setAttribute('role','button');
+        relHead.setAttribute('tabindex','0');
+        relHead.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); go(); } };
+      }
+    } else {
+      relHead.innerHTML = catIcon(w.cat) + "<span>Related Wallpapers</span>";
+      relHead.classList.remove('is-link');
+      relHead.onclick = null;
+    }
+  }
   relList.forEach(x=>{
     const card=document.createElement('div'); card.className='rel-card';
-    card.innerHTML="<div class='rel-thumb'><img src='"+x.img+"' alt='"+x.name+"' loading='lazy'></div><div class='rel-cap'>"+x.name+"</div>";
+    // The 640px thumbnail, never the original: this grid can list 80+ wallpapers,
+    // and loading originals here pulled ~50 MB for a single scroll.
+    card.innerHTML="<div class='rel-thumb'><img src='"+esc(thumbUrl(x))+"' alt='"+esc(x.name)+"' loading='lazy' decoding='async'></div><div class='rel-cap'>"+esc(x.name)+"</div>";
+    const ri = card.querySelector('img');
+    ri.onerror = ()=>{ ri.onerror = null; if(x.img) ri.src = x.img; };   // no thumbnail was made for it
     card.onclick=()=>showDetail(x);
     rel.appendChild(card);
-  });
-
-  // ---- Popular tags ----
-  const pt=document.getElementById('dtPopTags'); pt.innerHTML='';
-  popTags.forEach(([label,color,size,op])=>{
-    const a=document.createElement('a'); a.className='poptag'; a.textContent=label;
-    a.style.color=color; a.style.fontSize=size+'px'; a.style.opacity=op;
-    a.onclick=()=>{ filterByTag(label); };
-    pt.appendChild(a);
   });
 
   // ---- Details line: views, downloads, upload date, file size ----
@@ -2966,7 +4157,7 @@ function showDetail(w){
 
   // share buttons, address-bar deep link and page title for this wallpaper
   updateShareLinks(w);
-  setHash('w/' + slugOf(w));
+  if(!fromHistory) setRoute(w);
   document.title = w.name + ' — 8K Wallpapers';
   // canonical -> the real crawlable page for published wallpapers
   const real = realPathOf(w);
@@ -3017,79 +4208,13 @@ document.getElementById('dtDownload').onclick=async (e)=>{
     downloadWithFeedback(e.currentTarget, currentWp.name, currentWp.img);
   }
 };
-document.getElementById('dtReport').onclick=(e)=>{ e.preventDefault(); alert('Thanks — this image has been flagged for review.'); };
-
-// ---- "More Resolutions": expandable per-device resolution lists ----
-const RESOLUTIONS = {
-  desktop: [
-    {w:1920,h:1080, label:'Full HD 1080p'},
-    {w:1920,h:1200, label:'Widescreen HD'},
-    {w:2560,h:1440, label:'2K | QHD'},
-    {w:2880,h:1800, label:'Retina Widescreen'},
-    {w:3440,h:1440, label:'21:9 UltraWide QHD'},
-    {w:3840,h:1080, label:'Dual Monitor HD'},
-    {w:3840,h:2160, label:'4K UHD'},
-  ],
-  mobiles: [
-    {w:480, h:800,  label:''},
-    {w:768, h:1024, label:''},
-    {w:720, h:1280, label:'HD Phone'},
-    {w:1080,h:1920, label:'Mobile Phone Full HD'},
-    {w:1080,h:2160, label:'Vertical Full HD'},
-  ],
-  tablets: [
-    {w:1280,h:1280, label:'HD Square'},
-    {w:2048,h:2048, label:'Square QHD'},
-    {w:1620,h:2160, label:'Tablet Portrait'},
-    {w:2160,h:1620, label:'Tablet Landscape'},
-  ],
-  iphone: [
-    {w:640, h:1136, label:'iPhone 5, 5S'},
-    {w:750, h:1334, label:'iPhone 6, 7, 8'},
-    {w:1125,h:2436, label:'iPhone X, XS, 11 Pro'},
-    {w:1170,h:2532, label:'iPhone 12, 13, 14'},
-    {w:1290,h:2796, label:'iPhone 14 Pro Max, 15'},
-  ],
-  ipad: [
-    {w:1536,h:2048, label:'iPad Mini, iPad Air'},
-    {w:2048,h:2732, label:'iPad Pro 12.9"'},
-    {w:1668,h:2388, label:'iPad Air, iPad Pro 11"'},
-    {w:2732,h:2048, label:'iPad Pro Landscape'},
-  ],
+// the report page takes the wallpaper's stored path so it can show what is
+// being reported; demo/Unsplash images have no path and just open the form
+document.getElementById('dtReport').onclick=(e)=>{
+  e.preventDefault();
+  const path = currentWp && currentWp._ref && currentWp._ref.path ? currentWp._ref.path : '';
+  location.href = '/report' + (path ? '?id=' + encodeURIComponent(path) : '');
 };
-
-const resList = document.getElementById('resList');
-const resDevBtns = document.querySelectorAll('.res-dev');
-
-function buildResList(dev){
-  resList.innerHTML='';
-  (RESOLUTIONS[dev]||[]).forEach(r=>{
-    const item=document.createElement('div'); item.className='res-item';
-    item.innerHTML = "<span class='res-dim'>"+r.w+"x"+r.h+"</span>" + (r.label? "<span class='res-name'>("+r.label+")</span>" : "");
-    item.onclick = async ()=>{
-      if(!currentWp || item.classList.contains('busy')) return;
-      const dim = item.querySelector('.res-dim');
-      const orig = dim.textContent;
-      item.classList.add('busy'); dim.textContent = 'Preparing '+r.w+'x'+r.h+'\u2026';
-      bumpStat(currentWp,'d'); trackUnsplash(currentWp);
-      try { await downloadSized(currentWp.name, currentWp.img, r.w, r.h); }
-      finally { dim.textContent = orig; item.classList.remove('busy'); }
-    };
-    resList.appendChild(item);
-  });
-}
-
-resDevBtns.forEach(btn=>{
-  btn.onclick=()=>{
-    const dev = btn.dataset.dev;
-    const isActive = btn.classList.contains('active');
-    resDevBtns.forEach(b=>b.classList.remove('active'));
-    if(isActive){ resList.classList.remove('open'); return; }   // toggle closed
-    btn.classList.add('active');
-    buildResList(dev);
-    resList.classList.add('open');
-  };
-});
 
 document.querySelectorAll('.foot-nav a').forEach(a=>{
   // only the policy links open in-page; real links (e.g. /upload) navigate
@@ -3101,7 +4226,7 @@ document.getElementById('policyBack').onclick=showGallery;
 // clicking the logo returns to the home page (default gallery view)
 function goHome(){
   showGallery();                       // hide detail/policy, show the grid
-  activeTab='RECENT'; query=''; activeCat=null; activeTag=null; showFavs=false;
+  activeTab='RECENT'; query=''; activeCat=null; activeTag=null; showFavs=false; activeSort=null;
   clearResChips();
   syncSearchInputs('');
   [...tabsEl.children].forEach(c=>c.classList.remove('active'));
@@ -3353,7 +4478,13 @@ document.getElementById('homeLogo').onclick=goHome;
         });
         added++; changed++;
       });
-      if(changed){ render(true); buildResChecks(); buildCatList(); }   // repaint, keeping scroll depth
+      // repaint, keeping scroll depth. The hero counter has to refresh too:
+      // it ran once at load, before the API list arrived, so the homepage
+      // advertised the built-in demo count (20) instead of the real library.
+      if(changed){ _gridDrawn = true; render(true); buildResChecks(); buildCatList(); updateHeroStats(); }
+      // the mosaic and category tiles wait for the real library, so a first
+      // visit never flashes the built-in demo set
+      buildCatTiles(); paintHeroMosaic();
       // a shared #w/<slug> link may point at a wallpaper that just arrived
       if(changed && _pendingRoute) _pendingRoute = !routeFromHash();
       if(data.length === 0){
@@ -3364,6 +4495,12 @@ document.getElementById('homeLogo').onclick=goHome;
     } catch(e){
       console.warn('Could not load the wallpaper list:', e);
       setStatus('Could not load the wallpaper list: ' + (e && e.message ? e.message : e), 'err');
+    } finally {
+      // the real library is in (or failed) — the pager may now top up from
+      // Unsplash, which it holds off on until the local wallpapers are known
+      // nothing arrived (or it failed): swap the server's cards for the demo set
+      if(!_gridDrawn){ _gridDrawn = true; render(); updateHeroStats(); }
+      if(!_libLoaded){ _libLoaded = true; fillPage(); }
     }
   }
 

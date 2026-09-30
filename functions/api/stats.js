@@ -1,7 +1,8 @@
-// /api/stats — global view / like / dislike counters (D1-backed).
-//   GET   public: { "<image_path>": { v, l, d }, … } for every wallpaper
+// /api/stats — global view / like / dislike / download counters (D1-backed).
+//   GET   public: { "<image_path>": { v, l, d, dl }, … } for every wallpaper
+//         (v = views, l = likes, d = dislikes, dl = downloads)
 //   POST  public: { path, action } where action is
-//         view | like | unlike | dislike | undislike
+//         view | like | unlike | dislike | undislike | download
 //
 // D1 rather than KV: KV's free tier allows 1000 writes/day, which a like
 // button would burn through; D1 allows 100k. The browser dedupes (one view
@@ -14,7 +15,9 @@ const ACTIONS = {
   like:      'likes = likes + 1',
   unlike:    'likes = MAX(likes - 1, 0)',
   dislike:   'dislikes = dislikes + 1',
-  undislike: 'dislikes = MAX(dislikes - 1, 0)'
+  undislike: 'dislikes = MAX(dislikes - 1, 0)',
+  // every download counts, so this one is not deduped per browser
+  download:  'downloads = downloads + 1'
 };
 
 export async function onRequest({ request, env }){
@@ -23,10 +26,13 @@ export async function onRequest({ request, env }){
 
   if(request.method === 'GET'){
     const rows = await env.DB.prepare(
-      'SELECT path, views, likes, dislikes FROM stats WHERE views>0 OR likes>0 OR dislikes>0'
+      'SELECT path, views, likes, dislikes, downloads FROM stats ' +
+      'WHERE views>0 OR likes>0 OR dislikes>0 OR downloads>0'
     ).all();
     const out = {};
-    for(const r of (rows.results || [])) out[r.path] = { v: r.views, l: r.likes, d: r.dislikes };
+    for(const r of (rows.results || [])){
+      out[r.path] = { v: r.views, l: r.likes, d: r.dislikes, dl: r.downloads || 0 };
+    }
     return cors(json(out, { headers: { 'cache-control': 'public, max-age=30' } }));
   }
 
@@ -39,18 +45,22 @@ export async function onRequest({ request, env }){
 
     // one statement: create the row if new, otherwise apply the delta
     await env.DB.prepare(
-      'INSERT INTO stats (path, views, likes, dislikes) VALUES (?, ?, ?, ?) ' +
+      'INSERT INTO stats (path, views, likes, dislikes, downloads) VALUES (?, ?, ?, ?, ?) ' +
       'ON CONFLICT(path) DO UPDATE SET ' + set
     ).bind(
       path,
       body.action === 'view' ? 1 : 0,
       body.action === 'like' ? 1 : 0,
-      body.action === 'dislike' ? 1 : 0
+      body.action === 'dislike' ? 1 : 0,
+      body.action === 'download' ? 1 : 0
     ).run();
 
-    const row = await env.DB.prepare('SELECT views, likes, dislikes FROM stats WHERE path = ?')
+    const row = await env.DB.prepare('SELECT views, likes, dislikes, downloads FROM stats WHERE path = ?')
       .bind(path).first();
-    return cors(json({ v: (row && row.views) || 0, l: (row && row.likes) || 0, d: (row && row.dislikes) || 0 }));
+    return cors(json({
+      v: (row && row.views) || 0, l: (row && row.likes) || 0,
+      d: (row && row.dislikes) || 0, dl: (row && row.downloads) || 0
+    }));
   }
 
   return cors(json({ error: 'method not allowed' }, 405));

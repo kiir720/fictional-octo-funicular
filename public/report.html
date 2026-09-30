@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Report an image — 8K Wallpapers</title>
+<meta name="description" content="Report a problem with an image on 8K Wallpapers — copyright, wrong credit, explicit content, or a real person who didn't consent. A person reviews every report.">
+<meta name="robots" content="noindex, follow">
+<meta name="theme-color" content="#0E1116">
+<link rel="icon" href="/favicon.png" sizes="32x32">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+:root{
+  --ink:#0E1116;
+  --surface:#151A21;
+  --surface-2:#1B222C;
+  --line:#27313E;
+  --line-soft:#1F2733;
+  --text:#E7ECF3;
+  --muted:#8B99AB;
+  --amber:#FFB454;
+  --violet:#8B5CF6;
+  --amber-dim:#7A5320;
+  --bad:#FF7A6B;
+  --bad-dim:#5A241E;
+  --radius:14px;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+/* author display rules (e.g. .subject-img img{display:block}) would otherwise
+   beat the browser's own [hidden] rule and show an empty broken-image box */
+[hidden]{display:none!important}
+html,body{margin:0}
+body{
+  background:var(--ink);color:var(--text);font-family:var(--sans);
+  font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(900px 500px at 12% -10%, rgba(139,92,246,.09), transparent 70%);
+}
+
+/* same header as the rest of the site */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:11px 24px;border-bottom:1px solid var(--line-soft);
+  position:sticky;top:0;z-index:20;background:rgba(14,17,22,.82);backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.wordmark{font-size:19px;font-weight:700;color:var(--text);text-decoration:none}
+.wordmark b{color:#6366f1;font-weight:700}
+.backbtn{background:var(--surface-2);border:1px solid var(--line);padding:8px 14px;border-radius:8px;
+  color:var(--text);text-decoration:none;font-size:13px;font-weight:600;transition:border-color .15s}
+.backbtn:hover{border-color:var(--amber)}
+
+.wrap{max-width:1120px;margin:0 auto;padding:44px 28px 96px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--bad);margin:0 0 14px}
+h1{font-size:clamp(34px,5.5vw,52px);line-height:1;letter-spacing:-.025em;font-weight:800;margin:0 0 14px}
+.lede{color:var(--muted);max-width:56ch;margin:0 0 40px}
+
+.grid{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:40px;align-items:start}
+.left{position:sticky;top:96px}
+
+/* ---------- the image under report ---------- */
+.subject{
+  border:1px solid var(--line-soft);border-radius:var(--radius);overflow:hidden;background:var(--surface);
+  border-top:2px solid var(--bad);
+}
+.subject-img{position:relative;aspect-ratio:16/9;background:#10151C;display:grid;place-items:center}
+.subject-img img{width:100%;height:100%;object-fit:cover;display:block}
+.subject-img .placeholder{display:grid;justify-items:center;gap:10px;font-size:13px;color:#5B6778}
+.subject-img .placeholder svg{width:30px;height:30px;color:#3C4757}
+.flagtag{
+  position:absolute;top:10px;left:10px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;background:var(--bad);color:#200906;padding:4px 8px;border-radius:6px;font-weight:700;
+  z-index:1
+}
+.subject-meta{padding:16px 18px}
+.subject-meta h2{margin:0 0 4px;font-size:17px;letter-spacing:-.015em}
+.subject-meta .by{color:var(--muted);font-size:13px;margin:0 0 14px}
+.facts{display:grid;gap:7px;font-family:var(--mono);font-size:12px}
+.facts div{display:flex;justify-content:space-between;gap:12px;color:var(--muted)}
+.facts b{color:var(--text);font-weight:500;text-align:right;word-break:break-word}
+.wrongone{display:block;width:100%;margin-top:14px;padding:12px 0 0;font:inherit;font-size:12.5px;color:var(--muted);
+  text-align:left;cursor:pointer;background:none;border:0;border-top:1px solid var(--line-soft)}
+.wrongone:hover{color:var(--amber)}
+
+/* ---------- picking the wallpaper, when the page wasn't opened from one ---------- */
+.picks{display:grid;gap:6px;margin-top:10px;max-height:330px;overflow-y:auto}
+.pick{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;align-items:center;width:100%;
+  padding:6px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);
+  color:var(--text);font-family:inherit;text-align:left;cursor:pointer;transition:border-color .15s}
+.pick:hover{border-color:var(--amber)}
+.pick img{width:64px;height:40px;object-fit:cover;border-radius:6px;background:#10151C;display:block}
+.pick b{display:block;font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pick span{display:block;font-size:12px;color:var(--muted)}
+.picks .none{margin:4px 2px;font-size:12.5px;color:var(--muted)}
+
+/* ---------- what happens next ---------- */
+.track{margin-top:26px}
+.track h3{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);font-weight:400;margin:0 0 14px}
+.step{display:grid;grid-template-columns:auto 1fr;gap:14px;padding-bottom:18px;position:relative}
+.step:last-child{padding-bottom:0}
+.step::before{content:"";position:absolute;left:11px;top:24px;bottom:0;width:1px;background:var(--line)}
+.step:last-child::before{display:none}
+.step i{
+  width:23px;height:23px;border-radius:50%;border:1px solid var(--line);background:var(--surface);
+  display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-style:normal;color:var(--muted);z-index:1
+}
+.step strong{display:block;font-size:14px;font-weight:600;letter-spacing:-.01em}
+.step span{display:block;font-size:13px;color:var(--muted)}
+.step em{font-family:var(--mono);font-style:normal;font-size:11px;color:#5F6B7C;letter-spacing:.05em}
+
+/* ---------- reasons ---------- */
+.field{margin-bottom:26px}
+.lab{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:10px}
+.lab em{font-style:normal;color:#5F6B7C;letter-spacing:.06em}
+
+.reasons{display:grid;gap:9px}
+.reason{position:relative;display:grid;grid-template-columns:auto 1fr;gap:13px;align-items:start;
+  border:1px solid var(--line);border-radius:11px;padding:14px 16px;cursor:pointer;
+  background:var(--surface);transition:border-color .15s,background .15s}
+.reason:hover{background:var(--surface-2)}
+.reason input{position:absolute;opacity:0;width:0;height:0}
+.dot{flex:0 0 auto;width:17px;height:17px;border-radius:50%;border:1px solid var(--line);
+  margin-top:2px;display:grid;place-items:center;transition:.15s}
+.dot::after{content:"";width:7px;height:7px;border-radius:50%;background:var(--ink);transform:scale(0);transition:.15s}
+.reason input:checked ~ .dot{background:var(--amber);border-color:var(--amber)}
+.reason input:checked ~ .dot::after{transform:scale(1)}
+/* :has() is recent — the checked dot above already reads clearly without it */
+.reason:has(input:checked){border-color:var(--amber);background:var(--surface-2)}
+.reason input:focus-visible ~ .dot{outline:2px solid var(--amber);outline-offset:3px}
+.reason strong{display:block;font-size:14.5px;font-weight:600;letter-spacing:-.01em;margin-bottom:2px}
+.reason span{display:block;font-size:13px;color:var(--muted);line-height:1.45}
+
+textarea,input[type=text],input[type=url],input[type=email]{
+  width:100%;background:var(--surface);color:var(--text);border:1px solid var(--line);
+  border-radius:10px;padding:12px 14px;font-family:inherit;font-size:15px;outline:none;
+  transition:border-color .15s,background .15s}
+textarea{min-height:120px;resize:vertical;line-height:1.55}
+input::placeholder,textarea::placeholder{color:#5A6675}
+textarea:focus,input:focus{border-color:var(--amber);background:var(--surface-2)}
+.count{font-family:var(--mono);font-size:11px;color:#5F6B7C;text-align:right;margin-top:7px}
+.count.over{color:var(--bad)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+/* legal block, revealed for copyright claims */
+.legal{
+  border:1px solid var(--bad-dim);border-left:2px solid var(--bad);
+  border-radius:11px;padding:20px;margin-bottom:26px;background:#161116;
+  display:none}
+.legal.show{display:block}
+.legal h3{margin:0 0 6px;font-size:15px;letter-spacing:-.01em}
+.legal > p{margin:0 0 18px;color:var(--muted);font-size:13.5px}
+.legal .field:last-of-type{margin-bottom:0}
+
+.sworn{display:flex;gap:13px;align-items:flex-start;margin-top:20px}
+.sworn input{position:absolute;opacity:0;width:0;height:0}
+.box{flex:0 0 auto;width:21px;height:21px;border-radius:6px;border:1px solid var(--line);
+  background:var(--surface);display:grid;place-items:center;cursor:pointer;margin-top:2px}
+.box svg{width:12px;height:12px;opacity:0;transform:scale(.6);transition:.15s}
+.sworn input:checked + .box{background:var(--amber);border-color:var(--amber)}
+.sworn input:checked + .box svg{opacity:1;transform:scale(1)}
+.sworn input:focus-visible + .box{outline:2px solid var(--amber);outline-offset:3px}
+.sworn span{font-size:13px;color:var(--muted);line-height:1.5}
+.sworn a{color:var(--amber);text-decoration:none;border-bottom:1px solid rgba(255,180,84,.35)}
+
+.submit{width:100%;margin-top:8px;padding:15px;border:0;border-radius:11px;background:var(--amber);
+  color:#181103;font-size:15.5px;font-weight:700;letter-spacing:-.01em;font-family:inherit;
+  cursor:pointer;transition:filter .15s,transform .12s}
+.submit:hover:not(:disabled){filter:brightness(1.08)}
+.submit:active:not(:disabled){transform:translateY(1px)}
+.submit:disabled{background:#232B36;color:#5D6875;cursor:not-allowed}
+.status{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;margin-top:12px;min-height:16px}
+.status.ok{color:var(--amber)}
+.status.err{color:var(--bad)}
+
+/* sent state */
+.sent{display:none;border:1px solid var(--line-soft);border-radius:var(--radius);
+  padding:32px;text-align:center;background:var(--surface)}
+.sent.show{display:block}
+.sent .ref{font-family:var(--mono);font-size:13px;color:var(--amber);letter-spacing:.06em;
+  border:1px dashed var(--amber-dim);border-radius:9px;padding:10px;margin:16px 0 0;display:inline-block}
+.sent h2{margin:0 0 8px;font-size:22px;letter-spacing:-.02em}
+.sent p{margin:0;color:var(--muted);font-size:14px}
+.sent .home{display:inline-block;margin-top:20px;color:var(--muted);font-size:13px;text-decoration:none;
+  border-bottom:1px solid var(--line)}
+.sent .home:hover{color:var(--text)}
+
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+@media (max-width:880px){
+  .grid{grid-template-columns:1fr;gap:32px}
+  .left{position:static}
+  .row{grid-template-columns:1fr}
+  .wrap{padding:32px 20px 72px}
+  .topbar{padding:10px 16px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="wordmark" href="/"><b>8K</b> WALLPAPERS</a>
+  <a class="backbtn" href="/" id="backLink">← Back to wallpapers</a>
+</header>
+
+<main class="wrap">
+  <p class="eyebrow">Report</p>
+  <h1>Something wrong<br>with this image?</h1>
+  <p class="lede">Tell us what the problem is and a person will look at it. Copyright claims and anything involving a real person's safety go to the front of the queue.</p>
+
+  <div class="grid">
+    <!-- LEFT -->
+    <section class="left">
+      <div class="subject">
+        <div class="subject-img">
+          <span class="flagtag">Reporting</span>
+          <img id="subjectImg" alt="" hidden>
+          <span class="placeholder" id="subjectPlaceholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 8.5"/></svg>
+            No wallpaper attached yet
+          </span>
+        </div>
+        <div class="subject-meta">
+          <div id="attached" hidden>
+            <h2 id="subjectName"></h2>
+            <p class="by">This is the wallpaper your report is about.</p>
+            <div class="facts">
+              <div><span>id</span><b id="subjectId">—</b></div>
+              <div><span>resolution</span><b id="subjectRes">—</b></div>
+              <div><span>category</span><b id="subjectCat">—</b></div>
+              <div><span>published</span><b id="subjectDate">—</b></div>
+            </div>
+            <button type="button" class="wrongone" id="changeBtn">Not the right image? Pick another →</button>
+          </div>
+          <div id="picker" hidden>
+            <h2>Which wallpaper is it?</h2>
+            <p class="by" id="pickNote">Search by name and pick it from the list.</p>
+            <input type="text" id="pick" placeholder="Search wallpapers…" autocomplete="off" aria-label="Search wallpapers">
+            <div class="picks" id="picks"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="track">
+        <h3>What happens next</h3>
+        <div class="step"><i>1</i><div>
+          <strong>We read it</strong>
+          <span>A person reviews the report — no automated takedowns.</span>
+          <em>WITHIN 48 HOURS</em>
+        </div></div>
+        <div class="step"><i>2</i><div>
+          <strong>The image may come down</strong>
+          <span>If the claim holds up, it's pulled from the library and the CDN cache.</span>
+          <em>SAME DAY AS REVIEW</em>
+        </div></div>
+        <div class="step"><i>3</i><div>
+          <strong>You hear back</strong>
+          <span>We email you the outcome, whichever way it goes.</span>
+          <em>REFERENCE NUMBER INCLUDED</em>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- RIGHT -->
+    <section>
+      <form id="form">
+        <div class="field">
+          <span class="lab">What's the problem?</span>
+          <div class="reasons">
+            <label class="reason"><input type="radio" name="reason" value="copyright"><span class="dot"></span><span>
+              <strong>It's my work, posted without permission</strong>
+              <span>You own the image or represent the person who does.</span></span></label>
+
+            <label class="reason"><input type="radio" name="reason" value="credit"><span class="dot"></span><span>
+              <strong>Wrong credit or source</strong>
+              <span>The artist is misnamed, or the source link points somewhere else.</span></span></label>
+
+            <label class="reason"><input type="radio" name="reason" value="explicit"><span class="dot"></span><span>
+              <strong>Sexual, violent, or hateful content</strong>
+              <span>It doesn't belong in a public wallpaper library.</span></span></label>
+
+            <label class="reason"><input type="radio" name="reason" value="person"><span class="dot"></span><span>
+              <strong>It shows a real person who didn't agree to this</strong>
+              <span>Includes private photos and anything AI-made of a real person.</span></span></label>
+
+            <label class="reason"><input type="radio" name="reason" value="quality"><span class="dot"></span><span>
+              <strong>Broken, upscaled, or mislabelled</strong>
+              <span>The file won't open, or the resolution isn't what it claims.</span></span></label>
+
+            <label class="reason"><input type="radio" name="reason" value="other"><span class="dot"></span><span>
+              <strong>Something else</strong>
+              <span>Describe it below and we'll take a look.</span></span></label>
+          </div>
+        </div>
+
+        <!-- copyright-only block -->
+        <div class="legal" id="legal">
+          <h3>Copyright claim</h3>
+          <p>A formal claim needs a few extra details before we can act on it. Everything here goes to our copyright agent, and a copy may be sent to whoever uploaded the image.</p>
+
+          <div class="row">
+            <div class="field">
+              <label class="lab" for="legalName">Your full legal name</label>
+              <input type="text" id="legalName" placeholder="As it would appear on a notice">
+            </div>
+            <div class="field">
+              <label class="lab" for="relation">Your relationship to the work</label>
+              <input type="text" id="relation" placeholder="Photographer, agent, rights holder…">
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="lab" for="original">Where the original lives</label>
+            <input type="url" id="original" placeholder="https://… your portfolio, store, or first posting">
+          </div>
+
+          <label class="sworn" for="sworn">
+            <input type="checkbox" id="sworn">
+            <span class="box" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7.5-8" stroke="#181103" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span>I state in good faith that this use isn't authorised by me, my agent, or the law, and that the information here is accurate. I'm the rights holder or authorised to act for them. Knowingly false claims carry legal consequences — see the <a href="/copyright">copyright policy</a>.</span>
+          </label>
+        </div>
+
+        <div class="field">
+          <label class="lab" for="details">Details <em>— what should we know?</em></label>
+          <textarea id="details" placeholder="Where the image came from, when you first published it, or what exactly is wrong with it."></textarea>
+          <div class="count" id="count">0 / 1200</div>
+        </div>
+
+        <div class="field">
+          <label class="lab" for="email">Your email <em>— so we can tell you the outcome</em></label>
+          <input type="email" id="email" placeholder="you@example.com">
+        </div>
+
+        <button class="submit" id="submit" type="button" disabled>Send report</button>
+        <p class="status" id="status">Pick a reason to continue.</p>
+      </form>
+
+      <div class="sent" id="sent">
+        <h2>Report sent</h2>
+        <p>A person will look at this within 48 hours and email you either way. Keep this reference in case you need to follow up.</p>
+        <span class="ref" id="ref"></span>
+        <a class="home" href="/">← Back to the wallpapers</a>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const legal=$('legal'), details=$('details'), count=$('count'), email=$('email'),
+      submit=$('submit'), statusEl=$('status'), sworn=$('sworn'), form=$('form'), sent=$('sent');
+const LIMIT = 1200;
+// same rule the gallery uses: same-origin on any deployed host (pages.dev or the
+// custom domain), and only a local preview — which has no Functions — calls out
+const IS_LOCAL = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || location.protocol === 'file:';
+const API = IS_LOCAL ? 'https://8k-wallpapers.com' : '';
+
+/* the wallpaper the report is about: /report?id=<image_path>, or picked here */
+let reportedId = new URLSearchParams(location.search).get('id') || '';
+
+let _library = null;
+async function library(){
+  if(_library) return _library;
+  const res = await fetch(API + '/api/wallpapers', { cache:'no-store' });
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  let list = await res.json();
+  if(!Array.isArray(list)) list = (list && list.wallpapers) || [];
+  _library = list.filter(r => r && r.image_path);
+  return _library;
+}
+// the same slug rule as the server's wallpaperSlug(), so links land on the real page
+function slugOf(w){
+  const base = String(w.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'wallpaper';
+  const m = String(w.image_path || '').match(/(\d{6,})(?=\.[a-z0-9]+$)/i);
+  return m ? base + '-' + m[1] : base;
+}
+const thumbOf = w => API + '/images/thumbs/' + encodeURI(w.image_path);
+const fullOf  = w => API + '/images/' + encodeURI(w.image_path);
+
+function showAttached(){ $('attached').hidden = false; $('picker').hidden = true; }
+function showPicker(note){
+  $('attached').hidden = true; $('picker').hidden = false;
+  $('pickNote').textContent = note || 'Search by name and pick it from the list.';
+  runPick();
+}
+
+function paintSubject(w){
+  $('subjectName').textContent = w.name || 'Untitled';
+  $('subjectId').textContent = w.image_path;
+  $('subjectRes').textContent = w.resolution || '—';
+  $('subjectCat').textContent = w.category || '—';
+  $('subjectDate').textContent = w.created_at ? new Date(w.created_at).toLocaleDateString(undefined,
+    { day:'numeric', month:'short', year:'numeric' }) : '—';
+  // the small thumbnail, not the multi-megabyte original; fall back once if it's missing
+  const img = $('subjectImg');
+  img.onerror = () => { img.onerror = () => { img.hidden = true; $('subjectPlaceholder').hidden = false; }; img.src = fullOf(w); };
+  img.src = thumbOf(w);
+  img.alt = w.name || '';
+  img.hidden = false;
+  $('subjectPlaceholder').hidden = true;
+  const back = $('backLink');
+  back.href = '/wallpaper/' + slugOf(w);
+  back.textContent = '← Back to the wallpaper';
+}
+
+function attach(w){
+  reportedId = w.image_path;
+  paintSubject(w);
+  showAttached();
+  try {
+    const u = new URL(location.href); u.searchParams.set('id', reportedId);
+    history.replaceState(null, '', u);
+  } catch(e){}
+  check();
+}
+
+let _pickTimer = null;
+async function runPick(){
+  const box = $('picks');
+  let list;
+  try { list = await library(); }
+  catch(e){
+    box.textContent = '';
+    const p = document.createElement('p'); p.className = 'none';
+    p.textContent = 'The library could not be loaded. Describe the image in the details instead.';
+    box.appendChild(p);
+    return;
+  }
+  const words = $('pick').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const hits = (words.length ? list.filter(w => {
+    const hay = [w.name, w.category, (w.tags || []).join(' ')].join(' ').toLowerCase();
+    return words.every(x => hay.includes(x));
+  }) : list).slice(0, 8);
+  box.textContent = '';
+  if(!hits.length){
+    const p = document.createElement('p'); p.className = 'none';
+    p.textContent = 'Nothing matches that. Try one word from the name.';
+    box.appendChild(p);
+    return;
+  }
+  hits.forEach(w => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'pick';
+    const im = document.createElement('img'); im.alt = ''; im.loading = 'lazy'; im.src = thumbOf(w);
+    im.onerror = () => { im.onerror = null; im.style.visibility = 'hidden'; };
+    const t = document.createElement('div');
+    const n = document.createElement('b'); n.textContent = w.name || 'Untitled';
+    const c = document.createElement('span'); c.textContent = [w.category, w.resolution].filter(Boolean).join(' · ');
+    t.append(n, c); b.append(im, t);
+    b.onclick = () => attach(w);
+    box.appendChild(b);
+  });
+}
+$('pick').addEventListener('input', () => { clearTimeout(_pickTimer); _pickTimer = setTimeout(runPick, 120); });
+$('changeBtn').addEventListener('click', () => { showPicker(); $('pick').focus(); });
+
+(async function loadSubject(){
+  if(!reportedId){ showPicker(); return; }
+  try {
+    const w = (await library()).find(r => r.image_path === reportedId);
+    if(w){ paintSubject(w); showAttached(); }
+    // keep the id we were given (it still goes with the report), but let them pick the real one
+    else showPicker("We couldn't match that link to a wallpaper. Pick it below if you can — or just send the report.");
+  } catch(e){
+    // the library didn't load; the report still carries the id
+    $('subjectName').textContent = 'Wallpaper ' + reportedId;
+    $('subjectId').textContent = reportedId;
+    showAttached();
+  }
+  check();
+})();
+
+document.querySelectorAll('input[name=reason]').forEach(r =>
+  r.addEventListener('change', () => {
+    legal.classList.toggle('show', r.value === 'copyright');
+    check();
+  })
+);
+
+details.addEventListener('input', () => {
+  count.textContent = details.value.length + ' / ' + LIMIT;
+  count.classList.toggle('over', details.value.length > LIMIT);
+  check();
+});
+email.addEventListener('input', check);
+sworn.addEventListener('change', check);
+['legalName','relation','original'].forEach(id => $(id).addEventListener('input', check));
+
+function reason(){ const el = document.querySelector('input[name=reason]:checked'); return el ? el.value : null; }
+function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()); }
+
+function check(){
+  const r = reason();
+  let missing = null;
+  if(!r) missing = 'Pick a reason to continue.';
+  else if(!reportedId && r !== 'other') missing = "Pick the wallpaper you're reporting.";
+  else if(details.value.trim().length < 15) missing = 'Add a line or two of detail.';
+  else if(details.value.length > LIMIT) missing = 'The details are over the character limit.';
+  else if(!validEmail(email.value)) missing = 'Add an email we can reply to.';
+  else if(r === 'copyright'){
+    if(!$('legalName').value.trim()) missing = 'Add your full legal name.';
+    else if(!$('relation').value.trim()) missing = 'Say how you relate to the work.';
+    else if(!sworn.checked) missing = 'Confirm the good-faith statement.';
+  }
+  submit.disabled = !!missing;
+  statusEl.textContent = missing || 'Ready to send.';
+  statusEl.className = missing ? 'status' : 'status ok';
+}
+
+submit.addEventListener('click', async () => {
+  submit.disabled = true;
+  submit.textContent = 'Sending…';
+  statusEl.className = 'status';
+  statusEl.textContent = 'Sending…';
+  try {
+    const res = await fetch(API + '/api/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: reportedId,
+        reason: reason(),
+        details: details.value,
+        email: email.value,
+        legalName: $('legalName').value,
+        relation: $('relation').value,
+        original: $('original').value,
+        sworn: sworn.checked
+      })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok || !data.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    $('ref').textContent = 'Reference ' + data.ref;
+    form.style.display = 'none';
+    sent.classList.add('show');
+  } catch(err){
+    submit.disabled = false;
+    submit.textContent = 'Send report';
+    statusEl.className = 'status err';
+    statusEl.textContent = 'Could not send: ' + (err && err.message ? err.message : 'network error') + '. Try again.';
+  }
+});
+</script>
+</body>
+</html>

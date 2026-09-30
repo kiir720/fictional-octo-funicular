@@ -13,6 +13,17 @@ export async function onRequestGet({ env, request }){
 
   const urls = [];
   urls.push({ loc: origin + '/', changefreq: 'daily', priority: '1.0' });
+  // the legal pages are real crawlable URLs now, so list them too
+  ['about', 'privacy', 'tos', 'copyright', 'contact'].forEach(p => {
+    urls.push({ loc: origin + '/' + p, changefreq: 'yearly', priority: '0.3' });
+  });
+  urls.push({ loc: origin + '/upload', changefreq: 'monthly', priority: '0.5' });
+  // written guides — real editorial pages, worth crawling often
+  urls.push({ loc: origin + '/guides', changefreq: 'monthly', priority: '0.8' });
+  ['wallpaper-resolution','4k-5k-8k-explained','how-to-set-a-wallpaper',
+   'ultrawide-and-multi-monitor','why-wallpapers-look-blurry'].forEach(g => {
+    urls.push({ loc: origin + '/guides/' + g, changefreq: 'monthly', priority: '0.8' });
+  });
 
   // newest first so freshly published wallpapers sit near the top
   list.slice().sort((a, b) => {

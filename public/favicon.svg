@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="8K">
+  <rect width="64" height="64" rx="14" fill="#6366f1"/>
+  <!-- textLength pins the wordmark to the same width whatever sans-serif the
+       viewer's system supplies; y is nudged up so the ink sits dead centre,
+       since "8K" has no descender to balance the baseline. -->
+  <text x="32" y="30.5" fill="#ffffff" font-family="Segoe UI, system-ui, -apple-system, Helvetica, Arial, sans-serif"
+        font-size="34" font-weight="800" textLength="42" lengthAdjust="spacingAndGlyphs"
+        text-anchor="middle" dominant-baseline="central">8K</text>
+</svg>

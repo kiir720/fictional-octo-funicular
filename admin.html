@@ -790,22 +790,6 @@
   .rel-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .rel-cap { padding: 10px 12px; font-size: 12.5px; color: var(--muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  /* ---- Popular tags ---- */
-  .poptags-panel {
-    max-width: 1340px; margin: 34px auto 0; padding: 22px 26px 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
-    border: 1px solid rgba(255,255,255,0.12); border-radius: 14px 14px 0 0;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.25); overflow: hidden;
-  }
-  .poptags-head { font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--muted); margin-bottom: 16px; }
-  .poptags-wrap {
-    display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px;
-    justify-content: center; padding-bottom: 22px;
-  }
-  .poptag { cursor: pointer; font-weight: 600; line-height: 1.5; transition: opacity 0.15s, text-shadow 0.15s; text-decoration: none; }
-  .poptag:hover { opacity: 1 !important; text-shadow: 0 0 12px currentColor; }
-  .poptags-line { height: 3px; margin: 0 -26px; background: linear-gradient(90deg, #00d4ff, #7c4dff, #ff2d9b, #00d4ff); background-size: 300% 100%; animation: tagflow 8s linear infinite; }
-  @keyframes tagflow { 0% { background-position: 0% 0; } 100% { background-position: 300% 0; } }
   footer { text-align: center; color: var(--muted); font-size: 13px; padding: 26px; border-top: 1px solid rgba(255,255,255,0.22); background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03)); backdrop-filter: blur(24px) brightness(1.12); -webkit-backdrop-filter: blur(24px) brightness(1.12); box-shadow: inset 0 1px 0 rgba(255,255,255,0.45); position: relative; overflow: hidden; }
   footer::after {
     content: ''; position: absolute; top: -50%; left: -60%; width: 60%; height: 200%;
@@ -826,7 +810,7 @@
   }
   @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
   @media (prefers-reduced-motion: reduce) {
-    .header-sheen::after, footer::after, .poptags-line { animation: none; }
+    .header-sheen::after, footer::after { animation: none; }
     .tag::after, .tab::after, .card { transition: none; }
   }
 
@@ -1189,11 +1173,6 @@
       <div class="related-grid" id="dtRelated"></div>
     </div>
 
-    <div class="poptags-panel">
-      <div class="poptags-head">POPULAR TAGS</div>
-      <div class="poptags-wrap" id="dtPopTags"></div>
-      <div class="poptags-line"></div>
-    </div>
   </div>
 </div>
 
@@ -1240,18 +1219,6 @@ const tabs = [
   {label:'FEATURED', ico:'\u2605'},
   {label:'RANDOM', ico:'\u21C4'},
   {label:'COLLECTIONS', ico:'\u2756'},
-];
-
-// colorful popular tags: [label, color, sizePx, opacity]
-const popTags = [
-  ['Stock','#7c8cff',19,1],['Black background','#5fd17a',13.5,0.85],['Green background','#3ad07a',15,1],
-  ['8K','#3aa0ff',18,1],['PlayStation','#aab0bb',13,0.8],['2026','#6a6f78',12.5,0.7],
-  ['Gradient background','#ff8a3c',18,1],['Red aesthetic','#cfd3da',13,0.85],['5K','#ff3db5',18,1],
-  ['Illustration','#b07cff',17,1],['Abstract background','#6a6f78',12.5,0.6],['Neon','#e8ebf0',15,1],
-  ['White background','#f0f2f5',18,1],['Dark aesthetic','#aab0bb',13,0.85],['Green','#3ad07a',14,1],
-  ['Geometric','#cfd3da',17,1],['Minimalist','#9aa0a8',13.5,0.9],['Hello','#9cff5a',18,1],
-  ['Vibrant','#ff3db5',13,0.7],['Futuristic','#cfd3da',14,0.95],['Dark background','#2cc8e0',18,1],
-  ['3D Render','#aab0bb',12.5,0.85],['Apple','#e8ebf0',13.5,1],['Blue background','#5aa0ff',16,1],
 ];
 
 function gradient(c){return "<defs><linearGradient id='%ID%' x1='0' y1='0' x2='1' y2='1'>"+c.map((x,i)=>"<stop offset='"+(i/(c.length-1))+"' stop-color='"+x+"'/>").join('')+"</linearGradient></defs><rect width='800' height='500' fill='url(#%ID%)'/>";}
@@ -1667,8 +1634,8 @@ function showDetail(w){
   document.getElementById('dtName').textContent = w.name;
   document.getElementById('dtRes').textContent = w.res;
   document.getElementById('dtDesc').textContent =
-    "Get this "+w.name+" background in "+w.res+" 4K resolution from the "+w.cat+
-    " category. You can also download it for computer, mobile phones, iPhone and iPad from the resolutions below.";
+    w.name+" is a "+String(w.cat||'').toLowerCase()+" wallpaper at "+w.res+
+    ". Pick your screen size below and the download is resized to match — no account needed.";
   // larger preview for the stage
   const img=document.getElementById('dtImg');
   img.src = w.img.replace(/w=\d+/, 'w=1400');
@@ -1693,15 +1660,6 @@ function showDetail(w){
     card.innerHTML="<div class='rel-thumb'><img src='"+x.img+"' alt='"+x.name+"' loading='lazy'></div><div class='rel-cap'>"+x.name+"</div>";
     card.onclick=()=>showDetail(x);
     rel.appendChild(card);
-  });
-
-  // ---- Popular tags ----
-  const pt=document.getElementById('dtPopTags'); pt.innerHTML='';
-  popTags.forEach(([label,color,size,op])=>{
-    const a=document.createElement('a'); a.className='poptag'; a.textContent=label;
-    a.style.color=color; a.style.fontSize=size+'px'; a.style.opacity=op;
-    a.onclick=()=>{ showGallery(); document.getElementById('searchInput').value=''; query=''; activeTab='ALL'; [...tabsEl.children].forEach(x=>x.classList.remove('active')); setTitle(label+' Wallpapers'); render(); };
-    pt.appendChild(a);
   });
 
   galleryView.style.display='none';

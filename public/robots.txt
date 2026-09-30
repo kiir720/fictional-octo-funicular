@@ -1,5 +1,4 @@
 # 8K Wallpapers — crawler rules
-# If you attach a custom domain later, update the Sitemap line to match.
 
 User-agent: *
 Allow: /
@@ -7,4 +6,4 @@ Allow: /
 Disallow: /admin
 Disallow: /admin.html
 
-Sitemap: https://8k-wallpapers.pages.dev/sitemap.xml
+Sitemap: https://8k-wallpapers.com/sitemap.xml
