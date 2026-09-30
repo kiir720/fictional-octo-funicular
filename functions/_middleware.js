@@ -15,9 +15,33 @@ const REDIRECT_FROM = new Set([
 const HOME_PATHS = new Set(['/', '/wallpapers', '/wallpapers.html']);
 const FALLBACK_COUNT = 36;
 
+// public/_headers declares these too, but Pages applies _headers only to
+// static files — never to anything a Function produced, which here means the
+// homepage, every wallpaper/category/guide/legal page and the API. So they
+// are added once, here, to whatever the rest of the stack returns.
+// (No HSTS "preload": that is a hard-to-undo browser-list commitment.)
+const SECURITY_HEADERS = {
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'SAMEORIGIN',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()'
+};
+function secure(res){
+  try {
+    // responses handed back by next() can have immutable headers — copy once
+    const out = new Response(res.body, res);
+    for(const k in SECURITY_HEADERS){
+      if(!out.headers.has(k)) out.headers.set(k, SECURITY_HEADERS[k]);
+    }
+    return out;
+  } catch(e){ return res; }
+}
+
 export async function onRequest(context){
   try {
-    const { request, next, env } = context;
+    const { request, env } = context;
+    const next = async () => secure(await context.next());
     if(request.method !== 'GET' && request.method !== 'HEAD') return next();
 
     const url = new URL(request.url);
@@ -72,7 +96,7 @@ export async function onRequest(context){
       .transform(response);
   } catch(e){
     // never let middleware take the site down
-    try { return await context.next(); } catch(e2){ return new Response('', { status: 500 }); }
+    try { return secure(await context.next()); } catch(e2){ return new Response('', { status: 500 }); }
   }
 }
 

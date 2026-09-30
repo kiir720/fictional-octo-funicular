@@ -10,6 +10,8 @@
 <meta http-equiv="Expires" content="0">
 <title>8K Wallpapers — Free 4K, 5K &amp; 8K Ultra HD Backgrounds</title>
 <meta name="description" content="Download stunning free wallpapers in 4K, 5K and 8K Ultra HD. Hand-picked backgrounds for desktop, iPhone, Android and tablet — nature, space, abstract, cars, anime and more.">
+<link rel="canonical" href="https://8k-wallpapers.com/">
+<meta property="og:url" content="https://8k-wallpapers.com/">
 <meta name="keywords" content="8k wallpapers, 4k wallpapers, 5k wallpapers, ultra hd backgrounds, free wallpapers, desktop backgrounds, phone wallpapers">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#0f1116">
@@ -118,10 +120,17 @@
   (function(){
     if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
     var url = location.origin + location.pathname;
-    var link = document.createElement('link'); link.rel = 'canonical'; link.href = url;
-    document.head.appendChild(link);
-    var og = document.createElement('meta'); og.setAttribute('property','og:url'); og.content = url;
-    document.head.appendChild(og);
+    // The canonical and og:url now ship in the static <head> (fixed domain, and
+    // crawlers that skip JavaScript need them); only add them if they're absent,
+    // or the page would carry two conflicting canonicals.
+    if (!document.querySelector('link[rel="canonical"]')) {
+      var link = document.createElement('link'); link.rel = 'canonical'; link.href = url;
+      document.head.appendChild(link);
+    }
+    if (!document.querySelector('meta[property="og:url"]')) {
+      var og = document.createElement('meta'); og.setAttribute('property','og:url'); og.content = url;
+      document.head.appendChild(og);
+    }
     var ld = document.createElement('script'); ld.type = 'application/ld+json';
     ld.textContent = JSON.stringify({
       '@context': 'https://schema.org',
@@ -1802,6 +1811,9 @@
     color: rgba(255,255,255,0.78); font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums;
   }
   .ct:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* tiles and sidebar entries are real links now */
+  a.ct, a.cat-item { display: block; text-decoration: none; }
+  a.cat-item { display: flex; }
   @supports not (aspect-ratio: 1 / 1) { .ct::before { content: ''; display: block; padding-top: 62.5%; } }
 
   /* ---- toolbar: tabs on the left, resolution chips on the right, one rule ---- */
@@ -2183,6 +2195,7 @@
 
 <footer>
   <nav class="foot-nav">
+    <a href="/categories">Categories</a><span>|</span>
     <a href="/guides">Guides</a><span>|</span>
     <a href="/upload">Submit a wallpaper</a><span>|</span>
     <a href="/about" data-policy="about">About</a><span>|</span>
@@ -2450,6 +2463,8 @@ async function loadGlobalStats(){
     const data = await res.json();
     if(data && typeof data === 'object') gStats = data;
     if(_list && _list.length) render(true);   // repaint with the real numbers
+    // category covers follow what people download — re-pick them now
+    if(_libLoaded) buildCatTiles();
   } catch(e){ /* counters are non-essential — the gallery works without them */ }
 }
 function postStat(key, action){
@@ -2541,22 +2556,43 @@ function setTitle(t){ document.getElementById('sectionTitle').textContent=t; }
 const catGrid = document.getElementById('catGrid');
 // The full category list, each with how many wallpapers it holds. Rebuilt
 // whenever the library changes so the counts stay honest.
+// Same slug rule as the server's nameSlug(), so the links match /category/<slug>.
+function catSlug(name){
+  return String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+// Category links are real <a href="/category/…"> so crawlers can follow them and
+// Ctrl/⌘/Shift-click opens the category's own page in a new tab; a plain click
+// still filters right here without a page load.
+function inPageClick(el, fn){
+  el.addEventListener('click', e=>{
+    if(e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault(); fn();
+  });
+}
 function buildCatList(){
   const counts = {};
-  wallpapers.forEach(w=>{ if(w.cat) counts[w.cat] = (counts[w.cat] || 0) + 1; });
+  // /category/<slug> only exists for categories in the published library; the
+  // built-in demo photos count in the sidebar but have no server page to link to
+  const served = {};
+  wallpapers.forEach(w=>{
+    if(!w.cat) return;
+    counts[w.cat] = (counts[w.cat] || 0) + 1;
+    if(w._ref && w._ref.site === 'r2') served[w.cat] = true;
+  });
   catGrid.innerHTML = '';
-  const all = document.createElement('div');
-  all.className = 'cat-item'; all.dataset.cat = '';
+  const all = document.createElement('a');
+  all.className = 'cat-item'; all.dataset.cat = ''; all.href = '/';
   all.innerHTML = "<span>All wallpapers</span><span class='n'>" + wallpapers.length + "</span>";
-  all.onclick = ()=>{ clearFilter(); closeSide(); };
+  inPageClick(all, ()=>{ clearFilter(); closeSide(); });
   catGrid.appendChild(all);
   categories.forEach(name=>{
-    const item = document.createElement('div');
+    const n = counts[name] || 0;
+    const item = document.createElement(served[name] ? 'a' : 'div');
     item.className = 'cat-item';
     item.dataset.cat = name;
-    const n = counts[name] || 0;
+    if(served[name]) item.href = '/category/' + catSlug(name);
     item.innerHTML = "<span>" + esc(name) + "</span>" + (n ? "<span class='n'>" + n + "</span>" : "");
-    item.onclick = ()=>{ filterByCat(name); };
+    inPageClick(item, ()=>{ filterByCat(name); });
     catGrid.appendChild(item);
   });
   paintActiveCat();
@@ -3459,22 +3495,40 @@ function buildCatTiles(){
   const host = document.getElementById('catTiles'), row = document.getElementById('ctRow');
   if(!host || !row) return;
   const byCat = {};
-  wallpapers.forEach(w => { if(w.cat && w.img) (byCat[w.cat] = byCat[w.cat] || []).push(w); });
+  // published library only: every tile links to /category/<slug>, which the
+  // built-in demo photos have no server page behind
+  wallpapers.forEach(w => {
+    if(w.cat && w.img && w._ref && w._ref.site === 'r2') (byCat[w.cat] = byCat[w.cat] || []).push(w);
+  });
   const top = Object.keys(byCat).sort((a, b) => byCat[b].length - byCat[a].length).slice(0, 8);
-  const sig = top.map(c => c + ':' + byCat[c].length).join('|');
+  // Cover = the landscape wallpaper people download most (then like, then
+  // view) — same rule as the /categories page. The newest upload is often an
+  // odd one out, so it is only the fallback while a category has no data.
+  const covers = {};
+  top.forEach(c => {
+    let best = null, bestScore = 0;
+    byCat[c].forEach(w => {
+      if(!isLandscape(w)) return;
+      const s = gOf(w), score = (s.dl || 0) * 10 + (s.l || 0) * 5 + (s.v || 0);
+      if(score >= 5 && score > bestScore){ best = w; bestScore = score; }
+    });
+    covers[c] = best || byCat[c].find(isLandscape) || byCat[c][0];
+  });
+  const sig = top.map(c => c + ':' + byCat[c].length + ':' + covers[c].img).join('|');
   if(row.dataset.sig === sig) return;
   row.dataset.sig = sig;
   row.innerHTML = '';
   top.forEach(name => {
     const list = byCat[name];
-    const cover = list.find(isLandscape) || list[0];   // the newest landscape one
-    const b = document.createElement('button');
+    const cover = covers[name];
+    const b = document.createElement('a');
     b.className = 'ct';
+    b.href = '/category/' + catSlug(name);
     b.innerHTML = "<img src='" + esc(thumbUrl(cover)) + "' alt='' loading='lazy' decoding='async'>"
       + "<span class='ct-name'>" + esc(name) + "</span>"
       + "<span class='ct-n'>" + list.length + "</span>";
     b.querySelector('img').onerror = function(){ this.style.visibility = 'hidden'; };
-    b.onclick = () => filterByCat(name);
+    inPageClick(b, () => filterByCat(name));
     row.appendChild(b);
   });
   host.hidden = top.length < 4;

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page not found | 8K Wallpapers</title>
+<meta name="robots" content="noindex, follow">
+<meta name="theme-color" content="#0a0a0c">
+<link rel="icon" href="/favicon.png" sizes="32x32">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{min-height:100vh;display:flex;flex-direction:column;background:#0a0a0c;color:rgba(255,255,255,.95);
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;line-height:1.5}
+  a{color:inherit;text-decoration:none}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:11px 24px;
+    background:#121216;border-bottom:1px solid #272730}
+  .logo{font-size:19px;font-weight:700}.logo b{color:#6366f1}
+  main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:60px 20px}
+  .code{font-size:clamp(72px,14vw,132px);font-weight:800;line-height:1;letter-spacing:-3px;color:#6366f1}
+  h1{font-family:Georgia,"Iowan Old Style","Times New Roman",serif;font-size:clamp(24px,3.4vw,34px);
+    font-weight:600;margin:14px 0 10px}
+  p{color:#c4c8cf;font-size:15.5px;max-width:48ch;margin:0 auto 26px}
+  form{display:flex;width:min(460px,100%);margin:0 auto 22px;background:#1b1b21;
+    border:1px solid #272730;border-radius:10px;overflow:hidden}
+  form:focus-within{border-color:#6366f1}
+  input{flex:1;min-width:0;background:none;border:none;outline:none;color:#fff;font:inherit;
+    font-size:15px;padding:12px 14px}
+  input::placeholder{color:rgba(255,255,255,.45)}
+  button{background:#6366f1;color:#fff;border:none;font:inherit;font-weight:700;font-size:14px;
+    padding:0 20px;cursor:pointer}
+  button:hover{background:#4f46e5}
+  .links{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+  .links a{background:#1b1b21;border:1px solid #272730;border-radius:8px;padding:9px 16px;
+    font-size:14px;font-weight:600}
+  .links a:hover{border-color:#6366f1}
+</style>
+</head>
+<body>
+<header><a class="logo" href="/"><b>8K</b> WALLPAPERS</a></header>
+<main>
+  <div class="code">404</div>
+  <h1>This page doesn&rsquo;t exist</h1>
+  <p>The link may be old, or the wallpaper may have been removed. Try a search, or pick up from one of these.</p>
+  <form id="q" role="search">
+    <input name="q" type="search" placeholder="Search wallpapers — anime, nature, dark…" aria-label="Search wallpapers">
+    <button type="submit">Search</button>
+  </form>
+  <div class="links">
+    <a href="/">All wallpapers</a>
+    <a href="/categories">Categories</a>
+    <a href="/guides">Guides</a>
+  </div>
+</main>
+<script>
+  // the gallery searches from its #q= route
+  document.getElementById('q').addEventListener('submit', function(e){
+    e.preventDefault();
+    var v = (this.q.value || '').trim();
+    location.href = v ? '/#q=' + encodeURIComponent(v.toLowerCase()) : '/';
+  });
+</script>
+</body>
+</html>

@@ -58,6 +58,10 @@ function renderPage(row, list, origin){
   const dateStr = created && !isNaN(created)
     ? created.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) : '';
 
+  // the category's own crawlable page (was "/#q=<category>", which search
+  // engines read as the homepage, so no category page ever earned a link)
+  const catHref = '/category/' + nameSlug(category);
+
   const title = name + ' — ' + category + ' Wallpaper (' + resolution + ') | ' + SITE;
   const desc = 'Download ' + name + ' in ' + resolution + ' for free. A high-quality '
     + category + ' wallpaper for desktop, mobile, iPhone and iPad'
@@ -92,7 +96,7 @@ function renderPage(row, list, origin){
     caption: name,
     representativeOfPage: true,
     isFamilyFriendly: true,
-    license: origin + '/#copyright',
+    license: origin + '/copyright',
     acquireLicensePage: canonical,
     creditText: SITE,
     datePublished: row.created_at || undefined
@@ -102,7 +106,7 @@ function renderPage(row, list, origin){
     '@type': 'BreadcrumbList',
     itemListElement: [
       { '@type':'ListItem', position:1, name:'Home', item: origin + '/' },
-      { '@type':'ListItem', position:2, name: category + ' Wallpapers', item: origin + '/#q=' + encodeURIComponent(category.toLowerCase()) },
+      { '@type':'ListItem', position:2, name: category + ' Wallpapers', item: origin + catHref },
       { '@type':'ListItem', position:3, name: name, item: canonical }
     ]
   };
@@ -132,10 +136,11 @@ function renderPage(row, list, origin){
     + STYLE
     + '</head><body>'
     + '<header><a class="logo" href="/"><b>8K</b> WALLPAPERS</a>'
-      + '<a class="allbtn" href="/">Browse all wallpapers</a></header>'
+      + '<nav class="hnav"><a href="/categories">Categories</a>'
+      + '<a class="allbtn" href="/">Browse all wallpapers</a></nav></header>'
     + '<main>'
       + '<nav class="crumbs"><a href="/">Home</a> / '
-        + '<a href="/#q=' + encodeURIComponent(category.toLowerCase()) + '">' + escapeHtml(category) + '</a> / '
+        + '<a href="' + catHref + '">' + escapeHtml(category) + '</a> / '
         + '<span>' + escapeHtml(name) + '</span></nav>'
       + '<a class="stage" href="' + escapeHtml(imgFull) + '" title="View full size">'
         // The full image stays the src (it's what Google Images indexes); the
@@ -159,15 +164,17 @@ function renderPage(row, list, origin){
         + ' Download Original (' + escapeHtml(resolution) + ')</a>'
       + '<div class="meta">'
         + '<div class="mrow"><span class="ml">Category</span>'
-          + '<a class="chip" href="/#q=' + encodeURIComponent(category.toLowerCase()) + '">' + escapeHtml(category) + '</a></div>'
+          + '<a class="chip" href="' + catHref + '">' + escapeHtml(category) + '</a></div>'
         + (tags.length ? '<div class="mrow"><span class="ml">Tags</span><div class="tags">' + tagHtml + '</div></div>' : '')
         + (dateStr ? '<div class="mrow"><span class="ml">Added</span><span class="v">' + escapeHtml(dateStr) + '</span></div>' : '')
       + '</div>'
       + '<a class="report" href="/report?id=' + encodeURIComponent(path) + '">'
         + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-1.5 3.5L16 11H5"/></svg> Report Image</a>'
-      + (relHtml ? '<section class="related"><h2>Related Wallpapers</h2><div class="relgrid">' + relHtml + '</div></section>' : '')
+      + (relHtml ? '<section class="related"><h2>Related Wallpapers</h2><div class="relgrid">' + relHtml + '</div>'
+        + '<a class="morecat" href="' + catHref + '">See all ' + escapeHtml(category) + ' wallpapers &rarr;</a></section>' : '')
     + '</main>'
     + '<footer><a href="/">' + SITE + '</a> — free 4K, 5K &amp; 8K wallpapers for desktop, mobile &amp; tablet. '
+      + '<a href="/categories">Categories</a> · <a href="/guides">Guides</a> · '
       + '<a href="/about">About</a> · <a href="/privacy">Privacy</a> · <a href="/copyright">Copyright</a></footer>'
     + '</body></html>';
 }
@@ -194,6 +201,10 @@ const STYLE = '<style>'
   + '.logo{font-size:19px;font-weight:700}.logo b{color:#6366f1}'
   + '.allbtn{background:#1b1b21;border:1px solid #272730;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600}'
   + '.allbtn:hover{border-color:#6366f1}'
+  + '.hnav{display:flex;align-items:center;gap:18px;font-size:13.5px;font-weight:600}'
+  + '.hnav>a:not(.allbtn){color:rgba(255,255,255,.72)}.hnav>a:not(.allbtn):hover{color:#fff}'
+  + '@media(max-width:560px){.hnav>a:not(.allbtn){display:none}}'
+  + '.morecat{display:inline-block;margin-top:18px;color:#818cf8;font-size:14px;font-weight:600}.morecat:hover{color:#fff}'
   + 'main{max-width:1100px;margin:0 auto;padding:26px 24px 60px}'
   + '.crumbs{color:rgba(255,255,255,.55);font-size:13px;margin-bottom:14px}.crumbs a:hover{color:#818cf8}'
   + '.stage{display:block;border-radius:10px;overflow:hidden;border:1px solid #272730;background:#1b1b21;line-height:0}'
