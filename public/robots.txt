@@ -1,0 +1,9 @@
+# 8K Wallpapers — crawler rules
+
+User-agent: *
+Allow: /
+# the admin panel must never be indexed (it is not deployed publicly at all)
+Disallow: /admin
+Disallow: /admin.html
+
+Sitemap: https://8k-wallpapers.com/sitemap.xml

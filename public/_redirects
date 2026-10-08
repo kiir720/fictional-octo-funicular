@@ -1,0 +1,12 @@
+# Cloudflare Pages redirects — the site root serves the gallery.
+# The target is the extensionless "clean URL" (Pages serves wallpapers.html
+# there), so this is a direct 200 rewrite with no redirect hop.
+/  /wallpapers  200
+
+# Browsers that ignore the <link rel=icon> tags ask for /favicon.ico by habit —
+# hand them the PNG instead of a 404.
+/favicon.ico  /favicon.png  301
+
+# "/category" on its own (someone trimming the URL) -> the category index
+/category   /categories  301
+/category/  /categories  301

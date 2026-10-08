@@ -1,5 +1,6 @@
 # Local dev/preview tooling — not part of the published site
 .claude/
+.wrangler/
 
 # OS / editor cruft
 Thumbs.db

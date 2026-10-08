@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Download Section</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --accent:#FF7A3D;
+    --accent-2:#FF9A5C;
+    --accent-deep:#E85E1F;
+    --ease:cubic-bezier(.2,.9,.25,1);
+  }
+  html[data-theme="dark"]{
+    --bg:radial-gradient(130% 120% at 50% -20%,#14171F,#0A0B0F);
+    --chip:#171A23;
+    --chip-hover:#1E222D;
+    --edge:#282D39;
+    --edge-hover:#3A4152;
+    --text:#D2D7E1;
+    --text-dim:#8B93A4;
+    --label:#7C8494;
+    --ico:#9AA2B2;
+    --btn-shadow:0 12px 30px rgba(255,122,61,.34);
+  }
+  html[data-theme="light"]{
+    --bg:radial-gradient(130% 120% at 50% -20%,#FFFFFF,#EEF1F6);
+    --chip:#FFFFFF;
+    --chip-hover:#F1F4F9;
+    --edge:#E3E7EF;
+    --edge-hover:#CDD4E0;
+    --text:#28303D;
+    --text-dim:#6B7385;
+    --label:#8790A0;
+    --ico:#7E8698;
+    --btn-shadow:0 12px 28px rgba(255,122,61,.28);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:var(--bg);min-height:100vh;font-family:'Inter',system-ui,sans-serif;
+    display:flex;align-items:center;justify-content:center;padding:60px 20px;
+    transition:background .3s var(--ease);color:var(--text);
+  }
+  .wrap{width:100%;max-width:920px}
+
+  /* theme toggle */
+  .top{position:fixed;top:20px;right:22px}
+  .tog{width:42px;height:42px;border-radius:50%;background:var(--chip);border:1px solid var(--edge);display:grid;place-items:center;cursor:pointer;transition:.25s var(--ease)}
+  .tog:hover{border-color:var(--accent)}
+  .tog:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .tog svg{width:17px;height:17px;stroke:var(--accent);fill:var(--accent);transition:transform .4s var(--ease)}
+  .tog:active svg{transform:rotate(40deg) scale(.9)}
+
+  /* report link */
+  .report{
+    display:inline-flex;align-items:center;gap:8px;
+    color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;
+    background:none;border:none;font-family:inherit;padding:4px 0;margin-bottom:18px;
+    transition:color .2s var(--ease);
+  }
+  .report svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .report:hover{color:#E2604A}
+  .report:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+  /* download button */
+  .download{
+    display:flex;align-items:center;justify-content:center;gap:14px;width:100%;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    color:#fff;border:none;font-family:inherit;cursor:pointer;
+    padding:22px 28px;border-radius:16px;position:relative;overflow:hidden;
+    box-shadow:var(--btn-shadow);transition:transform .22s var(--ease),box-shadow .22s var(--ease);
+  }
+  .download::before{
+    content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);
+    transform:skewX(-20deg);transition:left .6s var(--ease);
+  }
+  .download:hover{transform:translateY(-3px);box-shadow:0 18px 40px rgba(255,122,61,.45)}
+  .download:hover::before{left:130%}
+  .download:active{transform:translateY(-1px) scale(.995)}
+  .download:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+  .dl-ico{
+    width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);
+    display:grid;place-items:center;flex-shrink:0;
+  }
+  .dl-ico svg{width:17px;height:17px;stroke:#fff;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .dl-main{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
+  .dl-title{font-size:16px;font-weight:800;letter-spacing:.2px;display:flex;align-items:center;gap:8px}
+  .dl-res{
+    font-size:12px;font-weight:700;background:rgba(255,255,255,.22);
+    padding:2px 9px;border-radius:100px;font-variant-numeric:tabular-nums;
+  }
+  .dl-sub{font-size:12px;font-weight:500;color:rgba(255,255,255,.85);margin-top:3px}
+
+  /* meta rows */
+  .meta{margin-top:30px;display:flex;flex-direction:column;gap:18px}
+  .metarow{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .metalabel{
+    font-size:13px;font-weight:700;color:var(--label);letter-spacing:.4px;
+    width:88px;flex-shrink:0;
+  }
+  .tags{display:flex;flex-wrap:wrap;gap:9px}
+  .tag{
+    display:inline-flex;align-items:center;gap:8px;
+    background:var(--chip);border:1px solid var(--edge);color:var(--text);
+    font-size:13px;font-weight:600;padding:9px 16px;border-radius:100px;cursor:pointer;
+    transition:all .2s var(--ease);text-decoration:none;
+  }
+  .tag .ico{width:16px;height:16px;color:var(--ico);stroke:currentColor;stroke-width:1.75;fill:none;stroke-linecap:round;stroke-linejoin:round;transition:color .2s,transform .3s var(--ease)}
+  .tag:hover{background:var(--chip-hover);border-color:var(--edge-hover);transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.25)}
+  .tag:hover .ico{color:var(--accent);transform:scale(1.1)}
+  .tag:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .tag .hash{color:var(--accent);font-weight:700}
+
+  .toast{
+    position:fixed;left:50%;bottom:32px;transform:translateX(-50%) translateY(20px);
+    background:var(--accent);color:#12100E;font-size:13px;font-weight:700;
+    padding:12px 22px;border-radius:100px;opacity:0;pointer-events:none;
+    transition:.3s var(--ease);box-shadow:0 10px 30px rgba(255,122,61,.4);
+    display:flex;align-items:center;gap:8px;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast svg{width:15px;height:15px;stroke:#12100E;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+  @media(max-width:560px){
+    .metarow{align-items:flex-start}
+    .metalabel{width:100%}
+    .download{flex-direction:column;gap:10px;padding:20px}
+    .dl-main{align-items:center}
+  }
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}.download::before{display:none}}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <button class="tog" id="themeToggle" aria-label="Toggle dark mode" title="Toggle theme">
+    <svg class="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+    <svg class="i-sun" viewBox="0 0 24 24" style="display:none"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M22 12h-2.5M4.5 12H2M19 5l-1.8 1.8M6.8 17.2 5 19M19 19l-1.8-1.8M6.8 6.8 5 5"/></svg>
+  </button>
+</div>
+
+<div class="wrap">
+
+  <!-- report -->
+  <button class="report" id="reportBtn">
+    <svg viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-1.5 3.5L16 11H5"/></svg>
+    Report Image
+  </button>
+
+  <!-- download -->
+  <button class="download" id="downloadBtn">
+    <span class="dl-ico">
+      <svg viewBox="0 0 24 24"><path d="M12 3v11M7 10l5 5 5-5M5 20h14"/></svg>
+    </span>
+    <span class="dl-main">
+      <span class="dl-title">Download Original <span class="dl-res">3840 × 2160</span></span>
+      <span class="dl-sub">4K UHD · JPG · ~8.2 MB</span>
+    </span>
+  </button>
+
+  <!-- meta -->
+  <div class="meta">
+    <div class="metarow">
+      <span class="metalabel">Categories</span>
+      <div class="tags">
+        <a class="tag">
+          <svg class="ico" viewBox="0 0 24 24"><circle cx="8" cy="8" r="4"/><rect x="12.5" y="4" width="7.5" height="7.5" rx="1.5"/><path d="M6 14.5l4 5.5 4-5.5z"/></svg>
+          Abstract
+        </a>
+      </div>
+    </div>
+    <div class="metarow">
+      <span class="metalabel">Tags</span>
+      <div class="tags">
+        <a class="tag"><span class="hash">#</span>Wallpaper</a>
+        <a class="tag"><span class="hash">#</span>8K</a>
+        <a class="tag"><span class="hash">#</span>Desktop</a>
+        <a class="tag"><span class="hash">#</span>Minimal</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg><span>Download started</span></div>
+
+<script>
+  const toast = document.getElementById('toast');
+  let t;
+  function showToast(msg){
+    toast.querySelector('span').textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(t); t = setTimeout(()=>toast.classList.remove('show'),1900);
+  }
+
+  // download button + count
+  let downloads = 0;
+  const sub = document.querySelector('.dl-sub');
+  document.getElementById('downloadBtn').addEventListener('click',()=>{
+    downloads++;
+    showToast('Download started ✓');
+  });
+
+  // report
+  document.getElementById('reportBtn').addEventListener('click',()=>{
+    showToast('Image reported — thanks');
+  });
+
+  // tags feedback
+  document.querySelectorAll('.tag').forEach(tag=>{
+    tag.addEventListener('click',e=>{
+      e.preventDefault();
+      showToast('Browsing "' + tag.textContent.trim() + '"');
+    });
+  });
+
+  // theme toggle
+  const root = document.documentElement;
+  const toggle = document.getElementById('themeToggle');
+  const moon = toggle.querySelector('.i-moon'), sunIco = toggle.querySelector('.i-sun');
+  function applyTheme(th){
+    root.setAttribute('data-theme',th);
+    const dark = th==='dark';
+    moon.style.display = dark?'':'none';
+    sunIco.style.display = dark?'none':'';
+    toggle.setAttribute('aria-label', dark?'Switch to light mode':'Switch to dark mode');
+  }
+  toggle.addEventListener('click',()=>applyTheme(root.getAttribute('data-theme')==='dark'?'light':'dark'));
+  applyTheme('dark');
+</script>
+</body>
+</html>

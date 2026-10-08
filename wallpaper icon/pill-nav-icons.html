@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pill Nav — Icons</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12141A;
+    --pill:#1B1E27;
+    --pill-hi:#232733;
+    --edge:#2E3340;
+    --text:#C9CFDB;
+    --text-dim:#8A92A3;
+    --accent:#FF7A3D;      /* warm orange, tied to "popular" flame */
+    --accent-2:#6C8BFF;
+    --ease:cubic-bezier(.2,.9,.25,1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:radial-gradient(120% 120% at 50% 0%,#161923,#0D0F14);
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:56px;
+    font-family:'Inter',system-ui,sans-serif;padding:60px 20px;
+  }
+
+  /* ---------- the nav ---------- */
+  .nav{
+    display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:center;
+    padding:10px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);
+    border-radius:100px;backdrop-filter:blur(10px);
+  }
+  .pill{
+    display:inline-flex;align-items:center;gap:10px;
+    padding:12px 22px 12px 18px;border-radius:100px;cursor:pointer;
+    background:var(--pill);border:1px solid var(--edge);
+    color:var(--text-dim);font-size:14px;font-weight:600;letter-spacing:.5px;
+    transition:all .22s var(--ease);position:relative;overflow:hidden;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .pill .ico{
+    width:20px;height:20px;flex-shrink:0;
+    stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;fill:none;
+    transition:transform .3s var(--ease);
+  }
+  .pill span{transform:translateY(.5px)}
+
+  /* hover: lift + brighten + colored icon */
+  .pill:hover{
+    color:var(--text);background:var(--pill-hi);border-color:#3A4152;
+    transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.35);
+  }
+  .pill:hover .ico{color:var(--accent)}
+  .pill:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* micro-interactions per icon on hover */
+  .pill:hover .clock-hand{transform-origin:12px 12px;animation:tick 2s steps(8) infinite}
+  @keyframes tick{to{transform:rotate(360deg)}}
+  .pill:hover .flame{animation:flick .6s var(--ease) infinite alternate}
+  @keyframes flick{to{transform:translateY(-1px) scaleY(1.06)}}
+  .pill:hover .star{animation:spark .5s var(--ease)}
+  @keyframes spark{0%{transform:rotate(0) scale(1)}50%{transform:rotate(-18deg) scale(1.12)}100%{transform:rotate(0) scale(1)}}
+  .pill:hover .shuffle{animation:sh .45s var(--ease)}
+  @keyframes sh{50%{transform:translateX(1.5px)}}
+  .pill:hover .layers{animation:lay .4s var(--ease)}
+  @keyframes lay{50%{transform:translateY(-1.5px)}}
+
+  /* active/selected state */
+  .pill.active{
+    color:#0E0F13;background:linear-gradient(135deg,var(--accent),#FF9A5C);
+    border-color:transparent;box-shadow:0 6px 18px rgba(255,122,61,.4);
+    transform:none;
+  }
+  .pill.active .ico{color:#0E0F13}
+  .pill.active:hover{transform:translateY(-2px)}
+
+  /* ---------- swatch labels ---------- */
+  .cap{color:var(--text-dim);font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;text-align:center;margin-bottom:-30px}
+  .section{display:flex;flex-direction:column;align-items:center;gap:22px}
+</style>
+</head>
+<body>
+
+  <div class="section">
+    <div class="cap">Default · one icon language</div>
+    <div class="nav" id="nav1">
+      <button class="pill" data-k="recent">
+        <svg class="ico" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="8.5"/>
+          <path class="clock-hand" d="M12 7.5V12l3 2"/>
+        </svg>
+        <span>Recent</span>
+      </button>
+
+      <button class="pill active" data-k="popular">
+        <svg class="ico" viewBox="0 0 24 24">
+          <path class="flame" d="M12 3.5c.6 2.7-1.3 3.8-2.6 5.3-1.2 1.4-2 2.9-2 4.7a4.6 4.6 0 0 0 9.2 0c0-1.6-.6-2.8-1.4-3.9-.5.7-1 1-1.7 1.1.9-2.6-.2-5.3-1.5-7.3Z"/>
+          <path class="flame" d="M12 19a2.2 2.2 0 0 0 2.2-2.2c0-1.3-1.2-2.1-2.2-3.3-1 1.2-2.2 2-2.2 3.3A2.2 2.2 0 0 0 12 19Z"/>
+        </svg>
+        <span>Popular</span>
+      </button>
+
+      <button class="pill" data-k="featured">
+        <svg class="ico" viewBox="0 0 24 24">
+          <path class="star" d="M12 3.5l2.5 5.3 5.8.7-4.3 3.9 1.2 5.7L12 22l-5.2 3 1.2-5.7-4.3-3.9 5.8-.7Z"/>
+        </svg>
+        <span>Featured</span>
+      </button>
+
+      <button class="pill" data-k="random">
+        <svg class="ico" viewBox="0 0 24 24">
+          <g class="shuffle">
+            <path d="M3 7h3.5c1.4 0 2.3.9 3 2l4 6c.7 1.1 1.6 2 3 2H21"/>
+            <path d="M3 17h3.5c1.4 0 2.3-.9 3-2l.7-1M14.3 8l.7-1c.7-1.1 1.6-2 3-2H21"/>
+            <path d="M18.5 2.5L21 5l-2.5 2.5M18.5 14.5L21 17l-2.5 2.5"/>
+          </g>
+        </svg>
+        <span>Random</span>
+      </button>
+
+      <button class="pill" data-k="collections">
+        <svg class="ico" viewBox="0 0 24 24">
+          <g class="layers">
+            <path d="M12 3.5l8 4.2-8 4.2-8-4.2Z"/>
+            <path d="M4 12l8 4.2 8-4.2"/>
+            <path d="M4 16l8 4.2 8-4.2"/>
+          </g>
+        </svg>
+        <span>Collections</span>
+      </button>
+    </div>
+  </div>
+
+<script>
+  // single-select active toggle
+  document.querySelectorAll('.nav').forEach(nav=>{
+    nav.addEventListener('click',e=>{
+      const p=e.target.closest('.pill'); if(!p)return;
+      nav.querySelector('.active')?.classList.remove('active');
+      p.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

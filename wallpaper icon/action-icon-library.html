@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Action Icon Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --accent:#FF7A3D;
+    --accent-2:#FF9A5C;
+    --ease:cubic-bezier(.2,.9,.25,1);
+  }
+  html[data-theme="dark"]{
+    --bg:radial-gradient(130% 120% at 50% -10%,#14171F,#0A0B0F);
+    --card:#14171F;
+    --cell:#171A23;
+    --cell-hover:#1E222D;
+    --edge:#282D39;
+    --edge-hover:#3A4152;
+    --text:#D2D7E1;
+    --text-dim:#8B93A4;
+    --ico:#AEB6C4;
+    --head:#EDEFF4;
+    --shadow:0 10px 26px rgba(0,0,0,.45);
+  }
+  html[data-theme="light"]{
+    --bg:radial-gradient(130% 120% at 50% -10%,#FFFFFF,#EDF0F6);
+    --card:#FFFFFF;
+    --cell:#F6F8FB;
+    --cell-hover:#EDF1F7;
+    --edge:#E4E8F0;
+    --edge-hover:#D2D9E4;
+    --text:#28303D;
+    --text-dim:#6B7385;
+    --ico:#5D6577;
+    --head:#1A212C;
+    --shadow:0 10px 24px rgba(70,80,100,.14);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:var(--bg);min-height:100vh;font-family:'Inter',system-ui,sans-serif;
+    color:var(--text);padding:56px 24px 90px;transition:background .3s var(--ease);
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+
+  header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:8px}
+  h1{font-size:30px;font-weight:800;letter-spacing:-.5px;color:var(--head)}
+  .subtitle{color:var(--text-dim);font-size:15px;margin-top:6px;max-width:560px;line-height:1.5}
+  .tog{width:44px;height:44px;border-radius:50%;background:var(--cell);border:1px solid var(--edge);display:grid;place-items:center;cursor:pointer;transition:.25s var(--ease);flex-shrink:0}
+  .tog:hover{border-color:var(--accent)}
+  .tog:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .tog svg{width:18px;height:18px;stroke:var(--accent);fill:var(--accent);transition:transform .4s var(--ease)}
+  .tog:active svg{transform:rotate(40deg) scale(.9)}
+
+  .group{margin-top:44px}
+  .group-label{
+    display:flex;align-items:center;gap:12px;
+    font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);
+    margin-bottom:18px;
+  }
+  .group-label::after{content:"";flex:1;height:1px;background:var(--edge)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:12px}
+  .cell{
+    display:flex;flex-direction:column;align-items:center;gap:12px;
+    background:var(--cell);border:1px solid var(--edge);border-radius:14px;
+    padding:20px 10px 14px;cursor:pointer;transition:all .2s var(--ease);position:relative;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .cell:hover{background:var(--cell-hover);border-color:var(--edge-hover);transform:translateY(-3px);box-shadow:var(--shadow)}
+  .cell:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .cell .ico{
+    width:26px;height:26px;color:var(--ico);
+    stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;fill:none;
+    transition:color .2s var(--ease),transform .35s var(--ease);
+  }
+  .cell:hover .ico{color:var(--accent);transform:scale(1.12)}
+  .cell .nm{font-size:11.5px;font-weight:600;color:var(--text-dim);letter-spacing:.2px;transition:color .2s}
+  .cell:hover .nm{color:var(--text)}
+
+  /* toggled/active state (for stateful icons) */
+  .cell.on{background:linear-gradient(135deg,rgba(255,122,61,.16),rgba(255,154,92,.08));border-color:rgba(255,122,61,.4)}
+  .cell.on .ico{color:var(--accent);fill:var(--accent)}
+  .cell.on .ico .nofill{fill:none}
+  .cell.on .nm{color:var(--accent)}
+  /* pop animation on toggle */
+  @keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.35)}100%{transform:scale(1)}}
+  .cell.pop .ico{animation:pop .4s var(--ease)}
+
+  .stateful-note{font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.5px;position:absolute;top:8px;right:9px;opacity:.7}
+
+  /* copy toast */
+  .toast{
+    position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(20px);
+    background:var(--accent);color:#12100E;font-size:13px;font-weight:700;
+    padding:11px 20px;border-radius:100px;opacity:0;pointer-events:none;
+    transition:.3s var(--ease);box-shadow:0 10px 30px rgba(255,122,61,.4);
+    display:flex;align-items:center;gap:8px;font-family:'Inter',monospace;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast code{font-weight:800}
+
+  .footnote{margin-top:50px;text-align:center;color:var(--text-dim);font-size:13px;line-height:1.6}
+  .footnote b{color:var(--accent)}
+
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>Action Icons</h1>
+      <p class="subtitle">A unified UI icon set — same 24-grid, 1.75 stroke, round caps. Tap any icon to copy its name; stateful ones (like, save, mute…) toggle filled.</p>
+    </div>
+    <button class="tog" id="themeToggle" aria-label="Toggle dark mode" title="Toggle theme">
+      <svg class="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      <svg class="i-sun" viewBox="0 0 24 24" style="display:none"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M22 12h-2.5M4.5 12H2M19 5l-1.8 1.8M6.8 17.2 5 19M19 19l-1.8-1.8M6.8 6.8 5 5"/></svg>
+    </button>
+  </header>
+
+  <div id="lib"></div>
+
+</div>
+
+<div class="toast" id="toast">Copied <code>name</code></div>
+
+<script>
+  // Icon library. Each entry: [name, svgInner, stateful?]
+  // stateful icons fill orange when toggled on.
+  const GROUPS = [
+    ["Engagement", [
+      ["Like",      '<path class="nofill" d="M12 20C7 17 3.5 13.4 3.5 9.4A4.4 4.4 0 0 1 12 6.8 4.4 4.4 0 0 1 20.5 9.4c0 4-3.5 7.6-8.5 10.6Z"/>', true],
+      ["Save",      '<path class="nofill" d="M6 4h12a1 1 0 0 1 1 1v15l-7-4-7 4V5a1 1 0 0 1 1-1Z"/>', true],
+      ["Favorite",  '<path class="nofill" d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 17l-5.2 2.6 1-5.9-4.3-4.1 5.9-.8Z"/>', true],
+      ["Rate",      '<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 17l-5.2 2.6 1-5.9-4.3-4.1 5.9-.8Z"/><path d="M9 21h6" opacity="0"/>', false],
+      ["Follow",    '<circle cx="9" cy="8" r="3.4"/><path d="M4 20c0-3 2.2-5.2 5-5.2s5 2.2 5 5.2"/><path d="M18 8v6M15 11h6"/>', true],
+      ["Comment",   '<path d="M20 12a7.5 7.5 0 0 1-10.6 6.8L4 20l1.2-4.4A7.5 7.5 0 1 1 20 12Z"/>', false],
+      ["Pin",       '<path class="nofill" d="M12 21s6-5.3 6-10.5A6 6 0 0 0 6 10.5C6 15.7 12 21 12 21Z"/><circle cx="12" cy="10.5" r="2.2"/>', true],
+      ["Thumbs Up", '<path d="M7 11v9H4a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1Z"/><path class="nofill" d="M7 11l4-7c1.3 0 2 .9 2 2.2V9h4.8a2 2 0 0 1 2 2.4l-1.2 6a2 2 0 0 1-2 1.6H7"/>', true],
+    ]],
+    ["Media & Files", [
+      ["Download",  '<path d="M12 3v11M7 10l5 5 5-5M5 20h14"/>', false],
+      ["Upload",    '<path d="M12 20V9M7 13l5-5 5 5M5 4h14"/>', false],
+      ["Cloud DL",  '<path d="M7 18a4 4 0 0 1-.5-8 5.5 5.5 0 0 1 10.6-1.4A3.8 3.8 0 0 1 17.5 18"/><path d="M12 12v6M9.5 15.5 12 18l2.5-2.5"/>', false],
+      ["Set as BG", '<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M3 13l4-3.5 3 2.5 3.5-3 4 4"/>', false],
+      ["Copy",      '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>', false],
+      ["Print",     '<path d="M6 9V4h12v5"/><rect x="6" y="14" width="12" height="6"/><path d="M6 16H4a1 1 0 0 1-1-1v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a1 1 0 0 1-1 1h-2"/><path d="M17 12h.01"/>', false],
+      ["Save Image",'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.6"/><path d="M3 16l5-4 4 3 3-2.5 6 5"/>', false],
+      ["Attach",    '<path d="M20 11l-8.5 8.5a5 5 0 0 1-7-7L13 4a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.6 1.6 0 0 1-2.3-2.3l7.8-7.8"/>', false],
+    ]],
+    ["View & Zoom", [
+      ["Fullscreen",'<path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"/>', false],
+      ["Exit Full", '<path d="M9 4v3a2 2 0 0 1-2 2H4M15 4v3a2 2 0 0 0 2 2h3M9 20v-3a2 2 0 0 0-2-2H4M15 20v-3a2 2 0 0 1 2-2h3"/>', false],
+      ["Zoom In",   '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M11 8v6M8 11h6"/>', false],
+      ["Zoom Out",  '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11h6"/>', false],
+      ["Preview",   '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>', false],
+      ["Hide",      '<path d="M4 4l16 16M9.9 5.2A9.5 9.5 0 0 1 12 5c6.5 0 10 7 10 7a15 15 0 0 1-3 3.6M6.5 7.5A15 15 0 0 0 2 12s3.5 7 10 7a9.5 9.5 0 0 0 3.5-.7"/><path d="M9.8 9.9a3 3 0 0 0 4.2 4.3"/>', false],
+      ["Expand",    '<path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/>', false],
+      ["Rotate",    '<path d="M4 12a8 8 0 1 1 2.4 5.7"/><path d="M4 20v-4h4"/>', false],
+    ]],
+    ["Navigation & Sort", [
+      ["Grid",      '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>', false],
+      ["List",      '<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1.2"/><circle cx="3.5" cy="12" r="1.2"/><circle cx="3.5" cy="18" r="1.2"/>', false],
+      ["Filter",    '<path d="M4 5h16l-6.5 8v5l-3 2v-7Z"/>', false],
+      ["Sort",      '<path d="M7 4v16M7 20l-3-3M7 4l3 3M17 20V4M17 4l3 3M17 20l-3-3"/>', false],
+      ["Search",    '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>', false],
+      ["Shuffle",   '<path d="M3 7h3.5c1.4 0 2.3.9 3 2l4 6c.7 1.1 1.6 2 3 2H21M3 17h3.5c1.4 0 2.3-.9 3-2l.7-1M14.3 8l.7-1c.7-1.1 1.6-2 3-2H21"/><path d="M18.5 2.5L21 5l-2.5 2.5M18.5 14.5 21 17l-2.5 2.5"/>', false],
+      ["Menu",      '<path d="M4 7h16M4 12h16M4 17h16"/>', false],
+      ["Options",   '<circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/>', false],
+    ]],
+    ["Edit & Manage", [
+      ["Edit",      '<path d="M4 20h4L18.5 9.5a2 2 0 0 0-2.8-2.8L5 17.2Z"/><path d="M14 6.5l3.5 3.5"/>', false],
+      ["Crop",      '<path d="M6 2v14a2 2 0 0 0 2 2h14M2 6h14a2 2 0 0 1 2 2v14"/>', false],
+      ["Adjust",    '<path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2.2"/><circle cx="8" cy="16" r="2.2"/>', false],
+      ["Delete",    '<path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M10 11v6M14 11v6"/>', false],
+      ["Add",       '<circle cx="12" cy="12" r="8.5"/><path d="M12 8v8M8 12h8"/>', false],
+      ["Duplicate", '<rect x="4" y="4" width="12" height="12" rx="2"/><path d="M8 20h10a2 2 0 0 0 2-2V8"/>', false],
+      ["Lock",      '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3"/>', true],
+      ["Tag",       '<path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9Z"/><circle cx="8" cy="8" r="1.4"/>', false],
+    ]],
+    ["Playback & Audio", [
+      ["Play",      '<path class="nofill" d="M7 4.5l12 7.5-12 7.5Z"/>', false],
+      ["Pause",     '<rect x="7" y="4" width="3.5" height="16" rx="1"/><rect x="13.5" y="4" width="3.5" height="16" rx="1"/>', false],
+      ["Mute",      '<path class="nofill" d="M4 9h3l5-4v14l-5-4H4Z"/><path d="M17 9l4 6M21 9l-4 6"/>', true],
+      ["Volume",    '<path class="nofill" d="M4 9h3l5-4v14l-5-4H4Z"/><path d="M16 8.5a5 5 0 0 1 0 7M19 6a9 9 0 0 1 0 12"/>', false],
+      ["Slideshow", '<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/><path class="nofill" d="M10.5 8.5l4 2.5-4 2.5Z"/>', false],
+      ["Loop",      '<path d="M4 8h11a4 4 0 0 1 4 4M20 16H9a4 4 0 0 1-4-4"/><path d="M16 5l3 3-3 3M8 19l-3-3 3-3"/>', true],
+    ]],
+    ["Status & Feedback", [
+      ["Info",      '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>', false],
+      ["Check",     '<circle cx="12" cy="12" r="8.5"/><path d="M8 12l3 3 5-5.5"/>', false],
+      ["Warning",   '<path d="M12 4l9 15H3Z"/><path d="M12 10v4M12 17h.01"/>', false],
+      ["Report",    '<path d="M5 21V4M5 4h11l-1.5 3.5L16 11H5"/>', false],
+      ["Verified",  '<path d="M12 3l2.2 1.6 2.7-.2.9 2.6 2.2 1.6-.8 2.6.8 2.6-2.2 1.6-.9 2.6-2.7-.2L12 21l-2.2-1.6-2.7.2-.9-2.6L4 15.4l.8-2.6L4 10.2l2.2-1.6.9-2.6 2.7.2Z"/><path d="M9 12l2 2 4-4"/>', true],
+      ["New",       '<circle cx="12" cy="12" r="8.5"/><path d="M9.5 15V9l5 6V9"/>', false],
+      ["Trending",  '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>', false],
+      ["Time",      '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>', false],
+    ]],
+    ["Sharing & Link", [
+      ["Share",     '<circle cx="6" cy="12" r="2.4"/><circle cx="17" cy="6" r="2.4"/><circle cx="17" cy="18" r="2.4"/><path d="M8 11l7-4M8 13l7 4"/>', false],
+      ["Link",      '<path d="M9 15l6-6M10.5 6l1-1a4 4 0 0 1 5.6 5.6l-1 1M13.5 18l-1 1a4 4 0 0 1-5.6-5.6l1-1"/>', false],
+      ["Send",      '<path d="M21 4L3 11l6 2.5M21 4l-6 16-3-8M21 4L9 13.5"/>', false],
+      ["QR",        '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h3v3M20 14v6M14 20h3"/>', false],
+      ["Embed",     '<path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13 5l-2 14"/>', false],
+      ["External",  '<path d="M14 5h5v5M19 5l-8 8M12 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-6"/>', false],
+    ]],
+  ];
+
+  const lib = document.getElementById('lib');
+  let count = 0;
+
+  GROUPS.forEach(([label, icons])=>{
+    const g = document.createElement('div');
+    g.className = 'group';
+    g.innerHTML = `<div class="group-label">${label}</div>`;
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    icons.forEach(([name, svg, stateful])=>{
+      count++;
+      const cell = document.createElement('button');
+      cell.className = 'cell';
+      cell.dataset.name = name;
+      cell.dataset.stateful = stateful ? '1' : '';
+      cell.innerHTML =
+        (stateful ? '<span class="stateful-note">toggle</span>' : '') +
+        `<svg class="ico" viewBox="0 0 24 24">${svg}</svg><span class="nm">${name}</span>`;
+      grid.appendChild(cell);
+    });
+    g.appendChild(grid);
+    lib.appendChild(g);
+  });
+
+  // subtitle count
+  document.querySelector('.subtitle').insertAdjacentHTML('beforeend',
+    ` <b style="color:var(--accent)">${count} icons.</b>`);
+
+  // interactions: toggle stateful, copy name
+  const toast = document.getElementById('toast');
+  let tTimer;
+  function showToast(name){
+    toast.innerHTML = 'Copied <code>' + name + '</code>';
+    toast.classList.add('show');
+    clearTimeout(tTimer); tTimer = setTimeout(()=>toast.classList.remove('show'),1500);
+  }
+  lib.addEventListener('click', e=>{
+    const cell = e.target.closest('.cell'); if(!cell) return;
+    // toggle if stateful
+    if(cell.dataset.stateful){
+      cell.classList.toggle('on');
+      cell.classList.remove('pop'); void cell.offsetWidth; cell.classList.add('pop');
+    }
+    // copy name
+    const name = cell.dataset.name;
+    if(navigator.clipboard) navigator.clipboard.writeText(name).catch(()=>{});
+    showToast(name);
+  });
+
+  // theme toggle
+  const root = document.documentElement;
+  const toggle = document.getElementById('themeToggle');
+  const moon = toggle.querySelector('.i-moon'), sun = toggle.querySelector('.i-sun');
+  function applyTheme(t){
+    root.setAttribute('data-theme',t);
+    const dark = t==='dark';
+    moon.style.display = dark?'':'none';
+    sun.style.display  = dark?'none':'';
+    toggle.setAttribute('aria-label', dark?'Switch to light mode':'Switch to dark mode');
+  }
+  toggle.addEventListener('click',()=>applyTheme(root.getAttribute('data-theme')==='dark'?'light':'dark'));
+  applyTheme('dark');
+</script>
+</body>
+</html>
