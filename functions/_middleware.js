@@ -69,14 +69,36 @@ const GTM_BODY = '<!-- Google Tag Manager (noscript) -->'
   + ' height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>'
   + '<!-- End Google Tag Manager (noscript) -->';
 
-// Head snippet goes straight after <meta charset> (as high as possible, but
-// without pushing the charset declaration out of the first 1024 bytes); a page
-// without one gets it at the end of <head>. The noscript part opens <body>.
-function addGtm(rw){
+// ---- Reddit Pixel ---------------------------------------------------------
+// Measures visits from the site's Reddit ads (a PageVisit on every page load).
+// It is advertising tracking with no cookieless mode, and the privacy policy
+// promises no advertising cookies without consent in the EEA/UK/CH — so there
+// (and wherever the country is unknown) it loads only for a visitor who has
+// accepted advertising cookies; everywhere else it loads directly.
+// Reddit's optional "advanced matching" (email, phone…) is deliberately NOT
+// used: it would send visitors' personal data to Reddit.
+const REDDIT_PIXEL_ID = 'a2_jgdff6hlgj6w';
+export function needsAdConsent(country){
+  const c = String(country || '').toUpperCase();
+  return !c || c === 'XX' || c === 'T1' || CONSENT_REGIONS.includes(c);   // XX unknown, T1 Tor
+}
+export function redditSnippet(needsConsent){
+  // the pixel code exactly as Reddit supplies it
+  const pixel = `!function(w,d){if(!w.rdt){var p=w.rdt=function(){p.sendEvent?p.sendEvent.apply(p,arguments):p.callQueue.push(arguments)};p.callQueue=[];var t=d.createElement("script");t.src="https://www.redditstatic.com/ads/pixel.js?pixel_id=${REDDIT_PIXEL_ID}",t.async=!0;var s=d.getElementsByTagName("script")[0];s.parentNode.insertBefore(t,s)}}(window,document);rdt('init','${REDDIT_PIXEL_ID}');rdt('track', 'PageVisit');`;
+  const body = needsConsent
+    ? `try{if(localStorage.getItem('8kw_ads_consent')==='yes'){${pixel}}}catch(e){}`
+    : pixel;
+  return '<!-- Reddit Pixel --><script>' + body + '</script><!-- End Reddit Pixel -->';
+}
+
+// Head tags go straight after <meta charset> (as high as possible, but without
+// pushing the charset declaration out of the first 1024 bytes); a page without
+// one gets them at the end of <head>. GTM's noscript part opens <body>.
+function addTags(rw, headHtml){
   let placed = false;
   return rw
-    .on('meta[charset]', { element(el){ if(!placed){ el.after(GTM_HEAD, { html: true }); placed = true; } } })
-    .on('head', { element(el){ el.onEndTag(end => { if(!placed){ end.before(GTM_HEAD, { html: true }); placed = true; } }); } })
+    .on('meta[charset]', { element(el){ if(!placed){ el.after(headHtml, { html: true }); placed = true; } } })
+    .on('head', { element(el){ el.onEndTag(end => { if(!placed){ end.before(headHtml, { html: true }); placed = true; } }); } })
     .on('body', { element(el){ el.prepend(GTM_BODY, { html: true }); } });
 }
 
@@ -106,10 +128,14 @@ export async function onRequest(context){
     const rw = new HTMLRewriter();
     let rewrite = false;
 
-    // ---- 2. Google Tag Manager on every page ---------------------------
+    // ---- 2. Google Tag Manager + Reddit Pixel on every page ------------
     // Live hostname only, so test traffic on preview deployments
-    // (<hash>.8k-wallpapers.pages.dev) never reaches the analytics.
-    if(url.hostname.toLowerCase() === CANONICAL){ addGtm(rw); rewrite = true; }
+    // (<hash>.8k-wallpapers.pages.dev) never reaches analytics or ad reports.
+    if(url.hostname.toLowerCase() === CANONICAL){
+      const country = request.cf && request.cf.country;
+      addTags(rw, GTM_HEAD + redditSnippet(needsAdConsent(country)));
+      rewrite = true;
+    }
 
     // ---- 3. no-JS fallback for the homepage ----------------------------
     // The gallery builds itself in the browser, so a client that does not run
