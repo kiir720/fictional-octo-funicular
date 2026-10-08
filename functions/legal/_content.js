@@ -3,7 +3,7 @@
 // Single source of truth: edit here, both places follow.
 export const POLICIES = {
   privacy: "<h1>Privacy Policy</h1>"
-    + "<p class='updated'>Last updated: 31 July 2026</p>"
+    + "<p class='updated'>Last updated: 7 October 2026</p>"
     + "<p class='lead'>This policy explains what 8K Wallpapers collects, why, and what control you have over it. If anything here is unclear, email us at <a href='mailto:8kwallpapersupport@gmail.com'>8kwallpapersupport@gmail.com</a> and we will answer.</p>"
     + "<h3>The short version</h3>"
     + "<p>You can browse and download every wallpaper without an account and without telling us who you are. We do not sell personal information. The data we do hold exists to run the site, credit contributors, and answer copyright complaints.</p>"
@@ -13,7 +13,7 @@ export const POLICIES = {
     + "<li><b>If you sign in with Google.</b> We receive a stable account identifier, your email address, display name, and profile picture. We never receive your Google password.</li>"
     + "<li><b>If you submit a wallpaper or file a report.</b> We keep what you enter, plus a one-way salted hash of your IP address. The hash lets us enforce rate limits and our repeat-infringer policy without storing the address itself.</li></ul>"
     + "<h3>Cookies and similar technologies</h3>"
-    + "<p>A cookie is a small file a site stores in your browser. We use one for your sign-in session, which is removed when you sign out. Our advertising partners may set their own, as described below. You can block or delete cookies in your browser settings; the gallery keeps working if you do, though you will be signed out.</p>"
+    + "<p>A cookie is a small file a site stores in your browser. We use one for your sign-in session, which is removed when you sign out. Google Analytics and our advertising partners may set their own, as described below. You can block or delete cookies in your browser settings; the gallery keeps working if you do, though you will be signed out.</p>"
     + "<h3>Advertising</h3>"
     + "<p>This site is supported by advertising served through Google AdSense.</p>"
     + "<ul><li>Third-party vendors, including Google, use cookies to serve ads based on your prior visits to this website or other websites.</li>"
@@ -24,7 +24,7 @@ export const POLICIES = {
     + "<p>Visitors in the European Economic Area, the United Kingdom and Switzerland are asked for consent before any advertising cookies are set. Declining is honoured, remembered on your device, and the site remains fully usable. You can change your answer by clearing this site's data in your browser.</p>"
     + "<p>We have no access to or control over cookies set by advertisers. Consult their privacy policies for details of their practices.</p>"
     + "<h3>Analytics</h3>"
-    + "<p>We do not currently run any third-party analytics product. The view, like and download counts shown on wallpapers are our own, are counted once per browser, and are not tied to an identity.</p>"
+    + "<p>We use Google Tag Manager to load Google Analytics, which measures how the site is used: pages viewed, how visitors arrived, approximate location (country or city), and device and browser type. It uses cookies and similar identifiers to do this. We use the results to see which wallpapers and pages are popular and to improve the site, not to identify you. Google processes this data under its <a href='https://policies.google.com/privacy' target='_blank' rel='noopener nofollow'>privacy policy</a>; see also <a href='https://policies.google.com/technologies/partner-sites' target='_blank' rel='noopener nofollow'>how Google uses information from sites that use its services</a>.</p><p>For visitors in the European Economic Area, the United Kingdom and Switzerland, analytics and advertising cookies are off by default (Google Consent Mode). Without your agreement Google receives only cookieless measurements that do not identify your browser. Anyone can opt out of Google Analytics with Google's <a href='https://tools.google.com/dlpage/gaoptout' target='_blank' rel='noopener nofollow'>browser add-on</a>.</p><p>The view, like and download counts shown on wallpapers are our own, are counted once per browser, and are not tied to an identity.</p>"
     + "<h3>Children</h3>"
     + "<p>This site is not directed at children under 13, and we do not knowingly collect information from them. If you believe a child has given us personal information, email us and we will delete it.</p>"
     + "<h3>Your rights</h3>"
