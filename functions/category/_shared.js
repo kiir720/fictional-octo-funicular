@@ -77,6 +77,62 @@ export function longEdge(res){
 // resolution tiers and filler words say nothing about a category's subject
 const NOT_A_SUBJECT = new Set(['4k', '5k', '8k', 'hd', 'full hd', 'fhd', 'qhd', 'uhd', '2k',
   'wallpaper', 'wallpapers', 'background', 'backgrounds', 'desktop']);
+
+// ---- Tag pages: /tag/<slug> ----------------------------------------------
+// Tags are what people actually type ("samurai wallpaper", "blue wallpaper
+// 4k"), so the bigger ones get their own crawlable page. Kept deliberately
+// selective so they read as real collections, not mass-produced filler:
+export const TAG_MIN_PAGE = 5;     // fewer wallpapers than this: no page at all
+export const TAG_MIN_INDEX = 10;   // fewer than this: page works but is noindex
+// Device words aren't subjects (and the library has no portrait images, so an
+// "iPhone wallpapers" page would mislead); orientation/format words likewise.
+const NOT_A_TAG_PAGE = new Set(['iphone', 'iphone-wallpapers', 'android', 'mobile', 'phone',
+  'portrait', 'landscape-orientation', 'ipad', 'tablet', 'desktop', 'pc', 'laptop', 'ultrawide', 'amoled']);
+// Synonyms folded into one page; a target that is a category slug redirects
+// to that category instead of duplicating it.
+const TAG_ALIASES = { 'minimalist': 'minimal', 'car': 'cars', 'flower': 'flowers', 'animal': 'animals',
+  'mountain': 'mountains', 'star': 'stars', 'cloud': 'clouds', 'gradient': 'gradients' };
+
+export function tagSlug(t){
+  const s = nameSlug(t);
+  return TAG_ALIASES[s] || s;
+}
+function titleCase(s){ return String(s).replace(/\b([a-z])/g, (m, c) => c.toUpperCase()); }
+
+// -> Map slug -> { slug, name, rows (newest first) } for tags that qualify for
+//    a page. categorySlugs: tags that duplicate a category are left out (the
+//    route redirects them). Display name = the most common spelling, title-cased.
+export function groupByTag(list, categorySlugs){
+  const bySlug = new Map();
+  for(const r of (Array.isArray(list) ? list : [])){
+    if(!r || !r.image_path) continue;
+    const seen = new Set();
+    for(const t of (Array.isArray(r.tags) ? r.tags : [])){
+      const raw = String(t).trim();
+      if(!raw || NOT_A_SUBJECT.has(raw.toLowerCase())) continue;
+      const slug = tagSlug(raw);
+      if(!slug || seen.has(slug) || NOT_A_TAG_PAGE.has(slug)) continue;
+      seen.add(slug);
+      let g = bySlug.get(slug);
+      if(!g){ g = { slug, rows: [], spellings: new Map() }; bySlug.set(slug, g); }
+      g.rows.push(r);
+      g.spellings.set(raw, (g.spellings.get(raw) || 0) + 1);
+    }
+  }
+  const out = new Map();
+  for(const [slug, g] of bySlug){
+    if(g.rows.length < TAG_MIN_PAGE || (categorySlugs && categorySlugs.has(slug))) continue;
+    const spelled = [...g.spellings.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    g.rows.sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+    out.set(slug, { slug, name: titleCase(spelled.toLowerCase()), rows: g.rows });
+  }
+  return out;
+}
+// Where a tag chip should point: its own page if it has one, else a search.
+export function tagHref(t, tagPages){
+  const slug = tagSlug(t);
+  return tagPages && tagPages.has(slug) ? '/tag/' + slug : '/#q=' + encodeURIComponent(String(t).toLowerCase());
+}
 export function topTags(rows, catName, n){
   const counts = new Map();
   const skip = String(catName || '').toLowerCase();
@@ -161,6 +217,7 @@ export function pageShell(o){
     + '<link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">'
     + '<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2"><link rel="manifest" href="/site.webmanifest">'
     + (o.canonical ? '<link rel="canonical" href="' + escapeHtml(o.canonical) + '">' : '')
+    + '<link rel="alternate" type="application/rss+xml" title="8K Wallpapers — New Wallpapers" href="/feed.xml">'
     + '<meta property="og:type" content="website">'
     + '<meta property="og:site_name" content="' + SITE + '">'
     + '<meta property="og:title" content="' + escapeHtml(o.ogTitle || o.title) + '">'
@@ -180,6 +237,20 @@ export function pageShell(o){
       + '<a href="/upload">Submit a wallpaper</a><a href="/about">About</a><a href="/privacy">Privacy</a>'
       + '<a href="/copyright">Copyright</a><a href="/contact">Contact</a></div></footer>'
     + '</body></html>';
+}
+
+// Prev / 1 2 3 / Next for a paged collection; page 1 is the bare URL so each
+// page has exactly one address.
+export function pagerHtml(base, pageNo, pages){
+  if(pages <= 1) return '';
+  const at = p => escapeHtml(p === 1 ? base : base + '?page=' + p);
+  return '<nav class="pager" aria-label="Pages">'
+    + (pageNo > 1 ? '<a href="' + at(pageNo - 1) + '" rel="prev">&larr; Prev</a>' : '')
+    + Array.from({ length: pages }, (_, i) => i + 1).map(p => p === pageNo
+        ? '<span class="cur" aria-current="page">' + p + '</span>'
+        : '<a href="' + at(p) + '">' + p + '</a>').join('')
+    + (pageNo < pages ? '<a href="' + at(pageNo + 1) + '" rel="next">Next &rarr;</a>' : '')
+    + '</nav>';
 }
 
 export function htmlResponse(html, status){

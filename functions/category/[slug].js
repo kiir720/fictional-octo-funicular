@@ -4,14 +4,15 @@
 import { readList, escapeHtml, wallpaperSlug } from '../api/_utils.js';
 import {
   SITE, PER_PAGE, MIN_INDEXABLE, BLURBS, groupByCategory, longEdge, topTags,
-  thumbUrl, cardHtml, pageShell, htmlResponse, notFoundPage
+  thumbUrl, cardHtml, pageShell, htmlResponse, notFoundPage, pagerHtml, groupByTag, tagHref
 } from './_shared.js';
 
 export async function onRequestGet({ params, env, request }){
   const url = new URL(request.url);
   const origin = url.origin;
   const asked = String(params.slug || '');
-  const groups = groupByCategory(await readList(env));
+  const list = await readList(env);
+  const groups = groupByCategory(list);
   const cat = groups.find(g => g.slug === asked.toLowerCase());
   if(!cat) return notFoundPage(groups);
 
@@ -44,13 +45,9 @@ export async function onRequestGet({ params, env, request }){
   const desc = 'Browse ' + n + ' free ' + cat.name.toLowerCase() + ' wallpapers'
     + (hi ? ' in 4K and higher' : '') + ' for desktop, mobile and tablet. ' + blurb;
 
-  const pager = pages > 1 ? '<nav class="pager" aria-label="Pages">'
-    + (pageNo > 1 ? '<a href="' + escapeHtml(pageNo === 2 ? base : base + '?page=' + (pageNo - 1)) + '" rel="prev">&larr; Prev</a>' : '')
-    + Array.from({ length: pages }, (_, i) => i + 1).map(p => p === pageNo
-        ? '<span class="cur" aria-current="page">' + p + '</span>'
-        : '<a href="' + escapeHtml(p === 1 ? base : base + '?page=' + p) + '">' + p + '</a>').join('')
-    + (pageNo < pages ? '<a href="' + escapeHtml(base + '?page=' + (pageNo + 1)) + '" rel="next">Next &rarr;</a>' : '')
-    + '</nav>' : '';
+  const pager = pagerHtml(base, pageNo, pages);
+  // popular tags link to their own pages where those exist
+  const tagPages = groupByTag(list, new Set(groups.map(g => g.slug)));
 
   const others = groups.map(g => '<a class="chip' + (g === cat ? ' on' : '') + '" href="/category/' + escapeHtml(g.slug) + '"'
       + (g === cat ? ' aria-current="page"' : '') + '>'
@@ -62,7 +59,7 @@ export async function onRequestGet({ params, env, request }){
     + '<p class="lead">' + escapeHtml(blurb) + '</p>'
     + '<p class="stats">' + escapeHtml(stats) + '</p>'
     + (tags.length ? '<div class="tagrow"><span class="lbl">Popular</span>'
-        + tags.map(t => '<a href="/#q=' + encodeURIComponent(String(t).toLowerCase()) + '">' + escapeHtml(t) + '</a>').join('')
+        + tags.map(t => '<a href="' + escapeHtml(tagHref(t, tagPages)) + '">' + escapeHtml(t) + '</a>').join('')
         + '</div>' : '')
     + '<div class="grid">' + rows.map((r, i) => cardHtml(r, origin, i < 4)).join('') + '</div>'
     + pager

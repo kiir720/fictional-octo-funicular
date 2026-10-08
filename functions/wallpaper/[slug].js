@@ -3,6 +3,7 @@
 // metadata without running any JavaScript. This is what makes the site's
 // 1000+ wallpapers indexable — the hash-routed SPA never was.
 import { readList, wallpaperSlug, nameSlug, idOf, escapeHtml } from '../api/_utils.js';
+import { groupByCategory, groupByTag, tagHref } from '../category/_shared.js';
 
 const SITE = '8K Wallpapers';
 
@@ -82,9 +83,24 @@ function renderPage(row, list, origin){
       + '<span>' + escapeHtml(r.name || '') + '</span></a>';
   }).join('');
 
+  // tags with their own /tag/ page link there (crawlable); the rest search
+  const tagPages = groupByTag(list, new Set(groupByCategory(list).map(g => g.slug)));
   const tagHtml = tags.map(t =>
-    '<a class="tag" href="/#q=' + encodeURIComponent(String(t).toLowerCase()) + '">'
+    '<a class="tag" href="' + escapeHtml(tagHref(t, tagPages)) + '">'
     + '<span class="hash">#</span>' + escapeHtml(t) + '</a>').join('');
+
+  // Share: Pinterest gets the full-resolution image (low-res pins do poorly there)
+  const enc = encodeURIComponent;
+  const shareText = name + ' — ' + category + ' wallpaper in ' + resolution;
+  const share = [
+    ['Pinterest', 'https://www.pinterest.com/pin/create/button/?url=' + enc(canonical) + '&media=' + enc(imgFull) + '&description=' + enc(shareText)],
+    ['Reddit', 'https://www.reddit.com/submit?url=' + enc(canonical) + '&title=' + enc(shareText)],
+    ['X', 'https://twitter.com/intent/tweet?url=' + enc(canonical) + '&text=' + enc(shareText)],
+    ['Facebook', 'https://www.facebook.com/sharer/sharer.php?u=' + enc(canonical)],
+    ['WhatsApp', 'https://wa.me/?text=' + enc(shareText + ' ' + canonical)]
+  ].map(([label, href]) => '<a href="' + escapeHtml(href) + '" target="_blank" rel="noopener nofollow">' + label + '</a>').join('')
+    + '<button type="button" onclick="navigator.clipboard&&navigator.clipboard.writeText(location.href.split(\'?\')[0])'
+    + '.then(()=>{this.textContent=\'Link copied\'})">Copy link</button>';
 
   const ld = {
     '@context': 'https://schema.org',
@@ -168,6 +184,7 @@ function renderPage(row, list, origin){
         + (tags.length ? '<div class="mrow"><span class="ml">Tags</span><div class="tags">' + tagHtml + '</div></div>' : '')
         + (dateStr ? '<div class="mrow"><span class="ml">Added</span><span class="v">' + escapeHtml(dateStr) + '</span></div>' : '')
       + '</div>'
+      + '<div class="share"><span class="lbl">Share</span>' + share + '</div>'
       + '<a class="report" href="/report?id=' + encodeURIComponent(path) + '">'
         + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-1.5 3.5L16 11H5"/></svg> Report Image</a>'
       + (relHtml ? '<section class="related"><h2>Related Wallpapers</h2><div class="relgrid">' + relHtml + '</div>'
@@ -254,6 +271,10 @@ const STYLE = '<style>'
   + '.chip,.tag{display:inline-block;background:#1b1b21;border:1px solid #272730;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600;margin:0 4px 4px 0}'
   + '.chip:hover,.tag:hover{border-color:#6366f1}.tag .hash{color:#6366f1;font-weight:700}'
   + '.tags{display:flex;flex-wrap:wrap}'
+  + '.share{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:20px 0 2px}'
+  + '.share .lbl{font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,.5);margin-right:4px}'
+  + '.share a,.share button{background:#1b1b21;border:1px solid #272730;border-radius:8px;padding:7px 13px;font:inherit;font-size:13px;font-weight:600;color:inherit;cursor:pointer}'
+  + '.share a:hover,.share button:hover{border-color:#6366f1}'
   + '.report{display:inline-flex;align-items:center;gap:7px;color:rgba(255,255,255,.55);font-size:13px;font-weight:600;margin:14px 0 26px}'
   + '.report:hover{color:#fff}.report svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}'
   + '.related{margin-top:10px}.related h2{font-size:18px;font-weight:700;margin-bottom:16px}'

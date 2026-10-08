@@ -4,8 +4,9 @@
 //   PATCH  (admin) rename an entry  { image_path, name }
 //   DELETE (admin) remove an entry  { image_path }  (also deletes its R2 image)
 import { json, cors, preflight, authorized, readList, writeList, deleteObject } from './_utils.js';
+import { pingIndexNow, urlsForNewWallpaper } from './_indexnow.js';
 
-export async function onRequest({ request, env }){
+export async function onRequest({ request, env, waitUntil }){
   if(request.method === 'OPTIONS') return preflight();
 
   if(request.method === 'GET'){
@@ -31,6 +32,8 @@ export async function onRequest({ request, env }){
     };
     list.unshift(entry);
     await writeList(env, list);
+    // new page: tell Bing & co. now rather than waiting for a crawl
+    waitUntil(pingIndexNow(urlsForNewWallpaper(entry)));
     return cors(json(entry, 201));
   }
 

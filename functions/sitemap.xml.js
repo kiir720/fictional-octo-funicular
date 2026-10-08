@@ -3,7 +3,7 @@
 // Replaces the old static 2-URL sitemap. (The static public/sitemap.xml was
 // removed so this Function is what answers the route.)
 import { readList, wallpaperSlug } from './api/_utils.js';
-import { groupByCategory, MIN_INDEXABLE } from './category/_shared.js';
+import { groupByCategory, MIN_INDEXABLE, groupByTag, TAG_MIN_INDEX } from './category/_shared.js';
 
 function esc(s){ return String(s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&apos;' }[c])); }
@@ -36,6 +36,15 @@ export async function onRequestGet({ env, request }){
     urls.push({ loc: origin + '/category/' + g.slug, changefreq: 'daily', priority: '0.9',
       lastmod: day(g.rows[0].created_at) });
   });
+  // tag pages ("samurai", "blue"…) — only the substantial ones, which are the
+  // ones whose pages ask to be indexed
+  [...groupByTag(list, new Set(groups.map(g => g.slug))).values()]
+    .filter(t => t.rows.length >= TAG_MIN_INDEX)
+    .sort((a, b) => b.rows.length - a.rows.length)
+    .forEach(t => {
+      urls.push({ loc: origin + '/tag/' + t.slug, changefreq: 'weekly', priority: '0.8',
+        lastmod: day(t.rows[0].created_at) });
+    });
 
   // newest first so freshly published wallpapers sit near the top. Each one
   // also names its image, which is how Google Images finds the file itself.

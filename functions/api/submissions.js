@@ -7,8 +7,9 @@
 // row is kept (with its ip_hash) so a repeat-infringer policy can be enforced.
 import { json, cors, preflight, authorized, readList, writeList,
          getObject, putObject, deleteObject, sanitizeName } from './_utils.js';
+import { pingIndexNow, urlsForNewWallpaper } from './_indexnow.js';
 
-export async function onRequest({ request, env }){
+export async function onRequest({ request, env, waitUntil }){
   if(request.method === 'OPTIONS') return preflight();
   if(!authorized(request, env)) return cors(json({ error: 'unauthorized' }, 401));
   if(!env.DB) return cors(json({ error: 'submissions database not bound' }, 503));
@@ -88,6 +89,7 @@ export async function onRequest({ request, env }){
       "UPDATE submissions SET status='approved', image_path=?, reviewed_at=datetime('now') WHERE id = ?"
     ).bind(livePath, id).run();
 
+    waitUntil(pingIndexNow(urlsForNewWallpaper(entry)));   // new page -> search engines now
     return cors(json({ ok: true, status: 'approved', entry }));
   }
 
