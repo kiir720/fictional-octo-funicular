@@ -2411,7 +2411,7 @@ function favId(w){ return (w._ref && w._ref.path) || w.img || w.name; }
 function isFav(w){ return favs.indexOf(favId(w)) > -1; }
 function toggleFav(w){
   const id = favId(w), i = favs.indexOf(id);
-  if(i > -1) favs.splice(i,1); else favs.push(id);
+  if(i > -1) favs.splice(i,1); else { favs.push(id); rdtTrack('AddToWishlist'); }
   try { localStorage.setItem(FAV_KEY, JSON.stringify(favs)); } catch(e){}
   // Unsplash results are ephemeral (fetched per view), so hearted ones are
   // stored whole — otherwise they'd vanish from Saved after a reload.
@@ -2494,6 +2494,22 @@ function registerDownload(w){
   g.dl = (g.dl || 0) + 1;
   postStat(k, 'download');
   renderShelves();   // the ranking may have just changed
+  rdtTrack('Lead');  // a download is this site's conversion (Reddit has no "Download" event)
+}
+// ---- Reddit conversion events ----
+// The pixel is injected by functions/_middleware.js — and in the EEA/UK/CH only
+// once the visitor accepts advertising cookies — so `rdt` may not exist; every
+// call is then a silent no-op. Standard events only: how the browser pixel
+// takes custom event names is not reliably documented. conversionId must be
+// unique per event — Reddit de-duplicates on it, so a fixed value would
+// collapse every conversion into one.
+function rdtTrack(event){
+  try {
+    if(typeof window.rdt !== 'function') return;
+    const id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+      : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+    window.rdt('track', event, { conversionId: id });
+  } catch(e){}
 }
 // dir: 1 = like, -1 = dislike. Clicking the active one clears the vote.
 function voteOn(w, dir){
@@ -3256,7 +3272,10 @@ loadGlobalStats();   // fills in the real view / like counts, then repaints
             method:'POST', headers:{'Content-Type':'application/json'},
             body: JSON.stringify({ credential: r.credential })
           }).then(x=>x.json().then(d=>({ok:x.ok,d}))).then(res=>{
-            if(res.ok) refresh(); else panelText.textContent = (res.d && res.d.error) || 'Sign-in failed.';
+            if(res.ok){
+              if(res.d && res.d.isNew) rdtTrack('SignUp');   // new accounts only, not every sign-in
+              refresh();
+            } else panelText.textContent = (res.d && res.d.error) || 'Sign-in failed.';
           }).catch(()=>{ panelText.textContent = 'Could not reach the server.'; });
         }});
         // width fills the panel (268px less its padding) instead of Google's narrow default
@@ -3426,11 +3445,20 @@ function clearFilter(){
   const rt=[...tabsEl.children].find(x=>x.textContent.includes('RECENT')); if(rt) rt.classList.add('active');
   setTitle('Recent Wallpapers'); render();
 }
+// runSearch fires on every keystroke, so the Reddit "Search" event waits until
+// the visitor pauses and is sent once per distinct query (var: no TDZ if a
+// shared #q= link runs a search during boot)
+var _rdtSearchTimer = 0, _rdtLastSearch = '';
 function runSearch(v){
   query=(v||'').toLowerCase(); activeCat=null; activeTag=null; showFavs=false; activeSort=null;
   resetActiveTabs(); syncSearchInputs(v||'');
   setTitle(query ? 'Results for “'+v+'”' : 'Recent Wallpapers');
   render();
+  clearTimeout(_rdtSearchTimer);
+  const q = query.trim();
+  if(q.length >= 2 && q !== _rdtLastSearch){
+    _rdtSearchTimer = setTimeout(()=>{ if(query.trim() === q){ _rdtLastSearch = q; rdtTrack('Search'); } }, 1200);
+  }
 }
 
 function updateChrome(count){
@@ -4102,6 +4130,7 @@ function showDetail(w, fromHistory){
   currentWp = w;
   bumpStat(w, 'v');
   registerView(w);   // global counter, once per browser per wallpaper
+  if(!fromHistory) rdtTrack('ViewContent');   // Back/Forward is not a new view
   document.getElementById('dtCat').textContent = w.cat;
   document.getElementById('dtName').textContent = w.name;
   // pixel size, set off to the right of the title

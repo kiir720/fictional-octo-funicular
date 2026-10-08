@@ -40,6 +40,11 @@ export async function onRequest({ request, env }){
 
   const res = cors(json({
     ok: true,
+    // created_at is only written when the row is inserted, and the insert sets
+    // last_seen in the same statement — so they are equal exactly on the first
+    // sign-in. Lets the page report a real sign-up (not every sign-in) to the
+    // Reddit pixel.
+    isNew: !!user.created_at && user.created_at === user.last_seen,
     user: { name: user.name, email: user.email, picture: user.picture }
   }));
   res.headers.append('set-cookie', sessionCookie(await makeSession(user, secret)));

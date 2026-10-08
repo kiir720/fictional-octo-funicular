@@ -220,7 +220,16 @@ function loadGsi(cid){
           body: JSON.stringify({ credential: r.credential }) })
           .then(function(x){ return x.json().then(function(d){ return { ok: x.ok, d: d }; }); })
           .then(function(res){
-            if(res.ok){ alt.textContent = ''; refresh(); }
+            if(res.ok){
+              // a brand-new account is a Reddit "SignUp" (the pixel may be absent: EEA without consent)
+              if(res.d && res.d.isNew && typeof window.rdt === 'function'){
+                try {
+                  window.rdt('track', 'SignUp', { conversionId: (window.crypto && crypto.randomUUID)
+                    ? crypto.randomUUID() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2) });
+                } catch(e){}
+              }
+              alt.textContent = ''; refresh();
+            }
             else alt.textContent = (res.d && res.d.error) || 'Sign-in failed.';
           })
           .catch(function(){ alt.textContent = 'Could not reach the server.'; });

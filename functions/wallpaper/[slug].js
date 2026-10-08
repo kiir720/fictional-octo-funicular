@@ -159,7 +159,7 @@ function renderPage(row, list, origin){
         + '<div class="dt-dims"><div class="dt-dims-val">' + escapeHtml(resolution.replace('x', ' × ')) + '</div>'
           + '<div class="dt-dims-lbl">PIXELS</div></div>'
       + '</div>'
-      + '<a class="download" href="' + escapeHtml(imgFull) + '" download>'
+      + '<a class="download" href="' + escapeHtml(imgFull) + '" download onclick="rdtT(\'Lead\')">'
         + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11M7 10l5 5 5-5M5 20h14"/></svg>'
         + ' Download Original (' + escapeHtml(resolution) + ')</a>'
       + '<div class="meta">'
@@ -176,8 +176,20 @@ function renderPage(row, list, origin){
     + '<footer><a href="/">' + SITE + '</a> — free 4K, 5K &amp; 8K wallpapers for desktop, mobile &amp; tablet. '
       + '<a href="/categories">Categories</a> · <a href="/guides">Guides</a> · '
       + '<a href="/about">About</a> · <a href="/privacy">Privacy</a> · <a href="/copyright">Copyright</a></footer>'
+    + RDT_EVENTS
     + '</body></html>';
 }
+
+// Reddit conversion events for this page, matching the gallery's: viewing a
+// wallpaper is ViewContent, downloading it is Lead. Search visitors mostly land
+// here rather than in the gallery, so without this most downloads would go
+// unreported. The pixel itself is injected by the middleware (in the EEA/UK/CH
+// only after consent), so rdt may be absent and this is then a no-op.
+// conversionId is unique per event; Reddit de-duplicates on it.
+const RDT_EVENTS = '<script>function rdtT(e){try{if(typeof rdt!=="function")return;'
+  + 'rdt("track",e,{conversionId:(self.crypto&&crypto.randomUUID)?crypto.randomUUID()'
+  + ':Date.now().toString(36)+"-"+Math.random().toString(36).slice(2)})}catch(x){}}'
+  + 'rdtT("ViewContent")</script>';
 
 function render404(origin){
   return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
