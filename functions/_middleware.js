@@ -5,6 +5,8 @@
 // deliberately narrow and defensive: anything unexpected falls through to the
 // normal response rather than failing the request.
 import { readList, wallpaperSlug, escapeHtml } from './api/_utils.js';
+import { CONSENT_REGIONS, needsAdConsent } from './api/_consent.js';
+export { needsAdConsent };   // re-exported for tests
 
 const CANONICAL = '8k-wallpapers.com';
 const REDIRECT_FROM = new Set([
@@ -49,8 +51,6 @@ const GTM_ID = 'GTM-PKZBLSFS';
 // sends only cookieless pings there — and granted everywhere else. A visitor
 // who accepted the ads consent bar gets the ad signals granted; that bar only
 // asked about ads, so it does not grant analytics.
-const CONSENT_REGIONS = ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT',
-  'LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE','IS','LI','NO','GB','CH'];
 const DENIED = "{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied'";
 const GTM_HEAD = '<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}'
   + "gtag('consent','default'," + DENIED + ",region:" + JSON.stringify(CONSENT_REGIONS).replace(/"/g, "'") + '});'
@@ -78,16 +78,28 @@ const GTM_BODY = '<!-- Google Tag Manager (noscript) -->'
 // Reddit's optional "advanced matching" (email, phone…) is deliberately NOT
 // used: it would send visitors' personal data to Reddit.
 const REDDIT_PIXEL_ID = 'a2_jgdff6hlgj6w';
-export function needsAdConsent(country){
-  const c = String(country || '').toUpperCase();
-  return !c || c === 'XX' || c === 'T1' || CONSENT_REGIONS.includes(c);   // XX unknown, T1 Tor
-}
+// Helpers for the Conversions API, defined only where the pixel itself may run:
+// - a visitor arriving from a Reddit ad has the ad's click id (?rdt_cid=…) kept
+//   for 28 days, so a download later in the visit is credited to that ad;
+// - window.rdtCtx() hands out one conversion's context — a fresh conversion id
+//   plus click id, Reddit's _rdt_uuid cookie, consent and screen size. The
+//   page fires the pixel event with that id and posts the same context to the
+//   server, which reports it too; Reddit de-duplicates the pair on the id.
+const RDT_HELPERS = `(function(){try{var m=location.search.match(/[?&]rdt_cid=([^&#]+)/);`
+  + `if(m)localStorage.setItem('8kw_rdt_cid',JSON.stringify({id:decodeURIComponent(m[1]),t:Date.now()}))}catch(e){}`
+  + `window.rdtCtx=function(){var c=null,ok=false,id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID()`
+  + `:Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);`
+  + `try{c=JSON.parse(localStorage.getItem('8kw_rdt_cid')||'null');ok=localStorage.getItem('8kw_ads_consent')==='yes'}catch(e){}`
+  + `var u=(document.cookie.match(/(?:^|;\\s*)_rdt_uuid=([^;]+)/)||[])[1];`
+  + `return{conversionId:id,consent:ok,clickId:(c&&c.id&&Date.now()-c.t<2419200000)?c.id:'',`
+  + `uuid:u?decodeURIComponent(u):'',screen:{w:screen.width,h:screen.height}}}})();`;
 export function redditSnippet(needsConsent){
   // the pixel code exactly as Reddit supplies it
   const pixel = `!function(w,d){if(!w.rdt){var p=w.rdt=function(){p.sendEvent?p.sendEvent.apply(p,arguments):p.callQueue.push(arguments)};p.callQueue=[];var t=d.createElement("script");t.src="https://www.redditstatic.com/ads/pixel.js?pixel_id=${REDDIT_PIXEL_ID}",t.async=!0;var s=d.getElementsByTagName("script")[0];s.parentNode.insertBefore(t,s)}}(window,document);rdt('init','${REDDIT_PIXEL_ID}');rdt('track', 'PageVisit');`;
+  const all = RDT_HELPERS + pixel;
   const body = needsConsent
-    ? `try{if(localStorage.getItem('8kw_ads_consent')==='yes'){${pixel}}}catch(e){}`
-    : pixel;
+    ? `try{if(localStorage.getItem('8kw_ads_consent')==='yes'){${all}}}catch(e){}`
+    : all;
   return '<!-- Reddit Pixel --><script>' + body + '</script><!-- End Reddit Pixel -->';
 }
 

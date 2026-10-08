@@ -9,6 +9,7 @@
 // and one vote per wallpaper per browser), so writes stay proportional to
 // real people rather than page loads.
 import { json, cors, preflight } from './_utils.js';
+import { sendRedditConversion, cleanCtx } from './_reddit.js';
 
 const ACTIONS = {
   view:      'views = views + 1',
@@ -20,7 +21,7 @@ const ACTIONS = {
   download:  'downloads = downloads + 1'
 };
 
-export async function onRequest({ request, env }){
+export async function onRequest({ request, env, waitUntil }){
   if(request.method === 'OPTIONS') return preflight();
   if(!env.DB) return cors(json({ error: 'stats database not bound' }, 503));
 
@@ -54,6 +55,13 @@ export async function onRequest({ request, env }){
       body.action === 'dislike' ? 1 : 0,
       body.action === 'download' ? 1 : 0
     ).run();
+
+    // A download is the site's conversion: report it to Reddit server-side too,
+    // with the conversion id the pixel used, in the background so the visitor
+    // never waits on Reddit. (No-op without a token, context or consent.)
+    if(body.action === 'download' && body.rdt){
+      waitUntil(sendRedditConversion(env, request, 'LEAD', cleanCtx(body.rdt)));
+    }
 
     const row = await env.DB.prepare('SELECT views, likes, dislikes, downloads FROM stats WHERE path = ?')
       .bind(path).first();

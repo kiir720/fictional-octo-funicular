@@ -4,8 +4,9 @@
 // involved — the credential flow only needs the (public) client ID.
 import { json, cors, preflight } from '../_utils.js';
 import { verifyGoogleIdToken, makeSession, sessionCookie, googleClientId } from '../_auth.js';
+import { sendRedditConversion, cleanCtx } from '../_reddit.js';
 
-export async function onRequest({ request, env }){
+export async function onRequest({ request, env, waitUntil }){
   if(request.method === 'OPTIONS') return preflight();
   if(request.method !== 'POST') return cors(json({ error: 'method not allowed' }, 405));
   if(!env.DB) return cors(json({ error: 'accounts are not available right now' }, 503));
@@ -38,13 +39,16 @@ export async function onRequest({ request, env }){
   if(!user) return cors(json({ error: 'could not create the account' }, 500));
   if(user.blocked) return cors(json({ error: 'This account has been suspended.' }, 403));
 
+  // created_at is only written when the row is inserted, and the insert sets
+  // last_seen in the same statement — so they are equal exactly on the first
+  // sign-in. A real sign-up (not every sign-in) goes to Reddit: the page fires
+  // the pixel, and the server reports the same conversion id in the background.
+  const isNew = !!user.created_at && user.created_at === user.last_seen;
+  if(isNew && body.rdt) waitUntil(sendRedditConversion(env, request, 'SIGN_UP', cleanCtx(body.rdt)));
+
   const res = cors(json({
     ok: true,
-    // created_at is only written when the row is inserted, and the insert sets
-    // last_seen in the same statement — so they are equal exactly on the first
-    // sign-in. Lets the page report a real sign-up (not every sign-in) to the
-    // Reddit pixel.
-    isNew: !!user.created_at && user.created_at === user.last_seen,
+    isNew,
     user: { name: user.name, email: user.email, picture: user.picture }
   }));
   res.headers.append('set-cookie', sessionCookie(await makeSession(user, secret)));

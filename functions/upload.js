@@ -216,17 +216,18 @@ function loadGsi(cid){
     try {
       google.accounts.id.initialize({ client_id: cid, callback: function(r){
         alt.textContent = 'Signing you in…';
+        // Reddit conversion context, minted before we know if the account is new:
+        // the server reports SIGN_UP with its id, the pixel below uses the same id
+        var rctx = null;
+        try { if(typeof window.rdtCtx === 'function') rctx = window.rdtCtx(); } catch(e){}
         fetch('/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ credential: r.credential }) })
+          body: JSON.stringify(rctx ? { credential: r.credential, rdt: rctx } : { credential: r.credential }) })
           .then(function(x){ return x.json().then(function(d){ return { ok: x.ok, d: d }; }); })
           .then(function(res){
             if(res.ok){
-              // a brand-new account is a Reddit "SignUp" (the pixel may be absent: EEA without consent)
-              if(res.d && res.d.isNew && typeof window.rdt === 'function'){
-                try {
-                  window.rdt('track', 'SignUp', { conversionId: (window.crypto && crypto.randomUUID)
-                    ? crypto.randomUUID() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2) });
-                } catch(e){}
+              // a brand-new account is a Reddit "SignUp" (no context = pixel absent: EEA without consent)
+              if(res.d && res.d.isNew && rctx && typeof window.rdt === 'function'){
+                try { window.rdt('track', 'SignUp', { conversionId: rctx.conversionId }); } catch(e){}
               }
               alt.textContent = ''; refresh();
             }

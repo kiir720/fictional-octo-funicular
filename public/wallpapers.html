@@ -2469,11 +2469,14 @@ async function loadGlobalStats(){
     if(_libLoaded) buildCatTiles();
   } catch(e){ /* counters are non-essential — the gallery works without them */ }
 }
-function postStat(key, action){
+// rdt: optional Reddit conversion context (see rdtConversion) — the server
+// reports a download to Reddit's Conversions API with the same conversion id
+function postStat(key, action, rdt){
   try {
     fetch(API_BASE + '/api/stats', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: key, action: action })
+      body: JSON.stringify(rdt ? { path: key, action: action, rdt: rdt } : { path: key, action: action }),
+      keepalive: true   // a download can navigate away; let the count still land
     }).catch(()=>{});
   } catch(e){}
 }
@@ -2492,9 +2495,23 @@ function registerDownload(w){
   const k = statKey(w);
   const g = gStats[k] || (gStats[k] = { v:0, l:0, d:0, dl:0 });
   g.dl = (g.dl || 0) + 1;
-  postStat(k, 'download');
+  // a download is this site's conversion (Reddit has no "Download" event, so
+  // it is a Lead): the pixel fires it and the server reports the same id
+  postStat(k, 'download', rdtConversion('Lead'));
   renderShelves();   // the ranking may have just changed
-  rdtTrack('Lead');  // a download is this site's conversion (Reddit has no "Download" event)
+}
+// One conversion, both ways: window.rdtCtx (from the Reddit snippet the
+// middleware injects) mints the context; the pixel event fires here with its
+// id, and the caller posts the same context to the server. Returns null where
+// the snippet is absent — previews, and the EEA/UK/CH without consent — so
+// nothing is reported anywhere.
+function rdtConversion(event){
+  try {
+    if(typeof window.rdtCtx !== 'function') return null;
+    const ctx = window.rdtCtx();
+    if(event && typeof window.rdt === 'function') window.rdt('track', event, { conversionId: ctx.conversionId });
+    return ctx;
+  } catch(e){ return null; }
 }
 // ---- Reddit conversion events ----
 // The pixel is injected by functions/_middleware.js — and in the EEA/UK/CH only
@@ -3268,12 +3285,19 @@ loadGlobalStats();   // fills in the real view / like counts, then repaints
     s.onload = ()=>{
       try {
         google.accounts.id.initialize({ client_id: clientId, callback: (r)=>{
+          // minted up front (no pixel event yet): if this turns out to be a new
+          // account, the server reports SIGN_UP with this id and the pixel below
+          // fires with the same one
+          const rctx = rdtConversion(null);
           fetch(API_BASE + '/api/auth/google', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ credential: r.credential })
+            body: JSON.stringify(rctx ? { credential: r.credential, rdt: rctx } : { credential: r.credential })
           }).then(x=>x.json().then(d=>({ok:x.ok,d}))).then(res=>{
             if(res.ok){
-              if(res.d && res.d.isNew) rdtTrack('SignUp');   // new accounts only, not every sign-in
+              // new accounts only, not every sign-in
+              if(res.d && res.d.isNew && rctx && typeof window.rdt === 'function'){
+                try { window.rdt('track', 'SignUp', { conversionId: rctx.conversionId }); } catch(e){}
+              }
               refresh();
             } else panelText.textContent = (res.d && res.d.error) || 'Sign-in failed.';
           }).catch(()=>{ panelText.textContent = 'Could not reach the server.'; });
@@ -3702,7 +3726,7 @@ const policies = {
     + "<li>You may opt out of personalised advertising by visiting <a href='https://www.google.com/settings/ads' target='_blank' rel='noopener nofollow'>Google Ads Settings</a>.</li>"
     + "<li>You can opt out of a third-party vendor's use of cookies for personalised advertising at <a href='https://www.aboutads.info/choices/' target='_blank' rel='noopener nofollow'>aboutads.info/choices</a>.</li>"
     + "<li>How Google uses data from sites that use its services is described at <a href='https://policies.google.com/technologies/partner-sites' target='_blank' rel='noopener nofollow'>policies.google.com/technologies/partner-sites</a>.</li></ul>"
-    + "<p>We also use the Reddit Pixel to measure our own advertising on Reddit. When you visit this site, Reddit may record the visit using cookies and similar technologies, so we can see how many visitors arrive from our Reddit ads. We do not send Reddit your name, email address or other contact details. Reddit handles this data under its <a href='https://www.reddit.com/policies/privacy-policy' target='_blank' rel='noopener nofollow'>privacy policy</a>, and if you have a Reddit account you can stop Reddit using activity from other sites to personalise your ads in your <a href='https://www.reddit.com/settings/privacy' target='_blank' rel='noopener nofollow'>Reddit privacy settings</a>.</p><p>Visitors in the European Economic Area, the United Kingdom and Switzerland are asked for consent before any advertising cookies are set. Declining is honoured, remembered on your device, and the site remains fully usable. You can change your answer by clearing this site's data in your browser.</p>"
+    + "<p>We also use the Reddit Pixel to measure our own advertising on Reddit. When you visit this site, Reddit may record the visit using cookies and similar technologies, so we can see how many visitors arrive from our Reddit ads. When you download a wallpaper or create an account, our server also reports that event directly to Reddit, with your IP address, browser type, screen size and, if present, Reddit's own cookie or ad-click identifier, so it can be matched to our ads even when the pixel is blocked. We do not send Reddit your name, email address, phone number or other contact details. Reddit handles this data under its <a href='https://www.reddit.com/policies/privacy-policy' target='_blank' rel='noopener nofollow'>privacy policy</a>, and if you have a Reddit account you can stop Reddit using activity from other sites to personalise your ads in your <a href='https://www.reddit.com/settings/privacy' target='_blank' rel='noopener nofollow'>Reddit privacy settings</a>.</p><p>Visitors in the European Economic Area, the United Kingdom and Switzerland are asked for consent before any advertising cookies are set. Declining is honoured, remembered on your device, and the site remains fully usable. You can change your answer by clearing this site's data in your browser.</p>"
     + "<p>We have no access to or control over cookies set by advertisers. Consult their privacy policies for details of their practices.</p>"
     + "<h3>Analytics</h3>"
     + "<p>We use Google Tag Manager to load Google Analytics, which measures how the site is used: pages viewed, how visitors arrived, approximate location (country or city), and device and browser type. It uses cookies and similar identifiers to do this. We use the results to see which wallpapers and pages are popular and to improve the site, not to identify you. Google processes this data under its <a href='https://policies.google.com/privacy' target='_blank' rel='noopener nofollow'>privacy policy</a>; see also <a href='https://policies.google.com/technologies/partner-sites' target='_blank' rel='noopener nofollow'>how Google uses information from sites that use its services</a>.</p><p>For visitors in the European Economic Area, the United Kingdom and Switzerland, analytics and advertising cookies are off by default (Google Consent Mode). Without your agreement Google receives only cookieless measurements that do not identify your browser. Anyone can opt out of Google Analytics with Google's <a href='https://tools.google.com/dlpage/gaoptout' target='_blank' rel='noopener nofollow'>browser add-on</a>.</p><p>The view, like and download counts shown on wallpapers are our own, are counted once per browser, and are not tied to an identity.</p>"
