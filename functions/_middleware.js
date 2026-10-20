@@ -64,6 +64,18 @@ const GTM_HEAD = '<script>window.dataLayer=window.dataLayer||[];function gtag(){
   + "'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);"
   + "})(window,document,'script','dataLayer','" + GTM_ID + "');</script>"
   + '<!-- End Google Tag Manager -->';
+// ---- Google Analytics 4 ---------------------------------------------------
+// The owner's GA4 tag, verbatim. It comes after GTM_HEAD, so the Consent Mode
+// defaults set there already apply (EEA/UK/CH: cookieless). The GTM container
+// was checked and holds NO GA4 tag — do not add one there as well, or every
+// visit is counted twice. The SPA's in-page navigation is counted by GA4's
+// "page changes based on browser history events" (Enhanced measurement).
+const GA4_ID = 'G-KHJ0PPS8DR';
+const GA4_HEAD = '<!-- Google tag (gtag.js) -->'
+  + '<script async src="https://www.googletagmanager.com/gtag/js?id=' + GA4_ID + '"></script>'
+  + '<script>window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}'
+  + "gtag('js', new Date());gtag('config', '" + GA4_ID + "');</script>";
+
 const GTM_BODY = '<!-- Google Tag Manager (noscript) -->'
   + '<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=' + GTM_ID + '"'
   + ' height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>'
@@ -145,7 +157,7 @@ export async function onRequest(context){
     // (<hash>.8k-wallpapers.pages.dev) never reaches analytics or ad reports.
     if(url.hostname.toLowerCase() === CANONICAL){
       const country = request.cf && request.cf.country;
-      addTags(rw, GTM_HEAD + redditSnippet(needsAdConsent(country)));
+      addTags(rw, GTM_HEAD + GA4_HEAD + redditSnippet(needsAdConsent(country)));
       rewrite = true;
     }
 
