@@ -13,6 +13,9 @@
 <link rel="canonical" href="https://8k-wallpapers.com/">
 <meta property="og:url" content="https://8k-wallpapers.com/">
 <link rel="alternate" type="application/rss+xml" title="8K Wallpapers — New Wallpapers" href="/feed.xml">
+<!-- Structured data in the static HTML (it used to be added by JavaScript, which
+     reviewers and checkers that don't run scripts never saw). -->
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://8k-wallpapers.com/#website","name":"8K Wallpapers","url":"https://8k-wallpapers.com/","description":"Free 4K, 5K and 8K Ultra HD wallpapers for desktop, mobile and tablet.","inLanguage":"en","publisher":{"@id":"https://8k-wallpapers.com/#org"}},{"@type":"Organization","@id":"https://8k-wallpapers.com/#org","name":"8K Wallpapers","url":"https://8k-wallpapers.com/","logo":{"@type":"ImageObject","url":"https://8k-wallpapers.com/icon-512.png","width":512,"height":512}},{"@type":"CollectionPage","@id":"https://8k-wallpapers.com/#home","url":"https://8k-wallpapers.com/","name":"8K Wallpapers — Free 4K, 5K & 8K Ultra HD Backgrounds","isPartOf":{"@id":"https://8k-wallpapers.com/#website"},"about":"Free 4K, 5K and 8K wallpapers, browsable by category and tag"}]}</script>
 <meta name="keywords" content="8k wallpapers, 4k wallpapers, 5k wallpapers, ultra hd backgrounds, free wallpapers, desktop backgrounds, phone wallpapers">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#0f1116">
@@ -135,20 +138,7 @@
       var og = document.createElement('meta'); og.setAttribute('property','og:url'); og.content = url;
       document.head.appendChild(og);
     }
-    var ld = document.createElement('script'); ld.type = 'application/ld+json';
-    ld.textContent = JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'WebSite',
-      name: '8K Wallpapers',
-      url: url,
-      description: 'Free 4K, 5K and 8K Ultra HD wallpapers for desktop, mobile and tablet.',
-      potentialAction: {
-        '@type': 'SearchAction',
-        target: url + '#q={search_term_string}',
-        'query-input': 'required name=search_term_string'
-      }
-    });
-    document.head.appendChild(ld);
+    // (the WebSite/Organization structured data now ships in the static <head>)
   })();
 
   // Flag browsers without CSS custom properties (e.g. IE11) so the stylesheet can
@@ -3910,7 +3900,7 @@ function describe(w){
   const p = parseResDims(w.res);
   const name = w.name || 'This wallpaper';
   const cat = w.cat ? w.cat.toLowerCase().replace('black/dark', 'dark') : '';
-  if(!p) return name + (cat ? ' — a ' + cat + ' wallpaper' : '') + ', free to download for personal use.';
+  if(!p) return w.desc || (name + (cat ? ' — a ' + cat + ' wallpaper' : '') + ', free to download for personal use.');
 
   const tier = sizeWord(p.w, p.h);          // 8K / 5K / 4K UHD / QHD / FHD / HD
   const aspect = aspectLabel(p.w, p.h);     // 16:9, 21:9, 9:16 …
@@ -3930,8 +3920,9 @@ function describe(w){
     ? name + ' is ' + article + cat + ' wallpaper at ' + p.w + ' × ' + p.h + ' (' + tier + ').'
     : name + ' at ' + p.w + ' × ' + p.h + ' (' + tier + ').';
 
-  return opening + ' ' + suits
-    + '. Pick your screen size below and the download is resized to match — no account needed.';
+  const tail = suits + '. Pick your screen size below and the download is resized to match — no account needed.';
+  // a written description of what the image shows replaces the generic opener
+  return (w.desc ? w.desc : opening) + ' ' + tail;
 }
 
 function sizeWord(w, h){
@@ -4584,6 +4575,7 @@ document.getElementById('homeLogo').onclick=goHome;
           cat: row.category,
           res: row.resolution,
           tags: row.tags || [],
+          desc: row.description || '',     // written description of the image, if any
           created_at: row.created_at,
           _new: true
         });

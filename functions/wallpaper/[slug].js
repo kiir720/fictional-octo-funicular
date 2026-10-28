@@ -39,6 +39,21 @@ export async function onRequestGet(context){
   });
 }
 
+// resolution tiers say nothing about what a wallpaper shows — not "related"
+const TIER_TAGS = new Set(['4k', '5k', '8k', 'hd', 'full hd', 'fhd', 'qhd', 'uhd', '2k', 'wallpaper', 'wallpapers']);
+// small stable string hash (FNV-1a), for a per-page but repeatable tie-break
+function fnv(s){
+  let h = 0x811c9dc5;
+  for(let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return h >>> 0;
+}
+// shorten at a word boundary for meta descriptions
+function clip(s, n){
+  if(s.length <= n) return s;
+  const cut = s.slice(0, n - 1);
+  return cut.slice(0, Math.max(cut.lastIndexOf(' '), n - 20)).replace(/[\s,;:.—-]+$/, '') + '…';
+}
+
 // "3840x2160" -> ' width="3840" height="2160"', so the browser reserves the
 // space before the image arrives and nothing below it jumps
 function dimsAttr(res){
@@ -64,14 +79,33 @@ function renderPage(row, list, origin){
   const catHref = '/category/' + nameSlug(category);
 
   const title = name + ' — ' + category + ' Wallpaper (' + resolution + ') | ' + SITE;
-  const desc = 'Download ' + name + ' in ' + resolution + ' for free. A high-quality '
+  // A written description of what the image shows is this page's unique
+  // text. Without one the page falls back to a template sentence, which is
+  // what made wallpaper pages read as near-duplicates of each other.
+  const about = typeof row.description === 'string' && row.description.trim() ? row.description.trim() : '';
+  const templ = 'Download ' + name + ' in ' + resolution + ' for free. A high-quality '
     + category + ' wallpaper for desktop, mobile, iPhone and iPad'
     + (tags.length ? ' — ' + tags.slice(0, 6).join(', ') + '.' : '.');
+  const desc = about ? clip(about, 158) : templ;           // meta description
+  const lead = about || templ;                              // visible text
 
-  // related wallpapers: same category first, then fill from the rest
-  const same = list.filter(r => r !== row && r.category === category);
-  const other = list.filter(r => r !== row && r.category !== category);
-  const related = same.concat(other).slice(0, 12);
+  // Related: scored by shared subject tags, then same category. It used to be
+  // simply the newest 12 in the category, so every page in a category showed
+  // the same block — a large identical chunk repeated across pages. A tie-break
+  // seeded by this page's path varies equal-scoring picks from page to page.
+  const subject = t => { const s = String(t).toLowerCase().trim(); return s && !TIER_TAGS.has(s) ? s : ''; };
+  const mine = new Set(tags.map(subject).filter(Boolean));
+  const seed = fnv(path);
+  const related = list
+    .filter(r => r && r !== row && r.image_path)
+    .map(r => {
+      let shared = 0;
+      for(const t of (r.tags || [])){ const s = subject(t); if(s && mine.has(s)) shared++; }
+      return [shared * 3 + (r.category === category ? 2 : 0) + ((fnv(r.image_path) ^ seed) >>> 0) % 997 / 1000, r];
+    })
+    .sort((a, b) => b[0] - a[0])
+    .slice(0, 12)
+    .map(x => x[1]);
   const relHtml = related.map(r => {
     const rp = '/wallpaper/' + wallpaperSlug(r);
     const rt = origin + '/images/thumbs/' + encodeURI(r.image_path);
@@ -99,14 +133,17 @@ function renderPage(row, list, origin){
     ['Facebook', 'https://www.facebook.com/sharer/sharer.php?u=' + enc(canonical)],
     ['WhatsApp', 'https://wa.me/?text=' + enc(shareText + ' ' + canonical)]
   ].map(([label, href]) => '<a href="' + escapeHtml(href) + '" target="_blank" rel="noopener nofollow">' + label + '</a>').join('')
-    + '<button type="button" onclick="navigator.clipboard&&navigator.clipboard.writeText(location.href.split(\'?\')[0])'
-    + '.then(()=>{this.textContent=\'Link copied\'})">Copy link</button>';
+    // no "=>" (or any ">") inside the attribute: valid HTML either way, but
+    // naive page readers — some SEO checkers among them — end the tag at the
+    // first ">" and then read the rest of the code as page text
+    + '<button type="button" onclick="var b=this;navigator.clipboard&amp;&amp;navigator.clipboard.writeText(location.href.split(\'?\')[0])'
+    + '.then(function(){b.textContent=\'Link copied\'})">Copy link</button>';
 
   const ld = {
     '@context': 'https://schema.org',
     '@type': 'ImageObject',
     name: name,
-    description: desc,
+    description: lead,
     contentUrl: imgFull,
     thumbnailUrl: imgThumb,
     caption: name,
@@ -170,7 +207,7 @@ function renderPage(row, list, origin){
         + '<div class="dt-head-main">'
           + '<div class="dt-eyebrow">' + escapeHtml(category) + '</div>'
           + '<h1 class="dt-title">' + escapeHtml(name) + '</h1>'
-          + '<p class="lead">' + escapeHtml(desc) + '</p>'
+          + '<p class="lead">' + escapeHtml(lead) + '</p>'
         + '</div>'
         + '<div class="dt-dims"><div class="dt-dims-val">' + escapeHtml(resolution.replace('x', ' × ')) + '</div>'
           + '<div class="dt-dims-lbl">PIXELS</div></div>'

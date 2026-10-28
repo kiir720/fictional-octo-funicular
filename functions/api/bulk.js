@@ -1,5 +1,7 @@
 // POST /api/bulk  (admin) — update many wallpapers in ONE write.
-// Body: { updates: [ { image_path, category?, tags?, name? }, … ] }
+// Body: { updates: [ { image_path, category?, tags?, name?, description? }, … ] }
+// description: a few sentences about what the image actually shows — the
+// page's unique text (an empty string removes it).
 //
 // The per-wallpaper PATCH rewrites the whole list document each time, so
 // retagging 1000+ wallpapers one-by-one would burn straight through Workers
@@ -64,6 +66,10 @@ export async function onRequest({ request, env }){
     if(Array.isArray(u.tags)){
       const tags = u.tags.map(t => String(t).trim()).filter(Boolean).slice(0, 12);
       if(tags.length) row.tags = tags;
+    }
+    if(typeof u.description === 'string'){
+      const d = u.description.replace(/\s+/g, ' ').trim().slice(0, 700);
+      if(d) row.description = d; else delete row.description;
     }
     updated++;
   }
