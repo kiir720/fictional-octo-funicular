@@ -157,7 +157,13 @@ export async function onRequest(context){
     // (<hash>.8k-wallpapers.pages.dev) never reaches analytics or ad reports.
     if(url.hostname.toLowerCase() === CANONICAL){
       const country = request.cf && request.cf.country;
-      addTags(rw, GTM_HEAD + GA4_HEAD + redditSnippet(needsAdConsent(country)));
+      // AdSense ownership tag on every page — the same ADS_CLIENT secret that
+      // feeds /ads.txt and /api/ads, so the id lives in one place. It only
+      // identifies the site to AdSense; it loads and shows no ads.
+      const adsClient = String(env.ADS_CLIENT || '').trim();
+      const adsMeta = /^ca-pub-\d{10,20}$/.test(adsClient)
+        ? '<meta name="google-adsense-account" content="' + adsClient + '">' : '';
+      addTags(rw, adsMeta + GTM_HEAD + GA4_HEAD + redditSnippet(needsAdConsent(country)));
       rewrite = true;
     }
 
