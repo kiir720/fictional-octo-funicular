@@ -3,7 +3,7 @@
 // metadata without running any JavaScript. This is what makes the site's
 // 1000+ wallpapers indexable — the hash-routed SPA never was.
 import { readList, wallpaperSlug, nameSlug, idOf, escapeHtml } from '../api/_utils.js';
-import { groupByCategory, groupByTag, tagHref } from '../category/_shared.js';
+import { groupByCategory, groupByTag, tagHref, longEdge } from '../category/_shared.js';
 
 const SITE = '8K Wallpapers';
 
@@ -78,7 +78,14 @@ function renderPage(row, list, origin){
   // engines read as the homepage, so no category page ever earned a link)
   const catHref = '/category/' + nameSlug(category);
 
-  const title = name + ' — ' + category + ' Wallpaper (' + resolution + ') | ' + SITE;
+  // People search "<subject> wallpaper 4k", so the title leads with the real
+  // size class, taken from the image's own resolution (never claimed beyond
+  // it) and skipped when the name already says it ("4k Keyboard").
+  const edge = longEdge(resolution);
+  const tier = edge >= 7680 ? '8K' : edge >= 5120 ? '5K' : edge >= 3840 ? '4K' : 'HD';
+  const kind = (/\b(4k|5k|8k|hd|uhd)\b/i.test(name) ? '' : tier + ' ') + 'Wallpaper';
+  const headline = name + ' ' + kind + ' — ' + category;
+  const title = headline + ' (' + resolution.replace(/x/i, '×') + ') | ' + SITE;
   // A written description of what the image shows is this page's unique
   // text. Without one the page falls back to a template sentence, which is
   // what made wallpaper pages read as near-duplicates of each other.
@@ -174,14 +181,14 @@ function renderPage(row, list, origin){
     + '<link rel="canonical" href="' + escapeHtml(canonical) + '">'
     + '<meta property="og:type" content="article">'
     + '<meta property="og:site_name" content="' + SITE + '">'
-    + '<meta property="og:title" content="' + escapeHtml(name + ' — ' + category + ' Wallpaper') + '">'
+    + '<meta property="og:title" content="' + escapeHtml(headline) + '">'
     + '<meta property="og:description" content="' + escapeHtml(desc) + '">'
     + '<meta property="og:url" content="' + escapeHtml(canonical) + '">'
     // Share previews use the 640px thumbnail: X refuses images over 5 MB and
     // Facebook over 8 MB, and many originals here are around 10 MB.
     + '<meta property="og:image" content="' + escapeHtml(imgThumb) + '">'
     + '<meta name="twitter:card" content="summary_large_image">'
-    + '<meta name="twitter:title" content="' + escapeHtml(name + ' — ' + category + ' Wallpaper') + '">'
+    + '<meta name="twitter:title" content="' + escapeHtml(headline) + '">'
     + '<meta name="twitter:description" content="' + escapeHtml(desc) + '">'
     + '<meta name="twitter:image" content="' + escapeHtml(imgThumb) + '">'
     + '<script type="application/ld+json">' + JSON.stringify(ld) + '</script>'

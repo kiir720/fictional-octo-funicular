@@ -60,7 +60,9 @@ export async function onRequestGet({ params, env, request }){
   const lead = n + ' wallpaper' + (n === 1 ? '' : 's') + ' tagged “' + tag.name + '”, ' + spread + '.';
   const stats = (hi === n ? (n > 1 ? 'All' : 'It is') + ' 4K or sharper' : (hi ? hi + ' of them are 4K or sharper' : 'Free'))
     + (hi ? ', and every one is free to download' : ' to download') + ' at its full original resolution.';
-  const title = label + (pageNo > 1 ? ' — Page ' + pageNo : '') + ' — Free 4K Backgrounds | ' + SITE;
+  // search order ("samurai wallpapers 4k"), claimed only when nearly all are 4K
+  const title = label + ' ' + (hi >= n * 0.8 ? '4K' : 'HD') + (pageNo > 1 ? ' — Page ' + pageNo : '')
+    + ' — ' + n + ' Free Backgrounds | ' + SITE;
   const desc = 'Browse ' + n + ' free ' + tag.name.toLowerCase() + ' wallpapers' + (hi ? ' in 4K and higher' : '')
     + ', ' + spread + '. Download for desktop, mobile and tablet.';
 

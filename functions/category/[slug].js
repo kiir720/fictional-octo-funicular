@@ -41,7 +41,9 @@ export async function onRequestGet({ params, env, request }){
   const stats = n + ' wallpaper' + (n === 1 ? '' : 's')
     + (hi === n ? (n > 1 ? ', all' : ', and it is') + ' 4K or sharper' : (hi ? ', ' + hi + ' of them 4K or sharper' : ''))
     + '. Each one is free to download at its full original resolution.';
-  const title = label + (pageNo > 1 ? ' — Page ' + pageNo : '') + ' — Free 4K Backgrounds | ' + SITE;
+  // search order ("anime wallpapers 4k"), claimed only when nearly all are 4K
+  const title = label + ' ' + (hi >= n * 0.8 ? '4K' : 'HD') + (pageNo > 1 ? ' — Page ' + pageNo : '')
+    + ' — ' + n + ' Free Backgrounds | ' + SITE;
   const desc = 'Browse ' + n + ' free ' + cat.name.toLowerCase() + ' wallpapers'
     + (hi ? ' in 4K and higher' : '') + ' for desktop, mobile and tablet. ' + blurb;
 
